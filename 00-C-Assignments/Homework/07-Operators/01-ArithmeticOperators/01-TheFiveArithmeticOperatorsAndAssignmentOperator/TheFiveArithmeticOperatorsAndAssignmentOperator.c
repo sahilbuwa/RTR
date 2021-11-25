@@ -20,19 +20,19 @@ int main(void)
 
 	// *** The Following Are The 5 Arithmetic Operators +, -, *, / and % ***
 	// *** Also, The Resultants Of The Arithmetic Operations In All The Below Five Cases Have Been Assigned To The Variable 'result' Using the Assignment Operator (=) ***
-	result = sab_a + sab_b;
+	sab_result = sab_a + sab_b;
 	printf("Addition Of A = %d And B = %d Gives %d.\n", sab_a, sab_b, sab_result);
 
-	result = sab_a - sab_b;
+	sab_result = sab_a - sab_b;
 	printf("Subtraction Of A = %d And B = %d Gives %d.\n", sab_a, sab_b, sab_result);
 
-	result = sab_a * sab_b;
+	sab_result = sab_a * sab_b;
 	printf("Multiplication Of A = %d And B = %d Gives %d.\n", sab_a, sab_b, sab_result);
 
-	result = sab_a / sab_b;
+	sab_result = sab_a / sab_b;
 	printf("Division Of A = %d And B = %d Gives Quotient %d.\n", sab_a, sab_b, sab_result);
 
-	result = sab_a % sab_b;
+	sab_result = sab_a % sab_b;
 	printf("Division Of A = %d And B = %d Gives Remainder %d.\n", sab_a, sab_b, sab_result);
 
 	printf("\n\n");

@@ -7,24 +7,18 @@ int main(void)
 
     //variable declarations
     unsigned int sab_a;
-    unsigned int sab_b;
     unsigned int sab_result;
 
     //code
     printf("\n\n");
     printf("Enter an integer = ");
     scanf("%u", &sab_a);
-    
-    printf("\n\n");
-    printf("Enter another integer = ");
-    scanf("%u", &sab_b);
        
     printf("\n\n\n\n");
-    sab_result = sab_a & sab_b;
-    printf("Bitwise AND-ing of \nA = %d (decimal) and B = %d (Decimal) gives result %d (Decimal).\n\n",sab_a,sab_b,sab_result);
+    sab_result = ~sab_a;
+    printf("Bitwise Complementing of \nA = %d (decimal) gives result %d (Decimal).\n\n",sab_a,sab_result);
 
     sab_PrintBinaryFormOfNumber(sab_a);
-    sab_PrintBinaryFormOfNumber(sab_b);
     sab_PrintBinaryFormOfNumber(sab_result);
 
     return 0;

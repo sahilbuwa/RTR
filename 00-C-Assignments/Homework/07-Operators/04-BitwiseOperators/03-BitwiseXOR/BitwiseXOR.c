@@ -20,8 +20,8 @@ int main(void)
     scanf("%u", &sab_b);
        
     printf("\n\n\n\n");
-    sab_result = sab_a & sab_b;
-    printf("Bitwise AND-ing of \nA = %d (decimal) and B = %d (Decimal) gives result %d (Decimal).\n\n",sab_a,sab_b,sab_result);
+    sab_result = sab_a ^ sab_b;
+    printf("Bitwise XOR-ing of \nA = %d (decimal) and B = %d (Decimal) gives result %d (Decimal).\n\n",sab_a,sab_b,sab_result);
 
     sab_PrintBinaryFormOfNumber(sab_a);
     sab_PrintBinaryFormOfNumber(sab_b);

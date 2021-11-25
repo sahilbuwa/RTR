@@ -20,22 +20,22 @@ int main(void)
     printf("If Answer=0, It Is 'FALSE'.\n");
     printf("If Answer=1, It is 'TRUE'.\n\n");
 
-    result=(a<b);
+    sab_result=(sab_a<sab_b);
     printf("(a < b) A = %d Is Less Than B =%d       \t Answer = %d\n",sab_a,sab_b,sab_result);
 
-    result=(a>b);
+    sab_result=(sab_a>sab_b);
     printf("(a > b) A = %d Is Greater Than B =%d       \t Answer = %d\n",sab_a,sab_b,sab_result);
     
-    result=(a<=b);
+    sab_result=(sab_a<=sab_b);
     printf("(a <= b) A = %d Is Less Than Or Equal To B =%d       \t Answer = %d\n",sab_a,sab_b,sab_result);
     
-    result=(a>=b);
+    sab_result=(sab_a>=sab_b);
     printf("(a >= b) A = %d Is Greater Than or Equal to B =%d       \t Answer = %d\n",sab_a,sab_b,sab_result);
     
-    result=(a==b);
+    sab_result=(sab_a==sab_b);
     printf("(a == b) A = %d Is Equal To B =%d       \t Answer = %d\n",sab_a,sab_b,sab_result);
     
-    result=(a!=b);
+    sab_result=(sab_a!=sab_b);
     printf("(a != b) A = %d Is Not Equal To B =%d       \t Answer = %d\n",sab_a,sab_b,sab_result);
     
     return 0;

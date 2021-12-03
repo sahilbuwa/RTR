@@ -10,7 +10,7 @@ int main(void)
 
     //code
     sab_a=7;
-    sab_b-5;
+    sab_b=5;
     sab_ch_result_01=(sab_a>sab_b) ? 'A' : 'B';
     sab_i_result_01= (sab_a>sab_b) ? sab_a:sab_b;
     printf("Ternary Operator Answer 1 ----- %c and %d.\n\n",sab_ch_result_01,sab_i_result_01);

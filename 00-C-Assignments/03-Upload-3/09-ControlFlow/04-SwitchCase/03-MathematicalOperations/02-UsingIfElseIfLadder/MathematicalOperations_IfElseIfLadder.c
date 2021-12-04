@@ -91,6 +91,6 @@ int main(void)
             }
         }
         else 
-            printf("Invalid Character %c Entered !!! Please try again...\n\n");
+            printf("Invalid Character %c Entered !!! Please try again...\n\n",sab_option);
     return 0;
 }

@@ -7,13 +7,12 @@ int main (void)
     //code
     sab_a=9;
     sab_b=30;
-    sab_p=30;
+    sab_p=31;
 
     printf("\n\n");
-    if(sab_a>sab_b)
+    if(sab_a<sab_b)
     {
         printf("A is less than B !!!\n\n");
-
     }
     if (sab_b != sab_p)
     {

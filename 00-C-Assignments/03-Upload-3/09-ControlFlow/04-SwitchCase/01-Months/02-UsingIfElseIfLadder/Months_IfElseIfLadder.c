@@ -50,7 +50,6 @@ int main(void)
         else
             printf("Invalid Number %d Entered !!! Please Try Again...\n\n",sab_num_month);
            
-    printf("Switch case block complete");
     return 0;
 
 }

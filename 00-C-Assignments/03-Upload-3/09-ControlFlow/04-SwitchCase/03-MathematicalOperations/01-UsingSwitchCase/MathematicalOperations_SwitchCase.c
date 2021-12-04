@@ -95,7 +95,7 @@ int main(void)
                     break;
             }
             default:
-                printf("Invalid Character %c Entered !!! Please try again...\n\n");
+                printf("Invalid Character %c Entered !!! Please try again...\n\n",sab_option_division);
                 break;
     }
     printf("Switch case block complete\n");

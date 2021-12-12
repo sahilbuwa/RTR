@@ -18,21 +18,21 @@ int main(int argc, char *argv[], char *envp[])
 
     sab_iresult=MAX_NUMBER(sab_inum1,sab_inum2);
     printf("\n\n");
-    printf("Result of the macro function is : \n\n",sab_iresult);
+    printf("Result of the macro function is : %d \n\n",sab_iresult);
 
     printf("\n\n");
 
     printf("\n\n");
-    printf("Enter An Integer Number : \n\n");
-    scanf("%d", &sab_fnum1);
+    printf("Enter An float Number : \n\n");
+    scanf("%f", &sab_fnum1);
 
     printf("\n\n");
-    printf("Enter An Integer Number : \n\n");
-    scanf("%d", &sab_fnum2);
+    printf("Enter An float Number : \n\n");
+    scanf("%f", &sab_fnum2);
 
     sab_fresult=MAX_NUMBER(sab_fnum1,sab_fnum2);
     printf("\n\n");
-    printf("Result of the macro function is : \n\n",sab_fresult);
+    printf("Result of the macro function is : %f \n\n",sab_fresult);
 
     printf("\n\n");
 

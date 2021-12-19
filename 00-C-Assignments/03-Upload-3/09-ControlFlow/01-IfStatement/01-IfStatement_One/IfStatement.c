@@ -18,7 +18,6 @@ int main (void)
     {
         printf("B is not equal to P !!!\n\n");
     }
-    
     printf("Both comparisions have been done!!!\n\n");
     return 0;
 }

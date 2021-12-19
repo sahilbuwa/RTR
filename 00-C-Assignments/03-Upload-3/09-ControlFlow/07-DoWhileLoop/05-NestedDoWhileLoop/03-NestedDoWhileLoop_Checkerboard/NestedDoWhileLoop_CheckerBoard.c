@@ -21,6 +21,6 @@ int main(void)
         }while(sab_j < 64);
     printf("\n\n");
     sab_i++;
-    }while(sab_i <= 64);
+    }while(sab_i < 64);
     return 0;
 }

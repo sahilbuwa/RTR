@@ -7,16 +7,16 @@ int main(void)
     //code
     printf("\n\n");
     sab_i=0;
-    while(sab_i <= 64)
+    sab_j=0;
+    while(sab_i < 64)
     {
-        sab_j=0;
-        while(sab_j <= 64)
+        while(sab_j < 64)
         {
             sab_c = ((sab_i & 0x8)==0) ^ ((sab_j & 0x8)==0);
             if(sab_c==0)
                 printf("  ");
             if(sab_c==1)
-                printf("*");
+                printf(" * ");
             sab_j++;
         }
         printf("\n\n");

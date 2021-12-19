@@ -14,13 +14,13 @@ int main(void)
         {
             sab_c = ((sab_i & 0x8)==0) ^ ((sab_j & 0x8)==0);
             if(sab_c==0)
-                printf("  ");
+                printf("   ");
             if(sab_c==1)
-                printf("*");
+                printf(" * ");
             sab_j++;
-        }while(sab_j <= 64);
-        printf("\n\n");
-        sab_i++;
+        }while(sab_j < 64);
+    printf("\n\n");
+    sab_i++;
     }while(sab_i <= 64);
     return 0;
 }

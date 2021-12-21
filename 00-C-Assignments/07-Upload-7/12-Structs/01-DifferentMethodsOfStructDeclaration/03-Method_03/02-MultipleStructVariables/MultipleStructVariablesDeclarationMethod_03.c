@@ -1,14 +1,14 @@
 #include<stdio.h>
 
-struct sab_MyPoint
-{
-    int sab_x;
-    int sab_y;
-} sab_point_A,sab_point_B,sab_point_C,sab_point_D,sab_point_E;
-
 int main(int argc,char* argv[],char* envp[])
 {
     //Code
+    struct sab_MyPoint
+    {
+        int sab_x;
+        int sab_y;
+    } sab_point_A,sab_point_B,sab_point_C,sab_point_D,sab_point_E;
+    
     //Assign values A
     sab_point_A.sab_x = 3;
     sab_point_A.sab_y = 0;

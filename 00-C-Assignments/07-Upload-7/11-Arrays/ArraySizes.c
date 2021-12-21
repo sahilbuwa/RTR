@@ -32,7 +32,8 @@ int main(int argc, char *argv[], char *envp[])
     printf("Size of 3-D integer array iArray_Three = %lu\n",sizeof(sab_iArray_Three));
 
     printf("Number of rows in 3-D integer array iArray_Three = %lu\n",sizeof(sab_iArray_Three));
-
+    sab_num_rows_3D = (sizeof(sab_iArray_Three)/sizeof(sab_iArray_Three[0]));
+    
     printf("Number of rows in 3-D integer array iArray-Three = %lu\n",(sizeof(sab_iArray_Three[0])/sizeof(sab_iArray_Three[0][0])));
     sab_num_columns_3D = (sizeof(sab_iArray_Three[0])/sizeof(sab_iArray_Three[0][0]));
 

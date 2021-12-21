@@ -1,5 +1,7 @@
 #include<stdio.h>
+
 int main(void)
+
 {
     //Variable Declarations
     int sab_a,sab_b,sab_p;

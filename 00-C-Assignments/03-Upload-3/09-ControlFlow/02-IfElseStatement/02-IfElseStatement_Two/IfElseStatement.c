@@ -1,5 +1,7 @@
 #include <stdio.h>
+
 int main(void)
+
 {
     //variable declarations
     int sab_age;

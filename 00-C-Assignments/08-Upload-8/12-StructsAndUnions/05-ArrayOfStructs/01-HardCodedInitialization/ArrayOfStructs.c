@@ -29,7 +29,7 @@ int main(int argc,char *argv[],char *envp[])
     strcpy(sab_EmployeeRecord[0].sab_marital_status,"Unmarried");
     
     //Emp 2
-    strcpy(sab_EmployeeRecord[1].name,sab_employee_sameer);
+    strcpy(sab_EmployeeRecord[1].sab_name,sab_employee_sameer);
     sab_EmployeeRecord[1].sab_age=32;
     sab_EmployeeRecord[1].sab_sex='M';
     sab_EmployeeRecord[1].sab_salary=60000.0f;
@@ -40,7 +40,7 @@ int main(int argc,char *argv[],char *envp[])
     sab_EmployeeRecord[2].sab_age=29;
     sab_EmployeeRecord[2].sab_sex='F';
     sab_EmployeeRecord[2].sab_salary=62000.0f;
-    strcpy(sab_EmployeeRecord[2].marital_status,"Unmarried");
+    strcpy(sab_EmployeeRecord[2].sab_marital_status,"Unmarried");
     
     //Emp 4
     strcpy(sab_EmployeeRecord[3].sab_name,sab_employee_sonali);

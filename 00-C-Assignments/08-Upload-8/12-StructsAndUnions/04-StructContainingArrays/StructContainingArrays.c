@@ -46,16 +46,16 @@ int main(int argc,char* argv[],char* envp[])
     for (sab_i=0;sab_i < CHAR_ARRAY_SIZE;sab_i++)
         sab_data_two.sab_cArray[sab_i] = (char)(sab_i + ALPHABET_BEGINNING);
 
-    strcpy(sab_data_two.sab_strArray[0],"Welcome !!!");
-    strcpy(sab_data_two.sab_strArray[1],"This");
-    strcpy(sab_data_two.sab_strArray[2],"Is");
-    strcpy(sab_data_two.sab_strArray[3],"Astromedicomp'S");
-    strcpy(sab_data_two.sab_strArray[4],"Real");
-    strcpy(sab_data_two.sab_strArray[5],"Time");
-    strcpy(sab_data_two.sab_strArray[6],"Rendering");
-    strcpy(sab_data_two.sab_strArray[7],"Batch");
-    strcpy(sab_data_two.sab_strArray[8],"Of");
-    strcpy(sab_data_two.sab_strArray[9],"2021-2022 !!!");
+    strcpy(sab_data_two.sab_strArray[0],"Welcome!!! ");
+    strcpy(sab_data_two.sab_strArray[1],"This ");
+    strcpy(sab_data_two.sab_strArray[2],"Is ");
+    strcpy(sab_data_two.sab_strArray[3],"Astromedicomp'S " );
+    strcpy(sab_data_two.sab_strArray[4],"Real ");
+    strcpy(sab_data_two.sab_strArray[5],"Time ");
+    strcpy(sab_data_two.sab_strArray[6],"Rendering ");
+    strcpy(sab_data_two.sab_strArray[7],"Batch ");
+    strcpy(sab_data_two.sab_strArray[8],"Of ");
+    strcpy(sab_data_two.sab_strArray[9],"2021-2022!!!");
 
     //Display values struct1
     printf("\n\n");
@@ -64,13 +64,11 @@ int main(int argc,char* argv[],char* envp[])
     printf("\n\n");
     printf("Integer array (data_one.iArray[]) : \n\n");
     for(sab_i=0;sab_i < INT_ARRAY_SIZE;sab_i++)
-        printf("data_one.iArray[%d] = %d\n", sab_i, sab_data_one.sab_fArray[sab_i]);
-
+        printf("data_one.iArray[%d] = %d\n", sab_i, sab_data_one.sab_iArray[sab_i]);
     printf("\n\n");
     printf("Floating-point array (data_one.fArray[]) : \n\n");
     for(sab_i = 0;sab_i < FLOAT_ARRAY_SIZE;sab_i++)
         printf("data_one.fArray[%d] = %f\n", sab_i,sab_data_one.sab_fArray[sab_i]);
-
     //Display values struct2
     printf("\n\n");
     printf("Members of 'struct DataTwo' along with their assigned values are : \n\n");

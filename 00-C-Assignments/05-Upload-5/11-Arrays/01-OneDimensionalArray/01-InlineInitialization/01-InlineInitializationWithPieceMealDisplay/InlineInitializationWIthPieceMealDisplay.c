@@ -49,8 +49,6 @@ int main(void)
     printf("fArray[5] (6th Element) = %f\n", sab_fArray[5]);
     printf("fArray[6] (7th Element) = %f\n", sab_fArray[6]);
     printf("fArray[7] (8th Element) = %f\n", sab_fArray[7]);
-    printf("fArray[8] (9th Element) = %f\n", sab_fArray[8]);
-    printf("fArray[9] (10th Element) = %f\n\n",sab_fArray[9]);
     sab_float_size = sizeof(float);
     sab_fArray_size = sizeof(sab_fArray);
     sab_fArray_num_elements = sab_fArray_size / sab_float_size;

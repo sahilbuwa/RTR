@@ -11,7 +11,7 @@ struct sab_Employee
     int sab_age;
     float sab_salary;
     char sab_sex;
-    char sab_marital_status[MARITAL_STATUS];
+    char sab_marital_status;
 };
 
 int main(int argc,char *argv[],char *envp[])
@@ -50,7 +50,6 @@ int main(int argc,char *argv[],char *envp[])
         printf("\n\n");
         printf("Is the employee married?(Y/y for yes,N/n for no): ");
         sab_EmployeeRecord[sab_i].sab_marital_status = getch();
-
         printf("%c",sab_EmployeeRecord[sab_i].sab_marital_status);
 
         sab_EmployeeRecord[sab_i].sab_marital_status=toupper(sab_EmployeeRecord[sab_i].sab_marital_status);

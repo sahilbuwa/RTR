@@ -1,5 +1,6 @@
 // Header Files
 #include "GL\freeglut.h"
+#define _MATH_DEFINES_DEFINED
 #include <math.h>
 
 // variable declarations
@@ -21,7 +22,7 @@ int main(int argc, char* argv[]) {
 	
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
 
-	glutInitWindowSize(800, 600);
+	glutInitWindowSize(800, 800);
 	glutInitWindowPosition(100, 100);
 	glutCreateWindow("Sahil Buwa");
 
@@ -72,7 +73,7 @@ void display(void) {
 	for (int i = 0; i < 360; i++) 
     {
 		// Find the angle
-		float angle_theta = i * 3.142 / 180;
+		float angle_theta = i * M_PI / 180;
 		glColor3f(0.0f, 0.0f, 0.0f);
 		glVertex3f(0.5f * cos(angle_theta),
 				   0.5f * sin(angle_theta), 0.0f);
@@ -84,7 +85,7 @@ void display(void) {
 	for (int i = 0; i < 360; i++) 
     {
 		// Find the angle
-		float angle_theta = i * 3.142 / 180;
+		float angle_theta = i * M_PI / 180;
 		glColor3f(1.0f, 1.0f, 1.0f);
 		glVertex3f(0.47f * cos(angle_theta),
 				   0.47f * sin(angle_theta), 0.0f);
@@ -94,7 +95,7 @@ void display(void) {
 	for (int i = 0; i < 360; i+=30) 
     {
 		// Find the angle
-		float angle_theta_big = i * 3.142 / 180;
+		float angle_theta_big = i * M_PI / 180;
         if(i%90==0)
         {
             glBegin(GL_QUADS);
@@ -115,7 +116,7 @@ void display(void) {
             {
                 //Taasanche thipke
                 // Find the angle
-                float angle_theta_small = i * 3.142 / 180;
+                float angle_theta_small = i * M_PI / 180;
                 glColor3f(0.0f, 0.0f, 0.0f);
                 glVertex3f(0.43f * cos(angle_theta_big)+0.015f * cos(angle_theta_small),
                         0.43f * sin(angle_theta_big)+0.015f * sin(angle_theta_small), 0.0f);
@@ -128,14 +129,14 @@ void display(void) {
 	for (int i = 0; i < 360; i++) 
     {
 		// Find the angle
-		float angle_theta = i * 3.142 / 180;
+		float angle_theta = i * M_PI / 180;
 		glColor3f(0.0f, 0.0f, 0.0f);
 		glVertex3f(0.03f * cos(angle_theta),
 				   0.03f * sin(angle_theta), 0.0f);
 	}
     glEnd();
     // Hour Hand
-    float hour_angle=205 * 3.142 / 180;
+    float hour_angle=205 * M_PI / 180;
     glBegin(GL_TRIANGLES);
     glColor3f(0.0f, 0.0f, 0.0f);
 	glVertex3f(0.0f,0.025f,0.0f);
@@ -146,7 +147,7 @@ void display(void) {
     glEnd();
 
     //Minute Hand
-    float minute_angle=30 * 3.142 / 180;
+    float minute_angle=30 * M_PI / 180;
     glBegin(GL_TRIANGLES);
     glColor3f(0.0f, 0.0f, 0.0f);
 	glVertex3f(0.03f,0.0f,0.0f);

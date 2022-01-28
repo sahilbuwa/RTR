@@ -45,6 +45,7 @@ int sab_CalculateSum(int sab_num, ...)
         sab_num--;
     }
     va_end(sab_numbers_list);
+    
     return sab_sum_total;
 }
 

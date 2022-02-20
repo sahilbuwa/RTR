@@ -1,5 +1,6 @@
 *.pdf
 *.exe
 *.obj
+*.res
 .vs/
 .vscode/

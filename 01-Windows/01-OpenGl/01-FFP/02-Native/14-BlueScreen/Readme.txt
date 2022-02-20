@@ -1,0 +1,3 @@
+From this application Window.c to OGL.cpp
+skeleton is copied.
+why-After few application we are going to include one header file which has c plus plus code thats why we make it .cpp now...

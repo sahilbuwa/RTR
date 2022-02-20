@@ -5,8 +5,8 @@
 #include<stdlib.h> // For Exit()
 
 // Defines
-#define XWIDTH 800
-#define YWIDTH 600
+#define WIN_WIDTH 800
+#define WIN_HEIGHT 600
 
 // Global Variable Declarations
 HWND ghwnd=NULL;
@@ -20,12 +20,19 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 // Entry-Point Function
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLine, int iCmdShow)
 {
+    // Function Declarations
+    int initialize(void);
+    void display(void);
+    void update(void);
+    void uninitialize(void);
+
     // Variable Declarations
     WNDCLASSEX wndclass;
     HWND hwnd;
     MSG msg;
     TCHAR szAppName[]= TEXT("MaziWindow");
     BOOL bDone=FALSE;
+    int iRetval=0;
 
     // Code
     if(fopen_s(&gpFile,"Log.txt","w")!=0)// fopen_s(File Open Secured)
@@ -46,11 +53,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
     wndclass.lpfnWndProc = WndProc;
     wndclass.hInstance = hInstance;
     wndclass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH); // BLACK_BRUSH
-    wndclass.hIcon = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON)); //ID of icon , MYICON int aslyane tyala string madhe convert karnyasathi MAKEINTRESOURCE macro waparaava laagto
+    wndclass.hIcon = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON3)); //ID of icon , MYICON int aslyane tyala string madhe convert karnyasathi MAKEINTRESOURCE macro waparaava laagto
     wndclass.hCursor = LoadCursor(NULL , IDC_ARROW); // ID of cursor
     wndclass.lpszClassName = szAppName;
     wndclass.lpszMenuName = NULL;
-    wndclass.hIconSm = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON)); //Chotu Icon sathi 
+    wndclass.hIconSm = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON3)); //Chotu Icon sathi 
 
     // Register The WNDCLASSEX
     RegisterClassEx(&wndclass);
@@ -59,10 +66,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
     hwnd = CreateWindow (   szAppName,
                             TEXT("Sahil Ajit Buwa"),
                             WS_OVERLAPPEDWINDOW,
-                            (GetSystemMetrics(SM_CXSCREEN)-XWIDTH)/2, 
-                            (GetSystemMetrics(SM_CYSCREEN)-YWIDTH)/2,
-                            XWIDTH,
-                            YWIDTH,
+                            (GetSystemMetrics(SM_CXSCREEN)-WIN_WIDTH)/2, 
+                            (GetSystemMetrics(SM_CYSCREEN)-WIN_HEIGHT)/2,
+                            WIN_WIDTH,
+                            WIN_HEIGHT,
                             NULL,
                             NULL, //Menu Handle , refer 28
                             hInstance, 
@@ -70,16 +77,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
                         );
 
     ghwnd=hwnd;
+    // Initialize
+    iRetval=initialize();
 
     // Show Window
     ShowWindow(hwnd, iCmdShow  ); // SW_SHOWNORMAL
     // SW_MAXIMIZE |SW_MINIMIZE |SW_HIDE (2nd parameter)
     // Window default kashi dakhav te OS che behaviour function cha 4th parameter
 
-
-    // Update The Window
-    UpdateWindow(hwnd);
-    // mazya window la dakhavlyavr mi dilelya brush ne rangav background
+    // Foregrounding and focusing the window
+    SetForegroundWindow(hwnd); // Both(hwnd,ghwnd) will do good. 
+    SetFocus(hwnd);
 
     // Game Loop
     while(bDone==FALSE)
@@ -99,11 +107,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
         {
             if(gbActiveWindow==TRUE)
             {
-                // Here Game Runs
+                // Render the scene
+                display();
+
+                // Update the scene
+                update();
+
             }
         }
     }
-
+    uninitialize();
     return (int)msg.wParam; 
 }
 
@@ -113,6 +126,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 {
     // Function Declarations
     void ToggleFullScreen(void);
+    void resize(int,int);
 
     // Variable Declarations
     TCHAR str[255];
@@ -126,6 +140,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
         case WM_KILLFOCUS:
             gbActiveWindow=FALSE;
             break;
+        case WM_ERASEBKGND:
+            break;
+        // As this is retained mode graphics, there is WM_PAINT to paint.    
+        case WM_CHAR:
+            switch(wParam)
+            {
+                case 'F':
+                case 'f':
+                    ToggleFullScreen();
+                    break;
+                default:
+                    break;
+            }
+            break;
         case WM_KEYDOWN:
             switch(wParam)
             {
@@ -136,32 +164,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                     break;
             }
             break;
-        case WM_CHAR:
-            switch(wParam)
-            {
-                case 'F':
-                case 'f':
-                    ToggleFullScreen();
-                    break;
-                case VK_ESCAPE:
-                    DestroyWindow(hwnd);
-                    break;
-                default:
-                    break;
-                
-            }
+        case WM_SIZE:
+            resize(LOWORD(lParam),HIWORD(lParam));
             break;
-        // case WM_LBUTTONDOWN:
-        //     wsprintf(str,TEXT("%d and %d"),GetSystemMetrics(SM_CXSCREEN),GetSystemMetrics(SM_CYSCREEN));
-		//     MessageBox(hwnd,str,TEXT("Result"),MB_OK);
-        //     break;
+        case WM_CLOSE:
+            DestroyWindow(hwnd);
+            break;
         case WM_DESTROY:
-            if(gpFile)
-            {
-                fprintf(gpFile,"Log File Is Successfully Closed.\n");
-                fclose(gpFile);
-                gpFile=NULL;
-            }
             PostQuitMessage(0);
             break;
         default:
@@ -183,7 +192,7 @@ void ToggleFullScreen(void)
 
     if(gbFullScreen==FALSE)
     {
-        dwStyle = GetWindowLong(ghwnd,GWL_STYLE);
+        dwStyle=GetWindowLong(ghwnd,GWL_STYLE);
         if(dwStyle & WS_OVERLAPPEDWINDOW)
         {
             mi.cbSize=sizeof(MONITORINFO);
@@ -191,7 +200,7 @@ void ToggleFullScreen(void)
             if( GetWindowPlacement( ghwnd, &wp) && GetMonitorInfo( MonitorFromWindow( ghwnd, MONITORINFOF_PRIMARY), &mi))
             {
                 SetWindowLong( ghwnd, GWL_STYLE, dwStyle & ~WS_OVERLAPPEDWINDOW );
-                SetWindowPos( ghwnd, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right-mi.rcMonitor.left, mi.rcMonitor.bottom-mi.rcMonitor.top, SWP_NOZORDER | SWP_FRAMECHANGED); //Z-axis la index waprun tila pudhe anne.. WM_NCCalcSize non client area calculate kar ani consider kar
+                SetWindowPos( ghwnd, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right-mi.rcMonitor.left, mi.rcMonitor.bottom-mi.rcMonitor.top, SWP_NOZORDER | SWP_FRAMECHANGED); //WM_NCCalcSize non client area calculate kar ani consider kar
             }    
             ShowCursor(FALSE);
             gbFullScreen=TRUE;
@@ -207,4 +216,56 @@ void ToggleFullScreen(void)
         gbFullScreen=FALSE;
     }
 
+}
+
+int initialize(void)
+{
+    // Function Declarations
+
+    // Variable Declarations
+
+    // Code
+
+    return 0;
+}
+
+void resize(int width, int height)
+{
+    // Code
+    if(height==0)
+        height=1; // To avoid divided by 0 error(illegal statement) in future calls..
+}
+
+void display(void)
+{
+    // Code
+
+}
+
+void update(void)
+{
+    // Code
+
+}
+
+void uninitialize(void)
+{
+    // Function Declarations
+    void ToggleFullscreen(void);
+    // Code
+    if(gbFullScreen)
+    {
+        ToggleFullScreen();
+    }
+    if(ghwnd)
+    {
+        DestroyWindow(ghwnd);
+        ghwnd=NULL;
+    }
+    if(gpFile)
+    {
+        fprintf(gpFile,"Log File Is Successfully Closed.\n");
+        fclose(gpFile);
+        gpFile=NULL;
+    }
 }

@@ -1,6 +1,8 @@
 // Header files
 #include<windows.h>
 
+unsigned int WM_PaintCount=0;
+
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
@@ -71,21 +73,32 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 {
     HDC hdc;
     PAINTSTRUCT ps;
-    RECT rc;
+    static RECT rc;
     TCHAR str[]=TEXT("Hello World!!!");
+    TCHAR strCount[]=TEXT("");
 
     // Code
     switch(iMsg)
     {
-        case WM_PAINT:
+        case WM_CREATE:
+            //GetClientRect(hwnd,&rc);
+            break;
+        case WM_SIZE:
             GetClientRect(hwnd,&rc);
+            break;
+        case WM_PAINT:
+            WM_PaintCount+=1;
+            //GetClientRect(hwnd,&rc);
             hdc = BeginPaint(hwnd,&ps);
             SetBkColor(hdc,RGB(0,0,0));
             SetTextColor(hdc,RGB(0,255,0));
             DrawText(hdc, str, -1, &rc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
             EndPaint(hwnd,&ps);
             break;
-
+        case WM_LBUTTONDOWN:
+            wsprintf(strCount,TEXT("%u times WM_PAINT called. "),WM_PaintCount);
+		    MessageBox(hwnd,strCount,TEXT("Result"),MB_OK);
+            break;
         case WM_DESTROY:
             PostQuitMessage(0);
             break;

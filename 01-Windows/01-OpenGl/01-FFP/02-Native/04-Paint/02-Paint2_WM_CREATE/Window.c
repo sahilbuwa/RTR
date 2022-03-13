@@ -88,7 +88,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
             DrawText(hdc, str, -1, &rc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
             EndPaint(hwnd,&ps);
             break;
-
         case WM_DESTROY:
             PostQuitMessage(0);
             break;

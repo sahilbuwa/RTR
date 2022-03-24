@@ -3,16 +3,12 @@
 #include"OGL.h"  //Aplya path (local) madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
-#define _USE_MATH_DEFINES
-#include<math.h>
 
 // OpenGL header files
 #include<GL/gl.h>
-#include<GL/glu.h>
 
 // OpenGL Libraries
 #pragma comment(lib,"OpenGL32.lib") 
-#pragma comment(lib,"GLU32.lib") 
 
 // Defines
 #define WIN_WIDTH 800
@@ -25,11 +21,8 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-float angleCube=0.0f;
-float angleCamera=0.0f;
-float cameraPositionX = 0.0f;
-float cameraPositionY = 0.0f;
-float cameraPositionZ = 0.0f;
+GLfloat identityMatrix[16];
+GLfloat orthographicMatrix[16];
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -280,7 +273,6 @@ int initialize(void)
     pfd.cGreenBits = 8;
     pfd.cBlueBits = 8;
     pfd.cAlphaBits = 8;
-    pfd.cDepthBits = 32; // 24 pan chaltai
     
     // GetDC
     ghdc = GetDC(ghwnd);
@@ -307,14 +299,24 @@ int initialize(void)
     // Clear the screen using black color
     glClearColor(0.0f,0.0f,0.0f,0.0f);
 
-    // Depth Related Changes
-    glClearDepth(1.0f);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-
-    glShadeModel(GL_SMOOTH);
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
-    
+    // Initialization of Matrix Arrays
+    // Initialize Identity Matrix
+    identityMatrix[0] =1.0f;
+    identityMatrix[1] =0.0f;
+    identityMatrix[2] =0.0f;
+    identityMatrix[3] =0.0f;
+    identityMatrix[4] =0.0f;
+    identityMatrix[5] =1.0f;
+    identityMatrix[6] =0.0f;
+    identityMatrix[7] =0.0f;
+    identityMatrix[8] =0.0f;
+    identityMatrix[9] =0.0f;
+    identityMatrix[10]=1.0f;
+    identityMatrix[11]=0.0f;
+    identityMatrix[12]=0.0f;
+    identityMatrix[13]=0.0f;
+    identityMatrix[14]=0.0f;
+    identityMatrix[15]=1.0f;
 
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
@@ -329,136 +331,95 @@ void resize(int width, int height)
 
     glViewport(0,0,(GLsizei)width,(GLsizei)height);
     glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
+    glLoadMatrixf(identityMatrix);
+    GLfloat l, r, b, t, n, f;
 
-    gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
-
+    if(width<=height)
+    {
+        l=-100.0f;
+        r=100.0f;
+        b=((-100.0f)*(((GLfloat)height)/((GLfloat)width)));
+        t=((100.0f)*(((GLfloat)height)/((GLfloat)width)));
+        n=-100.0f;
+        f=100.0f;
+        // glOrtho(-100.0f,
+        //          100.0f,
+        //         ((-100.0f)*(((GLfloat)height)/((GLfloat)width))),
+        //         ((100.0f)*(((GLfloat)height)/((GLfloat)width))),
+        //         -100.0f,
+        //         100.0f);
+        orthographicMatrix[0] = 2.0f / (r-l);
+        orthographicMatrix[1] = 0.0f;
+        orthographicMatrix[2] = 0.0f;
+        orthographicMatrix[3] = 0.0f;
+        orthographicMatrix[4] = 0.0f;
+        orthographicMatrix[5] = 2.0f / (t-b);
+        orthographicMatrix[6] = 0.0f;
+        orthographicMatrix[7] = 0.0f;
+        orthographicMatrix[8] = 0.0f;
+        orthographicMatrix[9] = 0.0f;
+        orthographicMatrix[10] = 2.0f / (n-f);
+        orthographicMatrix[11] = 0.0f;
+        orthographicMatrix[12] = (r+l) / (r-l);
+        orthographicMatrix[13] = (t+b) / (t-b);
+        orthographicMatrix[14] = (f+n) / (f-n);
+        orthographicMatrix[15] = 1.0f;
+        glMultMatrixf(orthographicMatrix);
+    }
+    else
+    {
+        l=((-100.0f)*(((GLfloat)width)/((GLfloat)height)));
+        r=((100.0f)*(((GLfloat)width)/((GLfloat)height)));
+        b=-100.0f;
+        t=100.0f;
+        n=-100.0f;
+        f=100.0f;
+        // glOrtho(((-100.0f)*(((GLfloat)width)/((GLfloat)height))),
+        //         ((100.0f)*(((GLfloat)width)/((GLfloat)height))),
+        //         -100.0f,
+        //          100.0f,
+        //         -100.0f,
+        //          100.0f);
+        orthographicMatrix[0] = 2.0f / (r-l);
+        orthographicMatrix[1] = 0.0f;
+        orthographicMatrix[2] = 0.0f;
+        orthographicMatrix[3] = 0.0f;
+        orthographicMatrix[4] = 0.0f;
+        orthographicMatrix[5] = 2.0f / (t-b);
+        orthographicMatrix[6] = 0.0f;
+        orthographicMatrix[7] = 0.0f;
+        orthographicMatrix[8] = 0.0f;
+        orthographicMatrix[9] = 0.0f;
+        orthographicMatrix[10] = 2.0f / (n-f);
+        orthographicMatrix[11] = 0.0f;
+        orthographicMatrix[12] = (r+l) / (r-l);
+        orthographicMatrix[13] = (t+b) / (t-b);
+        orthographicMatrix[14] = (f+n) / (f-n);
+        orthographicMatrix[15] = 1.0f;
+        glMultMatrixf(orthographicMatrix);
+    }
+    
 }
 
 void display(void)
 {
-    // Variable Declarations
-    
     // Code
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    glTranslatef(0.0f,0.0f,-20.0f);
-    glScalef(1.5f,1.5f,1.5f);
-    glRotatef(45.0f,0.0f,1.0f,0.0f); // Steady in center
-    
+    glClear(GL_COLOR_BUFFER_BIT);
     glBegin(GL_TRIANGLES);
-    /* X axis chya ujwya    bajula +ve
-       X axis chya davwya   bajula -ve
-       Y axis chya varchya  bajula +ve
-       Y axis chya khalchya bajula -ve
-       Z axis chya pudchya  bajula +ve
-       Z axis chya maagchya bajula -ve */
-    
-    // Front Face
 	glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); //Apex
-    glColor3f(0.0f, 1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
-	glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-
-    // Right Face
-    glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
+	glVertex3f(0.0f, 50.0f, 0.0f);
 	glColor3f(0.0f, 1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, -1.0f);
-
-    // Back Face
-    glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glColor3f(0.0f, 1.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-
-    // Left Face
-    glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-    glColor3f(0.0f, 1.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-
+	glVertex3f(-50.0f, -50.0f, 0.0f);
+	glColor3f(0.0f, 0.0f, 1.0f);
+	glVertex3f(50.0f, -50.0f, 0.0f);
 	glEnd();
-
-    glLoadIdentity();
-    gluLookAt(cameraPositionX, cameraPositionY, cameraPositionZ, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
-    glTranslatef(0.0f,0.0f,-20.0f);
-    glScalef(0.3f, 0.3f, 0.3f);
-    glRotatef(angleCube,0.0f,1.0f,0.0f);
-
-    glBegin(GL_QUADS);
-    // Front Face
-	glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(1.0f, 1.0f, 1.0f);
-	glVertex3f(-1.0f, 1.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-
-    // Right Face
-    glColor3f(0.0f, 1.0f, 0.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-
-    // Back Face
-    glColor3f(0.0f, 0.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-
-    // Left Face
-    glColor3f(0.0f, 1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-
-    // Top Face
-    glColor3f(1.0f, 0.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-
-    // Bottom Face
-    glColor3f(0.0f, 1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-
-	glEnd();
-
     SwapBuffers(ghdc);
 }
 
 void update(void)
 {
     // Code
-    // Revolving around itself
-    angleCube=angleCube+0.1f;
-    if(angleCube>=360.0f)
-        angleCube=angleCube-360.0f;
-    // Revolving around pyramid
-    static float i;
-    i=i+0.08f;
-    angleCamera=i*M_PI/180;
-    cameraPositionX= 35.0f * cos(angleCamera);
-    cameraPositionZ= 35.0f * sin(angleCamera);
-    if(i>=360.0f)
-        i=i-360.0f;
+
 }
 
 void uninitialize(void)

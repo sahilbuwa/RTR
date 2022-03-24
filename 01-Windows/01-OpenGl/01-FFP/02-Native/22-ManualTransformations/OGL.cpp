@@ -4,7 +4,7 @@
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
 #define _USE_MATH_DEFINES
-#include<math.h>
+#include<math.h> //For M_PI and trigonometric functions
 
 // OpenGL header files
 #include<GL/gl.h>
@@ -26,10 +26,12 @@ BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
 float angleCube=0.0f;
-float angleCamera=0.0f;
-float cameraPositionX = 0.0f;
-float cameraPositionY = 0.0f;
-float cameraPositionZ = 0.0f;
+GLfloat identityMatrix[16];
+GLfloat translationMatrix[16];
+GLfloat scaleMatrix[16];
+GLfloat rotationMatrix_X[16];
+GLfloat rotationMatrix_Y[16];
+GLfloat rotationMatrix_Z[16];
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -315,6 +317,61 @@ int initialize(void)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
     
+    // Initialization of Matrix Arrays
+    // Initialize Identity Matrix
+    identityMatrix[0] =1.0f;
+    identityMatrix[1] =0.0f;
+    identityMatrix[2] =0.0f;
+    identityMatrix[3] =0.0f;
+    identityMatrix[4] =0.0f;
+    identityMatrix[5] =1.0f;
+    identityMatrix[6] =0.0f;
+    identityMatrix[7] =0.0f;
+    identityMatrix[8] =0.0f;
+    identityMatrix[9] =0.0f;
+    identityMatrix[10]=1.0f;
+    identityMatrix[11]=0.0f;
+    identityMatrix[12]=0.0f;
+    identityMatrix[13]=0.0f;
+    identityMatrix[14]=0.0f;
+    identityMatrix[15]=1.0f;
+
+    // Initialize Translation Matrix
+    translationMatrix[0] = 1.0f;
+    translationMatrix[1] = 0.0f;
+    translationMatrix[2] = 0.0f;
+    translationMatrix[3] = 0.0f;
+    translationMatrix[4] = 0.0f;
+    translationMatrix[5] = 1.0f;
+    translationMatrix[6] = 0.0f;
+    translationMatrix[7] = 0.0f;
+    translationMatrix[8] = 0.0f;
+    translationMatrix[9] = 0.0f;
+    translationMatrix[10] = 1.0f;
+    translationMatrix[11] = 0.0f;
+    translationMatrix[12] = 0.0f;
+    translationMatrix[13] = 0.0f;
+    translationMatrix[14] = -5.0f;
+    translationMatrix[15] = 1.0f;
+
+    // Initialize Scale Matrix
+    scaleMatrix[0] = 0.75f;
+    scaleMatrix[1] = 0.0f;
+    scaleMatrix[2] = 0.0f;
+    scaleMatrix[3] = 0.0f;
+    scaleMatrix[4] = 0.0f;
+    scaleMatrix[5] = 0.75f;
+    scaleMatrix[6] = 0.0f;
+    scaleMatrix[7] = 0.0f;
+    scaleMatrix[8] = 0.0f;
+    scaleMatrix[9] = 0.0f;
+    scaleMatrix[10] = 0.75f;
+    scaleMatrix[11] = 0.0f;
+    scaleMatrix[12] = 0.0f;
+    scaleMatrix[13] = 0.0f;
+    scaleMatrix[14] = 0.0f;
+    scaleMatrix[15] = 0.75f;
+    
 
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
@@ -342,59 +399,72 @@ void display(void)
     // Code
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    //glLoadIdentity();
+    glLoadMatrixf(identityMatrix);
 
-    glTranslatef(0.0f,0.0f,-20.0f);
-    glScalef(1.5f,1.5f,1.5f);
-    glRotatef(45.0f,0.0f,1.0f,0.0f); // Steady in center
-    
-    glBegin(GL_TRIANGLES);
-    /* X axis chya ujwya    bajula +ve
-       X axis chya davwya   bajula -ve
-       Y axis chya varchya  bajula +ve
-       Y axis chya khalchya bajula -ve
-       Z axis chya pudchya  bajula +ve
-       Z axis chya maagchya bajula -ve */
-    
-    // Front Face
-	glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); //Apex
-    glColor3f(0.0f, 1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
-	glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
+    //glTranslatef(0.0f,0.0f,-5.0f);
+    glMultMatrixf(translationMatrix);
+    //glScalef(0.75f,0.75f,0.75f);
+    glMultMatrixf(scaleMatrix);
+    //glRotatef(angleCube,1.0f,1.0f,1.0f);
+    float angle=angleCube*(M_PI/180.0f);
+    // X-Rotation Matrix
+    rotationMatrix_X[0] = 1.0f;
+    rotationMatrix_X[1] = 0.0f;
+    rotationMatrix_X[2] = 0.0f;
+    rotationMatrix_X[3] = 0.0f;
+    rotationMatrix_X[4] = 0.0f;
+    rotationMatrix_X[5] = cos(angle);
+    rotationMatrix_X[6] = sin(angle);
+    rotationMatrix_X[7] = 0.0f;
+    rotationMatrix_X[8] = 0.0f;
+    rotationMatrix_X[9] = -sin(angle);
+    rotationMatrix_X[10] = cos(angle);
+    rotationMatrix_X[11] = 0.0f;
+    rotationMatrix_X[12] = 0.0f;
+    rotationMatrix_X[13] = 0.0f;
+    rotationMatrix_X[14] = 0.0f;
+    rotationMatrix_X[15] = 1.0f;
 
-    // Right Face
-    glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-	glColor3f(0.0f, 1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, -1.0f);
+    // Y-Rotation Matrix
+    rotationMatrix_Y[0] = cos(angle);
+    rotationMatrix_Y[1] = 0.0f;
+    rotationMatrix_Y[2] = sin(angle);
+    rotationMatrix_Y[3] = 0.0f;
+    rotationMatrix_Y[4] = 0.0f;
+    rotationMatrix_Y[5] = 1.0f;
+    rotationMatrix_Y[6] = 0.0f;
+    rotationMatrix_Y[7] = 0.0f;
+    rotationMatrix_Y[8] = -sin(angle);
+    rotationMatrix_Y[9] = 0.0f;
+    rotationMatrix_Y[10] = cos(angle);
+    rotationMatrix_Y[11] = 0.0f;
+    rotationMatrix_Y[12] = 0.0f;
+    rotationMatrix_Y[13] = 0.0f;
+    rotationMatrix_Y[14] = 0.0f;
+    rotationMatrix_Y[15] = 1.0f;
 
-    // Back Face
-    glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glColor3f(0.0f, 1.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
+    // Z-Rotation Matrix
+    rotationMatrix_Z[0] = cos(angle);
+    rotationMatrix_Z[1] = sin(angle);
+    rotationMatrix_Z[2] = 0.0f;
+    rotationMatrix_Z[3] = 0.0f;
+    rotationMatrix_Z[4] = -sin(angle);
+    rotationMatrix_Z[5] = cos(angle);
+    rotationMatrix_Z[6] = 0.0f;
+    rotationMatrix_Z[7] = 0.0f;
+    rotationMatrix_Z[8] = 0.0f;
+    rotationMatrix_Z[9] = 0.0f;
+    rotationMatrix_Z[10] = 1.0f;
+    rotationMatrix_Z[11] = 0.0f;
+    rotationMatrix_Z[12] = 0.0f;
+    rotationMatrix_Z[13] = 0.0f;
+    rotationMatrix_Z[14] = 0.0f;
+    rotationMatrix_Z[15] = 1.0f;
 
-    // Left Face
-    glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-    glColor3f(0.0f, 1.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-
-	glEnd();
-
-    glLoadIdentity();
-    gluLookAt(cameraPositionX, cameraPositionY, cameraPositionZ, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
-    glTranslatef(0.0f,0.0f,-20.0f);
-    glScalef(0.3f, 0.3f, 0.3f);
-    glRotatef(angleCube,0.0f,1.0f,0.0f);
+    glMultMatrixf(rotationMatrix_X);
+    glMultMatrixf(rotationMatrix_Y);
+    glMultMatrixf(rotationMatrix_Z);
 
     glBegin(GL_QUADS);
     // Front Face
@@ -433,7 +503,7 @@ void display(void)
     glVertex3f(1.0f, 1.0f, 1.0f);
 
     // Bottom Face
-    glColor3f(0.0f, 1.0f, 1.0f);
+    glColor3f(1.0f, 1.0f, 0.0f);
     glVertex3f(1.0f, -1.0f, -1.0f);
     glVertex3f(-1.0f, -1.0f, -1.0f);
     glVertex3f(-1.0f, -1.0f, 1.0f);
@@ -447,18 +517,10 @@ void display(void)
 void update(void)
 {
     // Code
-    // Revolving around itself
     angleCube=angleCube+0.1f;
     if(angleCube>=360.0f)
         angleCube=angleCube-360.0f;
-    // Revolving around pyramid
-    static float i;
-    i=i+0.08f;
-    angleCamera=i*M_PI/180;
-    cameraPositionX= 35.0f * cos(angleCamera);
-    cameraPositionZ= 35.0f * sin(angleCamera);
-    if(i>=360.0f)
-        i=i-360.0f;
+
 }
 
 void uninitialize(void)

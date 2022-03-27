@@ -23,9 +23,7 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-float anglePyramid=0.0f;
-float angleCube=0.0f;
-
+int gWidth = 0,gHeight = 0;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -199,12 +197,42 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 27:
                     DestroyWindow(hwnd);
                     break;
+                case 49:
+                    glViewport(0.0f, 0.0f, gWidth/2.0f , gHeight/2.0f);
+                    break;
+                case 50:
+                    glViewport(gWidth/2.0f, 0.0f, gWidth/2.0f , gHeight/2.0f);
+                    break;
+                case 51:
+                    glViewport(gWidth/2.0f, gHeight/2.0f, gWidth/2.0f , gHeight/2.0f);
+                    break;
+                case 52:
+                    glViewport(0.0f, gHeight/2.0f, gWidth/2.0f , gHeight/2.0f);
+                    break;
+                case 53:
+                    glViewport(0.0f, 0.0f, gWidth, gHeight/2.0f);
+                    break;
+                case 54:
+                    glViewport(0.0f, gHeight/2.0f, gWidth, gHeight/2.0f);
+                    break;
+                case 55:
+                    glViewport(0.0f, 0.0f, gWidth/2.0, gHeight);
+                    break;
+                case 56:
+                    glViewport(gWidth/2.0f, 0.0f, gWidth/2.0f, gHeight);
+                    break;
+                case 57:
+                    glViewport(gWidth/4.0f, gHeight/4.0f, gWidth/2.0f, gHeight/2.0f);
+                    break;
                 default:
+                    glViewport(0.0f, 0.0f, gWidth, gHeight);
                     break;
             }
             break;
         case WM_SIZE:
             resize(LOWORD(lParam),HIWORD(lParam));
+            gWidth = LOWORD(lParam);
+            gHeight = HIWORD(lParam);
             break;
         case WM_CLOSE:
             DestroyWindow(hwnd);
@@ -276,7 +304,6 @@ int initialize(void)
     pfd.cGreenBits = 8;
     pfd.cBlueBits = 8;
     pfd.cAlphaBits = 8;
-    pfd.cDepthBits = 32; // 24 pan chaltai
     
     // GetDC
     ghdc = GetDC(ghwnd);
@@ -300,20 +327,10 @@ int initialize(void)
         return -4;
 
     // Here Starts OpenGL code
-    // Clear the screen using black color
-    glClearColor(0.0f,0.0f,0.0f,0.0f);
-
-    // Depth Related Changes
-    glClearDepth(1.0f);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-
-    glShadeModel(GL_SMOOTH);
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
-    
-
+    // Clear the screen using blue color
+    glClearColor(0.0f,0.0f,1.0f,1.0f);
     // Warmup Resize Call
-    resize(WIN_WIDTH,WIN_HEIGHT);
+    resize(WIN_WIDTH, WIN_HEIGHT);
     return 0;
 }
 
@@ -333,71 +350,24 @@ void resize(int width, int height)
 
 void display(void)
 {
-    // Variable Declarations
-    
     // Code
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    glTranslatef(0.0f,0.0f,-6.0f);
-    glScalef(0.75f, 0.75f, 0.75f);
-    glRotatef(angleCube,1.0f,1.0f,1.0f);
+    glTranslatef(0.0f,0.0f,-3.0f);
     
-    glBegin(GL_QUADS);
-    // Front Face
-	glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(1.0f, 1.0f, 1.0f);
-	glVertex3f(-1.0f, 1.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-
-    // Right Face
-    glColor3f(0.0f, 1.0f, 0.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-
-    // Back Face
-    glColor3f(0.0f, 0.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-
-    // Left Face
-    glColor3f(0.0f, 1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-
-    // Top Face
-    glColor3f(1.0f, 0.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-
-    // Bottom Face
-    glColor3f(0.0f, 1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-
+    glBegin(GL_TRIANGLES);
+	glVertex3f(0.0f, 1.0f, 0.0f);
+	glVertex3f(-1.0f, -1.0f, 0.0f);
+	glVertex3f(1.0f, -1.0f, 0.0f);
 	glEnd();
-
     SwapBuffers(ghdc);
 }
 
 void update(void)
 {
     // Code
-    angleCube=angleCube+0.1f;
-    if(angleCube>=360.0f)
-        angleCube=angleCube-360.0f;
 
 }
 

@@ -1,0 +1,3 @@
+Log File Is Successfully Created. 
+OpenGL context setting successfull.
+Log File Is Successfully Closed.

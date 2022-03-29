@@ -3,6 +3,7 @@
 
 //global variables
 bool bFullScreen = false;
+float x=0.0f;
 
 //Entry-Point Function
 int main(int argc,char *argv[])
@@ -11,13 +12,14 @@ int main(int argc,char *argv[])
 	void initialize(void);
 	void resize(int, int);
 	void display(void);
+	void update(void);
 	void keyboard(unsigned char, int, int);
 	void mouse(int, int, int, int);
 	void uninitialize(void);
 
 	//code
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH); // GLUT_DEPTH is a must whenever we deal with 3D.
 	glutInitWindowSize(800, 600);
 	glutInitWindowPosition(100, 100);
 
@@ -41,6 +43,13 @@ void initialize(void)
 {
 	//code
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	
+	glClearDepth(1.0f);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+
+	glShadeModel(GL_SMOOTH);
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
 }
 
@@ -48,7 +57,13 @@ void initialize(void)
 void resize(int width, int height)
 {
 	//code
-	glViewport(0, 0, width, height);
+	if(height<=0)
+		height=1;
+	glViewport(0, 0,(GLsizei) width, (GLsizei)height);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	glFrustum(-1.0f, 1.0f, -1.0f, 1.0f, 1.5f, 20.0f);
 
 }
 
@@ -56,14 +71,18 @@ void resize(int width, int height)
 void display(void)
 {
 	//code
-	glClear(GL_COLOR_BUFFER_BIT);
-	glBegin(GL_TRIANGLES);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	gluLookAt(2.0f, 0.0f, 5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f); // View Transformation
+	glScalef(1.0f, 2.0f, 1.0f);
+
+	glutWireCube(1.0f);
 	
-	glEnd();
 	glutSwapBuffers();
 
 }
-
 
 void keyboard(unsigned char key,int x,int y )
 {

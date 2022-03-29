@@ -6,9 +6,11 @@
 
 // OpenGL header files
 #include<GL/gl.h>
+#include<GL/glu.h>
 
 // OpenGL Libraries
 #pragma comment(lib,"OpenGL32.lib") 
+#pragma comment(lib,"GLU32.lib") 
 
 // Defines
 #define WIN_WIDTH 800
@@ -21,6 +23,7 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
+float angleTriangle=0.0f;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -61,11 +64,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
     wndclass.lpfnWndProc = WndProc;
     wndclass.hInstance = hInstance;
     wndclass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH); // BLACK_BRUSH
-    wndclass.hIcon = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON3)); //ID of icon , MYICON int aslyane tyala string madhe convert karnyasathi MAKEINTRESOURCE macro waparaava laagto
+    wndclass.hIcon = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON)); //ID of icon , MYICON int aslyane tyala string madhe convert karnyasathi MAKEINTRESOURCE macro waparaava laagto
     wndclass.hCursor = LoadCursor(NULL , IDC_ARROW); // ID of cursor
     wndclass.lpszClassName = szAppName;
     wndclass.lpszMenuName = NULL;
-    wndclass.hIconSm = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON3)); //Chotu Icon sathi 
+    wndclass.hIconSm = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON)); //Chotu Icon sathi 
 
     // Register The WNDCLASSEX
     RegisterClassEx(&wndclass);
@@ -73,7 +76,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
     // Create The Window
     hwnd = CreateWindowEx ( WS_EX_APPWINDOW,
                             szAppName,
-                            TEXT("Sahil Ajit Buwa - OGL Window"),
+                            TEXT("Sahil Ajit Buwa - OGL window"),
                             WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE,
                             (GetSystemMetrics(SM_CXSCREEN)-WIN_WIDTH)/2, 
                             (GetSystemMetrics(SM_CYSCREEN)-WIN_HEIGHT)/2,
@@ -136,7 +139,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
             }
-
         }
         else
         {
@@ -256,7 +258,7 @@ void ToggleFullScreen(void)
 int initialize(void)
 {
     // Function Declarations
-
+    void resize(int,int);
     // Variable Declarations
     PIXELFORMATDESCRIPTOR pfd;
     int iPixelFormatIndex=0;
@@ -286,7 +288,7 @@ int initialize(void)
         return -2;
     
     // Create OpenGL rendereing context
-    ghrc = wglCreateContext(ghdc); // Windows System Integration - Attache naav , June naav - Windows Graphics Library
+    ghrc = wglCreateContext(ghdc);
     if(ghrc==NULL)
         return -3;
 
@@ -296,7 +298,9 @@ int initialize(void)
 
     // Here Starts OpenGL code
     // Clear the screen using blue color
-    glClearColor(0.0f,0.0f,1.0f,1.0f);
+    glClearColor(0.0f,0.0f,0.0f,1.0f);
+    // Warmup Resize Call
+    resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
 }
 
@@ -307,13 +311,45 @@ void resize(int width, int height)
         height=1; // To avoid divided by 0 error(illegal statement) in future calls..
 
     glViewport(0,0,(GLsizei)width,(GLsizei)height);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+
+    gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
+
 }
 
 void display(void)
 {
     // Code
     glClear(GL_COLOR_BUFFER_BIT);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity(); 
     
+    glTranslatef(0.0f, 0.0f, -3.0f);
+
+    // X axis
+    glEnable(GL_LINE_SMOOTH);
+    glLineWidth(3.0f);
+    glBegin(GL_LINES);
+    
+    glColor3f(1.0f, 0.0f, 0.0f);
+	glVertex3f(1.25f, 0.0f, 0.0f);
+    glVertex3f(-1.25f, 0.0f, 0.0f);
+	glEnd();
+
+    // Graph lines
+    glLineWidth(1.5f);
+    glBegin(GL_LINES);
+    glColor3f(0.0f, 0.0f, 1.0f);
+    for(float i=-1.25f;i<=1.25f;i+=0.0625f)
+    {
+        if(i==0.0f)
+            continue;
+        glVertex3f(1.25f, i, 0.0f);
+        glVertex3f(-1.25f, i, 0.0f);
+    }
+    glEnd();
+    glDisable(GL_LINE_SMOOTH);
     SwapBuffers(ghdc);
 }
 

@@ -3,7 +3,7 @@
 
 struct Node
 {
-    char data;
+    float data;
     struct Node *next;
     struct Node *prev;
 };
@@ -13,12 +13,13 @@ typedef struct Node node_t;
 // Function Declarations
 node_t* CreateLinkedList();
 void Display(node_t*);
-void InsertAtPos(node_t*,char,int);
+void InsertAtPos(node_t*,float,int);
 void DeleteAtPos(node_t*,int);
-void Search(node_t*,char);
-void InsertAtFirst(node_t*,char);
-void InsertAtLast(node_t*,char);
+void Search(node_t*,float);
+void InsertAtFirst(node_t*,float);
+void InsertAtLast(node_t*,float);
 void FreeList(node_t*);
+
 int main(void)
 {
     node_t* p_head;
@@ -27,32 +28,35 @@ int main(void)
     Display(p_head);
 
     printf("\n**********************************************************************************\nInserting Elements in List\n\n");
-    InsertAtFirst(p_head,'A');
+    InsertAtFirst(p_head,1.1f);
     Display(p_head);
 
-    InsertAtFirst(p_head,'B');
+    InsertAtFirst(p_head,2.2f);
     Display(p_head);
 
-    InsertAtFirst(p_head,'C');
+    InsertAtFirst(p_head,3.3f);
     Display(p_head);
 
-    InsertAtLast(p_head,'D');
+    InsertAtLast(p_head,4.4f);
     Display(p_head);
 
-    InsertAtPos(p_head,'E',1);
+    InsertAtPos(p_head,5.5f,1);
     Display(p_head);
 
-    InsertAtPos(p_head,'F',5);
+    InsertAtPos(p_head,6.6f,5);
     Display(p_head);
 
-    InsertAtPos(p_head,'G',10);
+    InsertAtPos(p_head,7.7f,10);
+    Display(p_head);
+
+    InsertAtPos(p_head,7.7f,7);
     Display(p_head);
 
     printf("\n**********************************************************************************\nSearching of Elements from List\n\n");
-    Search(p_head,'E');
+    Search(p_head,5.5f);
     Display(p_head);
 
-    Search(p_head, 'N');
+    Search(p_head,25.3f);
     Display(p_head);
 
     printf("\n**********************************************************************************\nDeletion of Elements of List\n\n");
@@ -68,10 +72,11 @@ int main(void)
     DeleteAtPos(p_head, 4);
     Display(p_head);
 
-    // printf("\n**********************************************************************************\nFinal List --->>>List\n\n");
-    // Display(p_head);
+    printf("\n**********************************************************************************\nFinal List\n\n");
+    Display(p_head);
 
-    // FreeList(p_head);
+    FreeList(p_head);
+    Display(p_head);
 
     return(0);
 }
@@ -101,7 +106,7 @@ void Display(node_t* p_head)
         while(p_traverse!=NULL)
         {
             
-            printf("|%c|->",p_traverse->data);
+            printf("|%f|->",p_traverse->data);
             p_traverse=p_traverse->next;
         }
         printf("\n----------------------------------------------------\n");
@@ -113,7 +118,7 @@ void Display(node_t* p_head)
     }
 }
 
-void InsertAtFirst(node_t* p_head,char data)
+void InsertAtFirst(node_t* p_head,float data)
 {
     node_t* p_newnode;
     p_newnode=malloc(sizeof(struct Node));
@@ -136,11 +141,10 @@ void InsertAtFirst(node_t* p_head,char data)
         p_newnode->data=data;
         p_newnode->prev=p_head;
         p_head->next = p_newnode;
-        
     }
 }
 
-void InsertAtLast(node_t* p_head,char data)
+void InsertAtLast(node_t* p_head,float data)
 {
     node_t* p_newnode;
     p_newnode=malloc(sizeof(struct Node));
@@ -174,7 +178,7 @@ void InsertAtLast(node_t* p_head,char data)
     }
 }
 
-void InsertAtPos(node_t* p_head,char data,int pos)
+void InsertAtPos(node_t* p_head,float data,int pos)
 {
     int npos=pos;
     node_t* p_newnode;
@@ -184,12 +188,13 @@ void InsertAtPos(node_t* p_head,char data,int pos)
         puts("Memory not allocated.\n");
         exit(0);
     }
-    if((p_head->next==NULL) && (pos==1) )
+    if((p_head->next==NULL) && (pos==1) ) // First thikani add karnyasathi
     {
         p_newnode->next=p_head;
         p_newnode->data=data;
         p_newnode->prev=p_head;
         p_head->next=p_newnode;
+        return;
     }
 
     node_t* p_traverse;
@@ -201,11 +206,21 @@ void InsertAtPos(node_t* p_head,char data,int pos)
     }
     if(pos==1)
     {
-        p_newnode->next=p_traverse->next;
-        p_traverse->next->prev=p_newnode;
-        p_newnode->data=data;
-        p_newnode->prev=p_traverse;
-        p_traverse->next=p_newnode;
+        if(p_traverse->next!=NULL) // 1st ani last sodun saglyansathi
+        {
+            p_newnode->next=p_traverse->next;
+            p_traverse->next->prev=p_newnode;
+            p_newnode->data=data;
+            p_newnode->prev=p_traverse;
+            p_traverse->next=p_newnode;
+        }
+        else // last index  la add kela tr
+        {
+            p_traverse->next=p_newnode;
+            p_newnode->data=data;
+            p_newnode->next=NULL;
+            p_newnode->prev=p_traverse;
+        }
     }
     else
     {
@@ -220,12 +235,11 @@ void DeleteAtPos(node_t* p_head, int pos)
     int npos = pos,trav_pos=1;
     node_t* p_traverse = NULL;
     node_t* p_temp = NULL;
-    p_traverse=p_head;
     if(pos==1) // 1st node delete karaichi ahe.
     {
         if(p_head->next->next==NULL) // List madhe 1ch element ahe.
         {
-            p_temp=p_traverse->next;
+            p_temp=p_head->next;
             p_head->next=NULL;
             free(p_temp);
             p_temp->next=NULL;
@@ -236,7 +250,7 @@ void DeleteAtPos(node_t* p_head, int pos)
         }
         else // List madhe 1 peksha jast element ahet.
         {
-            p_temp = p_traverse->next;
+            p_temp = p_head->next;
             p_temp->next->prev=p_head;
             p_head->next = p_temp->next;
             free(p_temp);
@@ -247,7 +261,7 @@ void DeleteAtPos(node_t* p_head, int pos)
             printf("\n----------------------------------------------------\n");
         }
     }
-    else
+    else // 1st node sodun bakichyansathi.
     {
         p_traverse=p_head->next;
         while ((trav_pos<(pos-1)) && (p_traverse->next!= NULL))
@@ -258,16 +272,26 @@ void DeleteAtPos(node_t* p_head, int pos)
         if (trav_pos==(pos-1))
         {
             p_temp = p_traverse->next;
-            p_temp->next->prev=p_traverse;
-            p_traverse->next = p_temp->next;
-            free(p_temp);
-            p_temp->next = NULL;
-            p_temp->prev = NULL;
+            if(p_temp->next!=NULL) // first ani last sodun saglya nodes sathi.
+            {
+                p_temp->next->prev=p_traverse;
+                p_traverse->next = p_temp->next;
+                free(p_temp);
+                p_temp->next = NULL;
+                p_temp->prev = NULL;
+            }
+            else // Last node sathi.
+            {
+                p_traverse->next=NULL;
+                p_temp->next=NULL;
+                p_temp->prev=NULL;
+                free(p_temp);
+            }
             printf("\n----------------------------------------------------\n");
             printf("\nNode %d deleted successfully\n", npos);
             printf("\n----------------------------------------------------\n");
         }
-        else
+        else // position sapdli nai tr
         {
             printf("\n----------------------------------------------------\n");
             printf("%d position is Invalid !!! Deletion Unsuccessfull.\n", npos);
@@ -276,7 +300,7 @@ void DeleteAtPos(node_t* p_head, int pos)
     }
 }
 
-void Search(node_t* p_head,char data)
+void Search(node_t* p_head,float data)
 {
     struct Node *p_traverse;
     int pos=1;
@@ -292,7 +316,7 @@ void Search(node_t* p_head,char data)
         }
         if(p_traverse->data==data)
         {
-            printf("%c is found at position %d.",data,pos);
+            printf("%f is found at position %d.",data,pos);
         }
         else
         {
@@ -317,11 +341,10 @@ void FreeList(node_t* p_head)
     while (p_run != NULL)
     {
         p_temp = p_run->next;
+        p_run->next = NULL;
+        p_run->prev = NULL;
         free(p_run);
         p_run = p_temp;
     }
-    p_head->next = NULL;
-    p_head->prev = NULL;
-    free(p_head);
     printf("\nList Destroyed!!\n\n");
 }

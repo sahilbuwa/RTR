@@ -21,6 +21,8 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
+GLfloat identityMatrix[16];
+GLfloat orthographicMatrix[16];
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -61,11 +63,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
     wndclass.lpfnWndProc = WndProc;
     wndclass.hInstance = hInstance;
     wndclass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH); // BLACK_BRUSH
-    wndclass.hIcon = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON3)); //ID of icon , MYICON int aslyane tyala string madhe convert karnyasathi MAKEINTRESOURCE macro waparaava laagto
+    wndclass.hIcon = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON)); //ID of icon , MYICON int aslyane tyala string madhe convert karnyasathi MAKEINTRESOURCE macro waparaava laagto
     wndclass.hCursor = LoadCursor(NULL , IDC_ARROW); // ID of cursor
     wndclass.lpszClassName = szAppName;
     wndclass.lpszMenuName = NULL;
-    wndclass.hIconSm = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON3)); //Chotu Icon sathi 
+    wndclass.hIconSm = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON)); //Chotu Icon sathi 
 
     // Register The WNDCLASSEX
     RegisterClassEx(&wndclass);
@@ -73,7 +75,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
     // Create The Window
     hwnd = CreateWindowEx ( WS_EX_APPWINDOW,
                             szAppName,
-                            TEXT("Sahil Ajit Buwa - OGL Window"),
+                            TEXT("Sahil Ajit Buwa - OGL window"),
                             WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE,
                             (GetSystemMetrics(SM_CXSCREEN)-WIN_WIDTH)/2, 
                             (GetSystemMetrics(SM_CYSCREEN)-WIN_HEIGHT)/2,
@@ -136,7 +138,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
             }
-
         }
         else
         {
@@ -256,7 +257,7 @@ void ToggleFullScreen(void)
 int initialize(void)
 {
     // Function Declarations
-
+    void resize(int,int);
     // Variable Declarations
     PIXELFORMATDESCRIPTOR pfd;
     int iPixelFormatIndex=0;
@@ -286,7 +287,7 @@ int initialize(void)
         return -2;
     
     // Create OpenGL rendereing context
-    ghrc = wglCreateContext(ghdc); // Windows System Integration - Attache naav , June naav - Windows Graphics Library
+    ghrc = wglCreateContext(ghdc);
     if(ghrc==NULL)
         return -3;
 
@@ -295,8 +296,30 @@ int initialize(void)
         return -4;
 
     // Here Starts OpenGL code
-    // Clear the screen using blue color
-    glClearColor(0.0f,0.0f,1.0f,1.0f);
+    // Clear the screen using black color
+    glClearColor(0.0f,0.0f,0.0f,0.0f);
+
+    // Initialization of Matrix Arrays
+    // Initialize Identity Matrix
+    identityMatrix[0] =1.0f;
+    identityMatrix[1] =0.0f;
+    identityMatrix[2] =0.0f;
+    identityMatrix[3] =0.0f;
+    identityMatrix[4] =0.0f;
+    identityMatrix[5] =1.0f;
+    identityMatrix[6] =0.0f;
+    identityMatrix[7] =0.0f;
+    identityMatrix[8] =0.0f;
+    identityMatrix[9] =0.0f;
+    identityMatrix[10]=1.0f;
+    identityMatrix[11]=0.0f;
+    identityMatrix[12]=0.0f;
+    identityMatrix[13]=0.0f;
+    identityMatrix[14]=0.0f;
+    identityMatrix[15]=1.0f;
+
+    // Warmup Resize Call
+    resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
 }
 
@@ -307,13 +330,89 @@ void resize(int width, int height)
         height=1; // To avoid divided by 0 error(illegal statement) in future calls..
 
     glViewport(0,0,(GLsizei)width,(GLsizei)height);
+    glMatrixMode(GL_PROJECTION);
+    glLoadMatrixf(identityMatrix);
+    GLfloat l, r, b, t, n, f;
+
+    if(width<=height)
+    {
+        l=-100.0f;
+        r=100.0f;
+        b=((-100.0f)*(((GLfloat)height)/((GLfloat)width)));
+        t=((100.0f)*(((GLfloat)height)/((GLfloat)width)));
+        n=-100.0f;
+        f=100.0f;
+        // glOrtho(-100.0f,
+        //          100.0f,
+        //         ((-100.0f)*(((GLfloat)height)/((GLfloat)width))),
+        //         ((100.0f)*(((GLfloat)height)/((GLfloat)width))),
+        //         -100.0f,
+        //         100.0f);
+        orthographicMatrix[0] = 2.0f / (r-l);
+        orthographicMatrix[1] = 0.0f;
+        orthographicMatrix[2] = 0.0f;
+        orthographicMatrix[3] = 0.0f;
+        orthographicMatrix[4] = 0.0f;
+        orthographicMatrix[5] = 2.0f / (t-b);
+        orthographicMatrix[6] = 0.0f;
+        orthographicMatrix[7] = 0.0f;
+        orthographicMatrix[8] = 0.0f;
+        orthographicMatrix[9] = 0.0f;
+        orthographicMatrix[10] = 2.0f / (n-f);
+        orthographicMatrix[11] = 0.0f;
+        orthographicMatrix[12] = (r+l) / (r-l);
+        orthographicMatrix[13] = (t+b) / (t-b);
+        orthographicMatrix[14] = (f+n) / (f-n);
+        orthographicMatrix[15] = 1.0f;
+        glMultMatrixf(orthographicMatrix);
+    }
+    else
+    {
+        l=((-100.0f)*(((GLfloat)width)/((GLfloat)height)));
+        r=((100.0f)*(((GLfloat)width)/((GLfloat)height)));
+        b=-100.0f;
+        t=100.0f;
+        n=-100.0f;
+        f=100.0f;
+        // glOrtho(((-100.0f)*(((GLfloat)width)/((GLfloat)height))),
+        //         ((100.0f)*(((GLfloat)width)/((GLfloat)height))),
+        //         -100.0f,
+        //          100.0f,
+        //         -100.0f,
+        //          100.0f);
+        orthographicMatrix[0] = 2.0f / (r-l);
+        orthographicMatrix[1] = 0.0f;
+        orthographicMatrix[2] = 0.0f;
+        orthographicMatrix[3] = 0.0f;
+        orthographicMatrix[4] = 0.0f;
+        orthographicMatrix[5] = 2.0f / (t-b);
+        orthographicMatrix[6] = 0.0f;
+        orthographicMatrix[7] = 0.0f;
+        orthographicMatrix[8] = 0.0f;
+        orthographicMatrix[9] = 0.0f;
+        orthographicMatrix[10] = 2.0f / (n-f);
+        orthographicMatrix[11] = 0.0f;
+        orthographicMatrix[12] = (r+l) / (r-l);
+        orthographicMatrix[13] = (t+b) / (t-b);
+        orthographicMatrix[14] = (f+n) / (f-n);
+        orthographicMatrix[15] = 1.0f;
+        glMultMatrixf(orthographicMatrix);
+    }
+    
 }
 
 void display(void)
 {
     // Code
     glClear(GL_COLOR_BUFFER_BIT);
-    
+    glBegin(GL_TRIANGLES);
+	glColor3f(1.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, 50.0f, 0.0f);
+	glColor3f(0.0f, 1.0f, 0.0f);
+	glVertex3f(-50.0f, -50.0f, 0.0f);
+	glColor3f(0.0f, 0.0f, 1.0f);
+	glVertex3f(50.0f, -50.0f, 0.0f);
+	glEnd();
     SwapBuffers(ghdc);
 }
 

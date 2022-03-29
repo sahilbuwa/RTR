@@ -3,12 +3,16 @@
 #include"OGL.h"  //Aplya path (local) madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
+#define _USE_MATH_DEFINES
+#include<math.h>
 
 // OpenGL header files
 #include<GL/gl.h>
+#include<GL/glu.h>
 
 // OpenGL Libraries
 #pragma comment(lib,"OpenGL32.lib") 
+#pragma comment(lib,"GLU32.lib") 
 
 // Defines
 #define WIN_WIDTH 800
@@ -21,6 +25,11 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
+float angleCube=0.0f;
+float angleCamera=0.0f;
+float cameraPositionX = 0.0f;
+float cameraPositionY = 0.0f;
+float cameraPositionZ = 0.0f;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -61,11 +70,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
     wndclass.lpfnWndProc = WndProc;
     wndclass.hInstance = hInstance;
     wndclass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH); // BLACK_BRUSH
-    wndclass.hIcon = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON3)); //ID of icon , MYICON int aslyane tyala string madhe convert karnyasathi MAKEINTRESOURCE macro waparaava laagto
+    wndclass.hIcon = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON)); //ID of icon , MYICON int aslyane tyala string madhe convert karnyasathi MAKEINTRESOURCE macro waparaava laagto
     wndclass.hCursor = LoadCursor(NULL , IDC_ARROW); // ID of cursor
     wndclass.lpszClassName = szAppName;
     wndclass.lpszMenuName = NULL;
-    wndclass.hIconSm = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON3)); //Chotu Icon sathi 
+    wndclass.hIconSm = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON)); //Chotu Icon sathi 
 
     // Register The WNDCLASSEX
     RegisterClassEx(&wndclass);
@@ -73,7 +82,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
     // Create The Window
     hwnd = CreateWindowEx ( WS_EX_APPWINDOW,
                             szAppName,
-                            TEXT("Sahil Ajit Buwa - OGL Window"),
+                            TEXT("Sahil Ajit Buwa - OGL window"),
                             WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE,
                             (GetSystemMetrics(SM_CXSCREEN)-WIN_WIDTH)/2, 
                             (GetSystemMetrics(SM_CYSCREEN)-WIN_HEIGHT)/2,
@@ -136,7 +145,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
             }
-
         }
         else
         {
@@ -256,7 +264,7 @@ void ToggleFullScreen(void)
 int initialize(void)
 {
     // Function Declarations
-
+    void resize(int,int);
     // Variable Declarations
     PIXELFORMATDESCRIPTOR pfd;
     int iPixelFormatIndex=0;
@@ -272,6 +280,7 @@ int initialize(void)
     pfd.cGreenBits = 8;
     pfd.cBlueBits = 8;
     pfd.cAlphaBits = 8;
+    pfd.cDepthBits = 32; // 24 pan chaltai
     
     // GetDC
     ghdc = GetDC(ghwnd);
@@ -286,7 +295,7 @@ int initialize(void)
         return -2;
     
     // Create OpenGL rendereing context
-    ghrc = wglCreateContext(ghdc); // Windows System Integration - Attache naav , June naav - Windows Graphics Library
+    ghrc = wglCreateContext(ghdc);
     if(ghrc==NULL)
         return -3;
 
@@ -295,8 +304,20 @@ int initialize(void)
         return -4;
 
     // Here Starts OpenGL code
-    // Clear the screen using blue color
-    glClearColor(0.0f,0.0f,1.0f,1.0f);
+    // Clear the screen using black color
+    glClearColor(0.0f,0.0f,0.0f,0.0f);
+
+    // Depth Related Changes
+    glClearDepth(1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+
+    glShadeModel(GL_SMOOTH);
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
+    
+
+    // Warmup Resize Call
+    resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
 }
 
@@ -307,20 +328,137 @@ void resize(int width, int height)
         height=1; // To avoid divided by 0 error(illegal statement) in future calls..
 
     glViewport(0,0,(GLsizei)width,(GLsizei)height);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+
+    gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
+
 }
 
 void display(void)
 {
-    // Code
-    glClear(GL_COLOR_BUFFER_BIT);
+    // Variable Declarations
     
+    // Code
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    glTranslatef(0.0f,0.0f,-20.0f);
+    glScalef(1.5f,1.5f,1.5f);
+    glRotatef(45.0f,0.0f,1.0f,0.0f); // Steady in center
+    
+    glBegin(GL_TRIANGLES);
+    /* X axis chya ujwya    bajula +ve
+       X axis chya davwya   bajula -ve
+       Y axis chya varchya  bajula +ve
+       Y axis chya khalchya bajula -ve
+       Z axis chya pudchya  bajula +ve
+       Z axis chya maagchya bajula -ve */
+    
+    // Front Face
+	glColor3f(1.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f); //Apex
+    glColor3f(0.0f, 1.0f, 0.0f);
+	glVertex3f(-1.0f, -1.0f, 1.0f);
+	glColor3f(0.0f, 0.0f, 1.0f);
+	glVertex3f(1.0f, -1.0f, 1.0f);
+
+    // Right Face
+    glColor3f(1.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
+    glColor3f(0.0f, 0.0f, 1.0f);
+	glVertex3f(1.0f, -1.0f, 1.0f);
+	glColor3f(0.0f, 1.0f, 0.0f);
+	glVertex3f(1.0f, -1.0f, -1.0f);
+
+    // Back Face
+    glColor3f(1.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
+    glColor3f(0.0f, 1.0f, 0.0f);
+    glVertex3f(1.0f, -1.0f, -1.0f);
+    glColor3f(0.0f, 0.0f, 1.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+
+    // Left Face
+    glColor3f(1.0f, 0.0f, 0.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
+    glColor3f(0.0f, 0.0f, 1.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+    glColor3f(0.0f, 1.0f, 0.0f);
+    glVertex3f(-1.0f, -1.0f, 1.0f);
+
+	glEnd();
+
+    glLoadIdentity();
+    gluLookAt(cameraPositionX, cameraPositionY, cameraPositionZ, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+    glTranslatef(0.0f,0.0f,-20.0f);
+    glScalef(0.3f, 0.3f, 0.3f);
+    glRotatef(angleCube,0.0f,1.0f,0.0f);
+
+    glBegin(GL_QUADS);
+    // Front Face
+	glColor3f(1.0f, 0.0f, 0.0f);
+	glVertex3f(1.0f, 1.0f, 1.0f);
+	glVertex3f(-1.0f, 1.0f, 1.0f);
+	glVertex3f(-1.0f, -1.0f, 1.0f);
+	glVertex3f(1.0f, -1.0f, 1.0f);
+
+    // Right Face
+    glColor3f(0.0f, 1.0f, 0.0f);
+    glVertex3f(1.0f, 1.0f, -1.0f);
+    glVertex3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(1.0f, -1.0f, 1.0f);
+    glVertex3f(1.0f, -1.0f, -1.0f);
+
+    // Back Face
+    glColor3f(0.0f, 0.0f, 1.0f);
+    glVertex3f(-1.0f, 1.0f, -1.0f);
+    glVertex3f(1.0f, 1.0f, -1.0f);
+    glVertex3f(1.0f, -1.0f, -1.0f);
+    glVertex3f(-1.0f, -1.0f, -1.0f);
+
+    // Left Face
+    glColor3f(0.0f, 1.0f, 1.0f);
+    glVertex3f(-1.0f, 1.0f, 1.0f);
+    glVertex3f(-1.0f, 1.0f, -1.0f);
+    glVertex3f(-1.0f, -1.0f, -1.0f);
+    glVertex3f(-1.0f, -1.0f, 1.0f);
+
+    // Top Face
+    glColor3f(1.0f, 0.0f, 1.0f);
+    glVertex3f(1.0f, 1.0f, -1.0f);
+    glVertex3f(-1.0f, 1.0f, -1.0f);
+    glVertex3f(-1.0f, 1.0f, 1.0f);
+    glVertex3f(1.0f, 1.0f, 1.0f);
+
+    // Bottom Face
+    glColor3f(0.0f, 1.0f, 1.0f);
+    glVertex3f(1.0f, -1.0f, -1.0f);
+    glVertex3f(-1.0f, -1.0f, -1.0f);
+    glVertex3f(-1.0f, -1.0f, 1.0f);
+    glVertex3f(1.0f, -1.0f, 1.0f);
+
+	glEnd();
+
     SwapBuffers(ghdc);
 }
 
 void update(void)
 {
     // Code
-
+    // Revolving around itself
+    angleCube=angleCube+0.1f;
+    if(angleCube>=360.0f)
+        angleCube=angleCube-360.0f;
+    // Revolving around pyramid
+    static float i;
+    i=i+0.08f;
+    angleCamera=i*M_PI/180;
+    cameraPositionX= 35.0f * cos(angleCamera);
+    cameraPositionZ= 35.0f * sin(angleCamera);
+    if(i>=360.0f)
+        i=i-360.0f;
 }
 
 void uninitialize(void)

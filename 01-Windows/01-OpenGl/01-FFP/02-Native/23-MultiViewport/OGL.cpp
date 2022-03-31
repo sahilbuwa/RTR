@@ -231,8 +231,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
             break;
         case WM_SIZE:
             resize(LOWORD(lParam),HIWORD(lParam));
-            gWidth = LOWORD(lParam);
-            gHeight = HIWORD(lParam);
             break;
         case WM_CLOSE:
             DestroyWindow(hwnd);
@@ -341,6 +339,8 @@ void resize(int width, int height)
         height=1; // To avoid divided by 0 error(illegal statement) in future calls..
 
     glViewport(0,0,(GLsizei)width,(GLsizei)height);
+    gWidth = width;
+    gHeight = height;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 

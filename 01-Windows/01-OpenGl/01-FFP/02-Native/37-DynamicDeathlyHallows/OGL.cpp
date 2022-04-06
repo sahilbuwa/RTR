@@ -25,8 +25,10 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-float angleTriangle=0.0f;
-float x = 0.0f , y =0.0f;
+float trianglex = -3.5f , triangley = -3.5f;
+float circlex = 3.5f , circley = -3.5f;
+float wandy = 3.5f;
+float spinAngleTriangle = -30.0f , spinAngleCircle = 90.0f;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -327,30 +329,36 @@ void display(void)
     glClear(GL_COLOR_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity(); 
-    
-    glTranslatef(-1.0f, -1.0f, -3.1f);
 
+    glEnable(GL_LINE_SMOOTH);
     // Invisibility Cloak
-    glTranslatef(x,y,0.0f);
-    glLineWidth(1.5f);
+    glTranslatef(trianglex,triangley,-6.0f);
+    glRotatef(spinAngleTriangle, 0.0f, 1.0f, 0.0f);
+    glLineWidth(2.0f);
     glBegin(GL_LINE_LOOP);
-    glColor3f(1.0f, 0.5f, 0.0f);
+    glColor3f(0.75f, 0.75f, 0.75f);
     glVertex3f(cos(M_PI_2), sin(M_PI_2), 0.0f);
     glVertex3f(cos(-(M_PI/6.0f)), sin(-(M_PI/6.0f)) , 0.0f);
     glVertex3f(cos((7.0f*M_PI)/6.0f), sin((7.0f*M_PI)/6.0f), 0.0f);
 	glEnd();
 
     // Elder Wand
+    glLoadIdentity();
+    glTranslatef(0.0f,wandy,-6.0f);
+    glLineWidth(2.0f);
     glBegin(GL_LINES);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(cos(M_PI_2), sin(M_PI_2), 0.0f);
-    glVertex3f(0.0f, sin((7.0f*M_PI)/6.0f), 0.0f);
+    glColor3f(0.625f, 0.32f, 0.15f);
+    glVertex3f(cos(M_PI_2), sin(M_PI_2)-0.05f, 0.0f);
+    glVertex3f(0.0f, sin((7.0f*M_PI)/6.0f), 0.0f); 
     glEnd();
 
     // Philosopher's Stone
-    glLineWidth(1.5f);
+    glLoadIdentity();
+    glTranslatef(circlex,circley,-6.0f);
+    glRotatef(spinAngleCircle, 0.0f, 1.0f, 0.0f);
+    glLineWidth(2.0f);
     glBegin(GL_LINE_LOOP);
-    glColor3f(1.0f, 1.0f, 0.0f);
+    glColor3f(1.0f, 0.0f, 0.0f);
     for(int i=0;i<360;i++)
     {
         float angle= i*M_PI / 180;
@@ -358,17 +366,37 @@ void display(void)
     }
     glEnd();
 
-
     SwapBuffers(ghdc);
 }
 
 void update(void)
 {
     // Code
-    if(x <= 1.0f)
-        x=x+0.001f;
-    if(y <= 1.0f)
-        y= y + 0.001f;
+    if(trianglex <= 0.0f && triangley <= 0.0f)
+    {    
+        trianglex = trianglex + 0.001f;
+        triangley = triangley + 0.001f;
+        spinAngleTriangle += 0.5f;
+    }
+    else
+    {   
+        if(circlex >= 0.0f && circley <= 0.0f)
+        {
+            circlex = circlex - 0.001f;
+            circley = circley + 0.001f;
+            spinAngleTriangle += 0.5f;
+            spinAngleCircle += 0.5f;
+        }
+        else
+        {
+            if(wandy >= 0.0f)
+            {
+                wandy = wandy - 0.001f;
+                spinAngleTriangle += 0.5f;
+                spinAngleCircle += 0.5f;
+            }
+        } 
+    }
 }
 
 void uninitialize(void)

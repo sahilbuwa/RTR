@@ -28,7 +28,8 @@ BOOL gbActiveWindow=FALSE;
 float trianglex = -3.5f , triangley = -3.5f;
 float circlex = 3.5f , circley = -3.5f;
 float wandy = 3.5f;
-float spinAngleTriangle = -30.0f , spinAngleCircle = 90.0f;
+float spinAngleTriangle = 0.0f , spinAngleCircle = 0.0f;
+int triangleSpinCount = 0, circleSpinCount = 0; 
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -377,8 +378,19 @@ void update(void)
         trianglex = trianglex + 0.001f;
         triangley = triangley + 0.001f;
         spinAngleTriangle += 0.5f;
+        if(spinAngleTriangle>=360.0f)
+            spinAngleTriangle = spinAngleTriangle - 360.0f;
     }
-    else
+    else if(trianglex >= 0.0f && triangley >= 0.0f && triangleSpinCount <= 4)
+    {
+        spinAngleTriangle += 0.5f;
+        if(spinAngleTriangle>=360.0f)
+        {
+            spinAngleTriangle = spinAngleTriangle - 360.0f;
+            triangleSpinCount += 1;
+        }
+    }
+    else if(triangleSpinCount>4)
     {   
         if(circlex >= 0.0f && circley <= 0.0f)
         {
@@ -386,12 +398,33 @@ void update(void)
             circley = circley + 0.001f;
             spinAngleTriangle += 0.5f;
             spinAngleCircle += 0.5f;
+            if(spinAngleTriangle>=360.0f)
+                spinAngleTriangle = spinAngleTriangle - 360.0f;
+            if(spinAngleCircle>=360.0f)
+                spinAngleCircle = spinAngleCircle - 360.0f;
         }
-        else
+        else if(circlex <= 0.0f && circley >= 0.0f && circleSpinCount <= 4)
         {
-            if(wandy >= 0.0f)
+            spinAngleTriangle += 0.5f;
+            if(spinAngleTriangle>=360.0f)
+                spinAngleTriangle = spinAngleTriangle - 360.0f;
+            spinAngleCircle += 0.5f;
+            if(spinAngleCircle>=360.0f)
+            {
+                spinAngleCircle = spinAngleCircle - 360.0f;
+                circleSpinCount += 1;
+            }
+        }
+        else if(circleSpinCount > 4)
+        {
+            if(wandy >= 0.0f )
             {
                 wandy = wandy - 0.001f;
+                spinAngleTriangle += 0.5f;
+                spinAngleCircle += 0.5f;
+            }
+            else if(wandy <= 0.0f && (int)spinAngleTriangle % (int)180.0f != 0)
+            {
                 spinAngleTriangle += 0.5f;
                 spinAngleCircle += 0.5f;
             }

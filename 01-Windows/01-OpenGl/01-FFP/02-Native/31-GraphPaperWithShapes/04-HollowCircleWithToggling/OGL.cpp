@@ -3,6 +3,8 @@
 #include"OGL.h"  //Aplya path (local) madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
+#define _USE_MATH_DEFINES
+#include<math.h> // cos() , sin() sathi
 
 // OpenGL header files
 #include<GL/gl.h>
@@ -23,7 +25,8 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-int gWidth = 0,gHeight = 0;
+float angleTriangle=0.0f;
+int toggleCircleIndex=0;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -197,35 +200,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 27:
                     DestroyWindow(hwnd);
                     break;
-                case 49:
-                    glViewport(0.0f, 0.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 50:
-                    glViewport(gWidth/2.0f, 0.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 51:
-                    glViewport(gWidth/2.0f, gHeight/2.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 52:
-                    glViewport(0.0f, gHeight/2.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 53:
-                    glViewport(0.0f, 0.0f, gWidth, gHeight/2.0f);
-                    break;
-                case 54:
-                    glViewport(0.0f, gHeight/2.0f, gWidth, gHeight/2.0f);
-                    break;
-                case 55:
-                    glViewport(0.0f, 0.0f, gWidth/2.0, gHeight);
-                    break;
-                case 56:
-                    glViewport(gWidth/2.0f, 0.0f, gWidth/2.0f, gHeight);
-                    break;
-                case 57:
-                    glViewport(gWidth/4.0f, gHeight/4.0f, gWidth/2.0f, gHeight/2.0f);
-                    break;
+                case 67:
+                case 99:
+                    toggleCircleIndex+=1;
+                    if(toggleCircleIndex>=25000)
+                    {
+                        toggleCircleIndex-=25000;
+                    }
                 default:
-                    glViewport(0.0f, 0.0f, gWidth, gHeight);
                     break;
             }
             break;
@@ -326,9 +308,9 @@ int initialize(void)
 
     // Here Starts OpenGL code
     // Clear the screen using blue color
-    glClearColor(0.0f,0.0f,1.0f,1.0f);
+    glClearColor(0.0f,0.0f,0.0f,1.0f);
     // Warmup Resize Call
-    resize(WIN_WIDTH, WIN_HEIGHT);
+    resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
 }
 
@@ -339,8 +321,6 @@ void resize(int width, int height)
         height=1; // To avoid divided by 0 error(illegal statement) in future calls..
 
     glViewport(0,0,(GLsizei)width,(GLsizei)height);
-    gWidth = width;
-    gHeight = height;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
@@ -353,15 +333,80 @@ void display(void)
     // Code
     glClear(GL_COLOR_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    glTranslatef(0.0f,0.0f,-3.0f);
+    glLoadIdentity(); 
     
-    glBegin(GL_TRIANGLES);
-	glVertex3f(0.0f, 1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 0.0f);
+    glTranslatef(0.0f, 0.0f, -3.1f);
+
+    // Graph lines
+    glLineWidth(1.5f);
+    glBegin(GL_LINES);
+    glColor3f(0.0f, 0.0f, 1.0f);
+    for(float i=-1.25f;i<=1.25f;i+=0.0625f)
+    {
+        if(i==0.0f)
+            continue;
+        glVertex3f(1.25f, i, 0.0f);
+        glVertex3f(-1.25f, i, 0.0f);
+    }
+    glEnd();
+
+    // Y axis
+    
+    glLineWidth(3.0f);
+    glBegin(GL_LINES);
+    
+    glColor3f(0.0f, 1.0f, 0.0f);
+	glVertex3f(0.0f, 1.25f, 0.0f);
+    glVertex3f(0.0f, -1.25f, 0.0f);
 	glEnd();
+
+    // Graph lines
+    glLineWidth(1.5f);
+    glBegin(GL_LINES);
+    glColor3f(0.0f, 0.0f, 1.0f);
+    for(float i=-1.25f;i<=1.25f;i+=0.0625f)
+    {
+        if(i==0.0f)
+            continue;
+        glVertex3f(i, 1.25f, 0.0f);
+        glVertex3f(i, -1.25f, 0.0f);
+    }
+    glEnd();
+    
+
+    // X-Axis
+    glLineWidth(3.0f);
+    glBegin(GL_LINES);
+    
+    glColor3f(1.0f, 0.0f, 0.0f);
+	glVertex3f(1.25f, 0.0f, 0.0f);
+    glVertex3f(-1.25f, 0.0f, 0.0f);
+	glEnd();
+
+    if(toggleCircleIndex%2==0)
+    {
+        glLineWidth(1.5f);
+        glBegin(GL_LINE_LOOP);
+        glColor3f(1.0f, 1.0f, 0.0f);
+        for(int i=0;i<360;i++)
+        {
+            float angle= i*M_PI / 180;
+            glVertex3f(1.02f*cos(angle),1.02f*sin(angle), 0.0f);
+        }
+        glEnd();
+    }
+    else
+    {
+        glPointSize(1.5f);
+        glBegin(GL_POINTS);
+        glColor3f(1.0f, 1.0f, 0.0f);
+        for(float i=0.0f;i<360;i+=0.3)
+        {
+            float angle= i*M_PI / 180;
+            glVertex3f(1.02f*cos(angle),1.02f*sin(angle), 0.0f);
+        }
+        glEnd();
+    }
     SwapBuffers(ghdc);
 }
 

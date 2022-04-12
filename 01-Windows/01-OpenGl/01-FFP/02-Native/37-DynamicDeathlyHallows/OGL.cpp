@@ -3,6 +3,8 @@
 #include"OGL.h"  //Aplya path (local) madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
+#define _USE_MATH_DEFINES
+#include<math.h> // cos() , sin() sathi
 
 // OpenGL header files
 #include<GL/gl.h>
@@ -23,7 +25,11 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-int gWidth = 0,gHeight = 0;
+float trianglex = -3.5f , triangley = -3.5f;
+float circlex = 3.5f , circley = -3.5f;
+float wandy = 3.5f;
+float spinAngleTriangle = 0.0f , spinAngleCircle = 0.0f;
+int triangleSpinCount = 0, circleSpinCount = 0; 
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -197,35 +203,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 27:
                     DestroyWindow(hwnd);
                     break;
-                case 49:
-                    glViewport(0.0f, 0.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 50:
-                    glViewport(gWidth/2.0f, 0.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 51:
-                    glViewport(gWidth/2.0f, gHeight/2.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 52:
-                    glViewport(0.0f, gHeight/2.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 53:
-                    glViewport(0.0f, 0.0f, gWidth, gHeight/2.0f);
-                    break;
-                case 54:
-                    glViewport(0.0f, gHeight/2.0f, gWidth, gHeight/2.0f);
-                    break;
-                case 55:
-                    glViewport(0.0f, 0.0f, gWidth/2.0, gHeight);
-                    break;
-                case 56:
-                    glViewport(gWidth/2.0f, 0.0f, gWidth/2.0f, gHeight);
-                    break;
-                case 57:
-                    glViewport(gWidth/4.0f, gHeight/4.0f, gWidth/2.0f, gHeight/2.0f);
-                    break;
                 default:
-                    glViewport(0.0f, 0.0f, gWidth, gHeight);
                     break;
             }
             break;
@@ -326,9 +304,9 @@ int initialize(void)
 
     // Here Starts OpenGL code
     // Clear the screen using blue color
-    glClearColor(0.0f,0.0f,1.0f,1.0f);
+    glClearColor(0.0f,0.0f,0.0f,1.0f);
     // Warmup Resize Call
-    resize(WIN_WIDTH, WIN_HEIGHT);
+    resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
 }
 
@@ -339,8 +317,6 @@ void resize(int width, int height)
         height=1; // To avoid divided by 0 error(illegal statement) in future calls..
 
     glViewport(0,0,(GLsizei)width,(GLsizei)height);
-    gWidth = width;
-    gHeight = height;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
@@ -353,22 +329,107 @@ void display(void)
     // Code
     glClear(GL_COLOR_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    glLoadIdentity(); 
 
-    glTranslatef(0.0f,0.0f,-3.0f);
-    
-    glBegin(GL_TRIANGLES);
-	glVertex3f(0.0f, 1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 0.0f);
+    glEnable(GL_LINE_SMOOTH);
+    // Invisibility Cloak
+    glTranslatef(trianglex,triangley,-6.0f);
+    glRotatef(spinAngleTriangle, 0.0f, 1.0f, 0.0f);
+    glLineWidth(2.0f);
+    glBegin(GL_LINE_LOOP);
+    glColor3f(0.75f, 0.75f, 0.75f);
+    glVertex3f(cos(M_PI_2), sin(M_PI_2), 0.0f);
+    glVertex3f(cos(-(M_PI/6.0f)), sin(-(M_PI/6.0f)) , 0.0f);
+    glVertex3f(cos((7.0f*M_PI)/6.0f), sin((7.0f*M_PI)/6.0f), 0.0f);
 	glEnd();
+
+    // Elder Wand
+    glLoadIdentity();
+    glTranslatef(0.0f,wandy,-6.0f);
+    glLineWidth(2.0f);
+    glBegin(GL_LINES);
+    glColor3f(0.625f, 0.32f, 0.15f);
+    glVertex3f(cos(M_PI_2), sin(M_PI_2)-0.05f, 0.0f);
+    glVertex3f(0.0f, sin((7.0f*M_PI)/6.0f), 0.0f); 
+    glEnd();
+
+    // Philosopher's Stone
+    glLoadIdentity();
+    glTranslatef(circlex,circley,-6.0f);
+    glRotatef(spinAngleCircle, 0.0f, 1.0f, 0.0f);
+    glLineWidth(2.0f);
+    glBegin(GL_LINE_LOOP);
+    glColor3f(1.0f, 0.0f, 0.0f);
+    for(int i=0;i<360;i++)
+    {
+        float angle= i*M_PI / 180;
+        glVertex3f(0.5f*cos(angle),0.5f*sin(angle), 0.0f);
+    }
+    glEnd();
+
     SwapBuffers(ghdc);
 }
 
 void update(void)
 {
     // Code
-
+    if(trianglex <= 0.0f && triangley <= 0.0f)
+    {    
+        trianglex = trianglex + 0.001f;
+        triangley = triangley + 0.001f;
+        spinAngleTriangle += 0.5f;
+        if(spinAngleTriangle>=360.0f)
+            spinAngleTriangle = spinAngleTriangle - 360.0f;
+    }
+    else if(trianglex >= 0.0f && triangley >= 0.0f && triangleSpinCount <= 4)
+    {
+        spinAngleTriangle += 0.5f;
+        if(spinAngleTriangle>=360.0f)
+        {
+            spinAngleTriangle = spinAngleTriangle - 360.0f;
+            triangleSpinCount += 1;
+        }
+    }
+    else if(triangleSpinCount>4)
+    {   
+        if(circlex >= 0.0f && circley <= 0.0f)
+        {
+            circlex = circlex - 0.001f;
+            circley = circley + 0.001f;
+            spinAngleTriangle += 0.5f;
+            spinAngleCircle += 0.5f;
+            if(spinAngleTriangle>=360.0f)
+                spinAngleTriangle = spinAngleTriangle - 360.0f;
+            if(spinAngleCircle>=360.0f)
+                spinAngleCircle = spinAngleCircle - 360.0f;
+        }
+        else if(circlex <= 0.0f && circley >= 0.0f && circleSpinCount <= 4)
+        {
+            spinAngleTriangle += 0.5f;
+            if(spinAngleTriangle>=360.0f)
+                spinAngleTriangle = spinAngleTriangle - 360.0f;
+            spinAngleCircle += 0.5f;
+            if(spinAngleCircle>=360.0f)
+            {
+                spinAngleCircle = spinAngleCircle - 360.0f;
+                circleSpinCount += 1;
+            }
+        }
+        else if(circleSpinCount > 4)
+        {
+            if(wandy >= 0.0f )
+            {
+                wandy = wandy - 0.001f;
+                spinAngleTriangle += 0.5f;
+                spinAngleCircle += 0.5f;
+            }
+            else if(wandy <= 0.0f && (int)spinAngleTriangle % (int)180.0f != 0)
+            {
+                spinAngleTriangle += 0.5f;
+                spinAngleCircle += 0.5f;
+            }
+        } 
+    }
 }
 
 void uninitialize(void)

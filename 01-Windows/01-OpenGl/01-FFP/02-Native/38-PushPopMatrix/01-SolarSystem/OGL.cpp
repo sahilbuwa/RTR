@@ -3,6 +3,8 @@
 #include"OGL.h"  //Aplya path (local) madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
+#define _USE_MATH_DEFINES
+#include<math.h>
 
 // OpenGL header files
 #include<GL/gl.h>
@@ -23,7 +25,8 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-int gWidth = 0,gHeight = 0;
+int Day=0 , Year = 0;
+GLUquadric *quadric = NULL;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -187,6 +190,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 'f':
                     ToggleFullScreen();
                     break;
+                case 'D':
+                    Day = (Day + 6) % 360;
+                    break;
+                case 'd':
+                    Day = (Day - 6) % 360;
+                    break;
+                case 'Y':
+                    Year = (Year + 3) % 360;
+                    break;
+                case 'y':
+                    Year = (Year - 3) % 360;
+                    break;
                 default:
                     break;
             }
@@ -197,35 +212,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 27:
                     DestroyWindow(hwnd);
                     break;
-                case 49:
-                    glViewport(0.0f, 0.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 50:
-                    glViewport(gWidth/2.0f, 0.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 51:
-                    glViewport(gWidth/2.0f, gHeight/2.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 52:
-                    glViewport(0.0f, gHeight/2.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 53:
-                    glViewport(0.0f, 0.0f, gWidth, gHeight/2.0f);
-                    break;
-                case 54:
-                    glViewport(0.0f, gHeight/2.0f, gWidth, gHeight/2.0f);
-                    break;
-                case 55:
-                    glViewport(0.0f, 0.0f, gWidth/2.0, gHeight);
-                    break;
-                case 56:
-                    glViewport(gWidth/2.0f, 0.0f, gWidth/2.0f, gHeight);
-                    break;
-                case 57:
-                    glViewport(gWidth/4.0f, gHeight/4.0f, gWidth/2.0f, gHeight/2.0f);
-                    break;
                 default:
-                    glViewport(0.0f, 0.0f, gWidth, gHeight);
                     break;
             }
             break;
@@ -302,6 +289,7 @@ int initialize(void)
     pfd.cGreenBits = 8;
     pfd.cBlueBits = 8;
     pfd.cAlphaBits = 8;
+    pfd.cDepthBits = 32; // 24 pan chaltai
     
     // GetDC
     ghdc = GetDC(ghwnd);
@@ -325,10 +313,20 @@ int initialize(void)
         return -4;
 
     // Here Starts OpenGL code
-    // Clear the screen using blue color
-    glClearColor(0.0f,0.0f,1.0f,1.0f);
+    // Clear the screen using black color
+    glClearColor(0.0f,0.0f,0.0f,0.0f);
+
+    // Depth Related Changes
+    glClearDepth(1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+
+    glShadeModel(GL_SMOOTH);
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
+    
+
     // Warmup Resize Call
-    resize(WIN_WIDTH, WIN_HEIGHT);
+    resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
 }
 
@@ -339,8 +337,6 @@ void resize(int width, int height)
         height=1; // To avoid divided by 0 error(illegal statement) in future calls..
 
     glViewport(0,0,(GLsizei)width,(GLsizei)height);
-    gWidth = width;
-    gHeight = height;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
@@ -350,25 +346,62 @@ void resize(int width, int height)
 
 void display(void)
 {
+    // Variable Declarations
+    
     // Code
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    glTranslatef(0.0f,0.0f,-3.0f);
+    // View Transformation
+    gluLookAt(0.0f, 0.0f, 5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+    // Save the camera/view Matrix (Push)
+    glPushMatrix();
     
-    glBegin(GL_TRIANGLES);
-	glVertex3f(0.0f, 1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 0.0f);
-	glEnd();
+    glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    // Create Quadric
+    quadric = gluNewQuadric();
+
+    glColor3f(1.0f,1.0f,0.0f);
+    
+    // Draw Sphere
+    gluSphere(quadric, 0.75, 30, 30);
+
+    // Restore the saved camera matrix (Pop)
+    glPopMatrix();
+
+    // Save the current view / camera matrix (Push)
+    glPushMatrix();
+
+    // Rotate around sun
+    glRotatef((GLfloat)Year, 0.0f, 1.0f, 0.0f);
+
+    // Translation from Earth
+    glTranslatef(1.5f, 0.0f, 0.0f);
+
+    glRotatef(90.0f, 1.0f, 0.0f, 0.0f);         // Z-axis Varcha pole saral karun Y-axis varti aanla..
+
+    // Self-rotation / Spinning of Earth
+    glRotatef((GLfloat)Day, 0.0f, 0.0f, 1.0f);
+
+    // Draw Earth
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    quadric=gluNewQuadric();
+
+    glColor3f(0.4f, 0.9f, 1.0f);
+    gluSphere(quadric, 0.2, 20, 20);
+    glPopMatrix();
+    
     SwapBuffers(ghdc);
 }
 
 void update(void)
 {
     // Code
-
+   
 }
 
 void uninitialize(void)

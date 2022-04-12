@@ -3,6 +3,8 @@
 #include"OGL.h"  //Aplya path (local) madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
+#define _USE_MATH_DEFINES
+#include<math.h> // cos() , sin() sathi
 
 // OpenGL header files
 #include<GL/gl.h>
@@ -23,7 +25,16 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-int gWidth = 0,gHeight = 0;
+float ColorsArray[30]={     1.0f,0.0f,0.0f,
+                            0.0f,1.0f,0.0f,
+                            0.0f,0.0f,1.0f,
+                            1.0f,1.0f,0.0f,
+                            1.0f,0.0f,1.0f,
+                            0.0f,1.0f,1.0f,
+                            1.0f,1.0f,1.0f,
+                            0.5f,0.5f,0.5f,
+                            1.0f,0.5f,0.0f,
+                            0.5f,0.0f,0.5f  };
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -197,35 +208,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 27:
                     DestroyWindow(hwnd);
                     break;
-                case 49:
-                    glViewport(0.0f, 0.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 50:
-                    glViewport(gWidth/2.0f, 0.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 51:
-                    glViewport(gWidth/2.0f, gHeight/2.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 52:
-                    glViewport(0.0f, gHeight/2.0f, gWidth/2.0f , gHeight/2.0f);
-                    break;
-                case 53:
-                    glViewport(0.0f, 0.0f, gWidth, gHeight/2.0f);
-                    break;
-                case 54:
-                    glViewport(0.0f, gHeight/2.0f, gWidth, gHeight/2.0f);
-                    break;
-                case 55:
-                    glViewport(0.0f, 0.0f, gWidth/2.0, gHeight);
-                    break;
-                case 56:
-                    glViewport(gWidth/2.0f, 0.0f, gWidth/2.0f, gHeight);
-                    break;
-                case 57:
-                    glViewport(gWidth/4.0f, gHeight/4.0f, gWidth/2.0f, gHeight/2.0f);
-                    break;
                 default:
-                    glViewport(0.0f, 0.0f, gWidth, gHeight);
                     break;
             }
             break;
@@ -326,9 +309,9 @@ int initialize(void)
 
     // Here Starts OpenGL code
     // Clear the screen using blue color
-    glClearColor(0.0f,0.0f,1.0f,1.0f);
+    glClearColor(0.0f,0.0f,0.0f,1.0f);
     // Warmup Resize Call
-    resize(WIN_WIDTH, WIN_HEIGHT);
+    resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
 }
 
@@ -339,8 +322,6 @@ void resize(int width, int height)
         height=1; // To avoid divided by 0 error(illegal statement) in future calls..
 
     glViewport(0,0,(GLsizei)width,(GLsizei)height);
-    gWidth = width;
-    gHeight = height;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
@@ -353,15 +334,25 @@ void display(void)
     // Code
     glClear(GL_COLOR_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    glTranslatef(0.0f,0.0f,-3.0f);
+    glLoadIdentity(); 
     
-    glBegin(GL_TRIANGLES);
-	glVertex3f(0.0f, 1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 0.0f);
-	glEnd();
+    glLineWidth(1.5f);
+    for(int i=1;i<11;i++)
+    {
+        glLoadIdentity();
+        glTranslatef(0.0f, 0.0f, -3.1f);
+        glScalef(0.12f*i,0.12f*i,0.12f*i);
+        glBegin(GL_LINE_LOOP); 
+        glColor3f(ColorsArray[(3*(i-1))+0], ColorsArray[(3*(i-1))+1], ColorsArray[(3*(i-1))+2]);
+        for(int i=0;i<360;i++)
+        {
+            float angle= i*M_PI / 180;
+            glVertex3f(1.02f*cos(angle),1.02f*sin(angle), 0.0f);
+        }
+        glEnd();
+    }
+    
+
     SwapBuffers(ghdc);
 }
 

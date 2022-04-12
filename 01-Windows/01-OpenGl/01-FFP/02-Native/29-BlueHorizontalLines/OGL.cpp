@@ -341,7 +341,7 @@ void display(void)
     glLineWidth(1.5f);
     glBegin(GL_LINES);
     glColor3f(0.0f, 0.0f, 1.0f);
-    for(float i=-1.25f;i<=1.25f;i+=0.0625f)
+    for(float i=-1.26f;i<=1.25f;i+=0.06125f)
     {
         if(i==0.0f)
             continue;

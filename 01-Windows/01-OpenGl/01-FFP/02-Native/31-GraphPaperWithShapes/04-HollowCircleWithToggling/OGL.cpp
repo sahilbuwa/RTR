@@ -25,8 +25,7 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-float angleTriangle=0.0f;
-int toggleCircleIndex=0;
+BOOL toggleCircleIndex=FALSE;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -202,11 +201,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                     break;
                 case 67:
                 case 99:
-                    toggleCircleIndex+=1;
-                    if(toggleCircleIndex>=25000)
-                    {
-                        toggleCircleIndex-=25000;
-                    }
+                    toggleCircleIndex= ~toggleCircleIndex;
+                    break;
                 default:
                     break;
             }
@@ -383,11 +379,11 @@ void display(void)
     glVertex3f(-1.25f, 0.0f, 0.0f);
 	glEnd();
 
-    if(toggleCircleIndex%2==0)
+    if(toggleCircleIndex)
     {
         glLineWidth(1.5f);
         glBegin(GL_LINE_LOOP);
-        glColor3f(1.0f, 1.0f, 0.0f);
+        glColor3f(1.0f, 1.0f, 1.0f);
         for(int i=0;i<360;i++)
         {
             float angle= i*M_PI / 180;

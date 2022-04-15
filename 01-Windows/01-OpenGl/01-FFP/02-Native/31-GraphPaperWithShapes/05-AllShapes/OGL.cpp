@@ -25,11 +25,11 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-int toggleCircleIndex=0;
-int toggleSquareIndex=0;
-int toggleTriangleIndex=0;
-int togglePointIndex=0;
-int toggleGraphPaperIndex=0;
+BOOL toggleCircleIndex = FALSE;
+BOOL toggleSquareIndex = FALSE;
+BOOL toggleTriangleIndex = FALSE;
+BOOL togglePointIndex = FALSE;
+BOOL toggleGraphPaperIndex = FALSE;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -205,33 +205,23 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                     break;
                 case 67:
                 case 99:
-                    toggleCircleIndex+=1;
-                    if(toggleCircleIndex>25000)
-                        toggleCircleIndex-=25000;
+                    toggleCircleIndex= ~toggleCircleIndex;
                     break;
                 case 71:
                 case 103:
-                    toggleGraphPaperIndex+=1;
-                    if(toggleGraphPaperIndex>25000)
-                        toggleGraphPaperIndex-=25000;
+                    toggleGraphPaperIndex= ~toggleGraphPaperIndex;
                     break;
                 case 80:
                 case 112:
-                    togglePointIndex+=1;
-                    if(togglePointIndex>25000)
-                        togglePointIndex-=25000;
+                    togglePointIndex= ~togglePointIndex;
                     break;
                 case 83:
                 case 115:
-                    toggleSquareIndex+=1;
-                    if(toggleSquareIndex>25000)
-                        toggleSquareIndex-=25000;
+                    toggleSquareIndex= ~toggleSquareIndex;
                     break;
                 case 84:
                 case 116:
-                    toggleTriangleIndex+=1;
-                    if(toggleTriangleIndex>25000)
-                        toggleTriangleIndex-=25000;
+                    toggleTriangleIndex= ~toggleTriangleIndex;
                     break;
                 default:
                     break;

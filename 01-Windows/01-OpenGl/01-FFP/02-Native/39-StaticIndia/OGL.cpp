@@ -25,16 +25,7 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-float ColorsArray[30]={     1.0f,0.0f,0.0f,
-                            0.0f,1.0f,0.0f,
-                            0.0f,0.0f,1.0f,
-                            0.0f,1.0f,1.0f,
-                            1.0f,0.0f,1.0f,
-                            1.0f,1.0f,0.0f,
-                            1.0f,1.0f,1.0f,
-                            0.5f,0.5f,0.5f,
-                            1.0f,0.5f,0.0f,
-                            0.5f,0.0f,0.5f  };
+float x=0.0f,y=0.0f;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -331,29 +322,164 @@ void resize(int width, int height)
 
 void display(void)
 {
+    // Function Declarations
+    void DrawLetterI(float,float);
+    void DrawLetterN(float,float);
+    void DrawLetterD(float,float);
+    void DrawLetterA(float,float);
     // Code
     glClear(GL_COLOR_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity(); 
-    
-    glLineWidth(1.5f);
-    for(int i=1;i<11;i++)
-    {
-        glLoadIdentity();
-        glTranslatef(0.0f, 0.0f, -3.1f);
-        glScalef(0.15f*i,0.15f*i,0.15f*i);
-        glBegin(GL_LINE_LOOP); 
-        glColor3f(ColorsArray[(3*(i-1))+0], ColorsArray[(3*(i-1))+1], ColorsArray[(3*(i-1))+2]);
-        glVertex3f(1.02f*cos(M_PI_4),      1.02f*sin(M_PI_4), 0.0f);
-        glVertex3f(1.02f*cos(3.0f*M_PI_4), 1.02f*sin(3.0f*M_PI_4) , 0.0f);
-        glVertex3f(1.02f*cos(5.0f*M_PI_4), 1.02f*sin(5.0f*M_PI_4), 0.0f);
-        glVertex3f(1.02f*cos(7.0f*M_PI_4), 1.02f*sin(7.0f*M_PI_4), 0.0f);
-        glEnd();
-    }
-    
 
+    glTranslatef(0.0f, 0.0f, -3.0f);
+    glScalef(1.0f,1.5f,0.0f);
+
+    DrawLetterI(-1.4f, -0.1f);
+    DrawLetterN(-0.6f, -0.1f);
+    DrawLetterD(0.1f,  -0.1f);
+    DrawLetterI(0.7f,  -0.1f);
+    DrawLetterA(1.4f,  -0.1f);
     SwapBuffers(ghdc);
 }
+
+void DrawLetterI(float x, float y)
+{
+    // Upper quad
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x+0.25f, y+0.5f, 0.0f);
+    glVertex3f(x-0.25f, y+0.5f, 0.0f);
+    glVertex3f(x-0.25f, y+0.4f, 0.0f);
+    glVertex3f(x+0.25f, y+0.4f, 0.0f);
+    glEnd();
+    
+    // Middle Quad
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x+0.05f, y+0.4f, 0.0f);
+    glVertex3f(x-0.05f, y+0.4f, 0.0f);
+    glVertex3f(x-0.05f, y-0.3f, 0.0f);
+    glVertex3f(x+0.05f, y-0.3f, 0.0f);
+    glEnd();
+
+    // Lower Quad
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x+0.25f, y-0.2f, 0.0f);
+    glVertex3f(x-0.25f, y-0.2f, 0.0f);
+    glVertex3f(x-0.25f, y-0.3f, 0.0f);
+    glVertex3f(x+0.25f, y-0.3f, 0.0f);
+    glEnd();
+}
+
+void DrawLetterN(float x, float y)
+{   
+    // Right Quad
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x+0.1f, y+0.5f, 0.0f);
+    glVertex3f(x+0.0f, y+0.5f, 0.0f);
+    glVertex3f(x+0.0f, y-0.3f, 0.0f);
+    glVertex3f(x+0.1f, y-0.3f, 0.0f);
+    glEnd();
+    
+    // Middle Tirka Quad    
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x+0.0f, y-0.3f, 0.0f);
+    glVertex3f(x+0.1f, y-0.3f, 0.0f);
+    glVertex3f(x-0.3f, y+0.5f, 0.0f);
+    glVertex3f(x-0.4f, y+0.5f, 0.0f);
+    glEnd();
+
+    // Left Quad
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x-0.3f, y+0.5f, 0.0f);
+    glVertex3f(x-0.4f, y+0.5f, 0.0f);
+    glVertex3f(x-0.4f, y-0.3f, 0.0f);
+    glVertex3f(x-0.3f, y-0.3f, 0.0f);
+    glEnd();
+}
+
+void DrawLetterD(float x, float y)
+{
+    // Left Vertical Quad
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x-0.3f, y+0.5f, 0.0f);
+    glVertex3f(x-0.4f, y+0.5f, 0.0f);
+    glVertex3f(x-0.4f, y-0.3f, 0.0f);
+    glVertex3f(x-0.3f, y-0.3f, 0.0f);
+    glEnd();
+
+    // Top Horizontal Quad
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x-0.3f, y+0.5f, 0.0f);
+    glVertex3f(x-0.3f, y+0.4f, 0.0f);
+    glVertex3f(x+0.0f, y+0.4f, 0.0f);
+    glVertex3f(x+0.0f, y+0.5f, 0.0f);
+    glEnd();
+
+    // Right Vertical Quad
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x+0.1f, y+0.4f, 0.0f);
+    glVertex3f(x+0.0f, y+0.4f, 0.0f);
+    glVertex3f(x+0.0f, y-0.2f, 0.0f);
+    glVertex3f(x+0.1f, y-0.2f, 0.0f);
+    glEnd();
+
+    // Bottom Horizontal Quad
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x-0.3f, y-0.3f, 0.0f);
+    glVertex3f(x-0.3f, y-0.2f, 0.0f);
+    glVertex3f(x+0.0f, y-0.2f, 0.0f);
+    glVertex3f(x+0.0f, y-0.3f, 0.0f);
+    glEnd();
+
+    // Bottom Right Corner
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x+0.0f, y-0.2f, 0.0f);
+    glVertex3f(x+0.0f, y-0.3f, 0.0f);
+    glVertex3f(x+0.1f, y-0.2f, 0.0f);
+    glVertex3f(x+0.0f, y-0.2f, 0.0f);
+    glEnd();
+
+    // Top Right Corner
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x+0.0f, y+0.4f, 0.0f);
+    glVertex3f(x+0.0f, y+0.5f, 0.0f);
+    glVertex3f(x+0.1f, y+0.4f, 0.0f);
+    glVertex3f(x+0.0f, y+0.4f, 0.0f);
+    glEnd();
+    
+}
+
+void DrawLetterA(float x, float y)
+{
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x-0.25f, y-0.3f, 0.0f);
+    glVertex3f(x-0.15f, y-0.3f, 0.0f);
+    glVertex3f(x+0.05f, y+0.5f, 0.0f);
+    glVertex3f(x-0.05f, y+0.5f, 0.0f);
+    glEnd();
+    
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x+0.05f, y+0.5f, 0.0f);
+    glVertex3f(x-0.05f, y+0.5f, 0.0f);
+    glVertex3f(x+0.15f, y-0.3f, 0.0f);
+    glVertex3f(x+0.25f, y-0.3f, 0.0f);
+    glEnd();
+}
+
 
 void update(void)
 {

@@ -25,7 +25,13 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-float x=0.0f,y=0.0f;
+float x=0.0f, y=0.0f ;
+float R=0.0f, G=0.0f, B=0.0f;
+float jet1_x= 0.0f,   jet1_y= 0.0f,
+      jet2_x = -6.0f, 
+      jet3_x = 0.0f,  jet3_y = 0.0f;
+float angleRotationJet1 = -90.0f, angleRotationJet3 = 90.0f;
+float angleRevolutionJet1 = 180.0f, angleRevolutionJet3 = 180.0f;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -327,12 +333,13 @@ void display(void)
     void DrawLetterN(float,float);
     void DrawLetterD(float,float);
     void DrawLetterA(float,float);
+    void DrawJet(float,float,float,float,float);
     // Code
     glClear(GL_COLOR_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity(); 
 
-    glTranslatef(0.0f, 0.0f, -3.0f);
+    glTranslatef(0.0f, 0.0f, -4.0f);
     glScalef(1.0f,1.5f,0.0f);
 
     DrawLetterI(-1.3f, -0.1f);
@@ -340,6 +347,24 @@ void display(void)
     DrawLetterD(0.2f,  -0.1f);
     DrawLetterI(0.7f,  -0.1f);
     DrawLetterA(1.3f,  -0.1f);
+
+    // Jet1
+    glLoadIdentity();
+    glTranslatef(jet1_x,jet1_y,-4.0f);
+    glRotatef(angleRotationJet1,0.0f, 0.0f, 1.0f);
+    DrawJet(0.0f, -0.2f , 1.0f, 0.5f, 0.0f);
+
+    // Jet2
+    glLoadIdentity();
+    glTranslatef(jet2_x, -0.05f,-4.0f);
+    DrawJet(0.0f, -0.2f , 1.0f, 1.0f, 1.0f);
+
+    // Jet3
+    glLoadIdentity();
+    glTranslatef(jet3_x, jet3_y,-4.0f);
+    glRotatef(angleRotationJet3,0.0f, 0.0f, 1.0f);
+    DrawJet(0.0f, -0.2f , 0.0f, 1.0f, 0.0f);
+
     SwapBuffers(ghdc);
 }
 
@@ -569,13 +594,85 @@ void DrawLetterA(float x, float y)
     glVertex3f(x+0.25f, y-0.3f, 0.0f);
     glEnd();
 
-    // Madhli Advi Dandi
+    // // Madhli Advi Dandi
+    // glBegin(GL_QUADS);
+    // glColor3f(1.0f, 1.0f, 1.0f);
+    // glVertex3f(x+0.13f, y+0.08f, 0.0f);
+    // glVertex3f(x+0.13f, y+0.12f, 0.0f);
+    // glVertex3f(x-0.13f, y+0.12f, 0.0f);
+    // glVertex3f(x-0.13f, y+0.08f, 0.0f);
+    // glEnd();
+
+}
+
+void DrawJet(float x, float y, float R, float G, float B)
+{
+    glScalef(0.25f, 0.25f, 0.0f);
+    glColor3f(0.0f, 0.5f, 0.8f);
+    // Fuselage
     glBegin(GL_QUADS);
+    glVertex3f(x-0.3f, y+0.5f, 0.0f);
+    glVertex3f(x-0.9f, y+0.5f, 0.0f);
+    glVertex3f(x-0.9f, y+0.3f, 0.0f);
+    glVertex3f(x-0.3f, y+0.3f, 0.0f);
+    glEnd();
+
+    // Nose
+    glBegin(GL_TRIANGLES);
+    glVertex3f(x-0.3f, y+0.5f, 0.0f);
+    glVertex3f(x-0.3f, y+0.3f, 0.0f);
+    glVertex3f(x+0.2f,  y+0.4f, 0.0f);
+    glEnd();
+
+    // Big Wings
+    glBegin(GL_QUADS);
+    glVertex3f(x-0.3f, y+0.5f, 0.0f);
+    glVertex3f(x-0.6f, y+0.5f, 0.0f);
+    glVertex3f(x-0.65f, y+0.8f, 0.0f);
+    glVertex3f(x-0.5f, y+0.8f, 0.0f);
+
+    glVertex3f(x-0.3f, y+0.3f, 0.0f);
+    glVertex3f(x-0.6f, y+0.3f, 0.0f);
+    glVertex3f(x-0.65f, y+0.0f, 0.0f);
+    glVertex3f(x-0.5f, y+0.0f, 0.0f);
+    
+    glEnd();
+
+    // Tail wings
+    glBegin(GL_QUADS);
+    glVertex3f(x-0.9f, y+0.5f, 0.0f);
+    glVertex3f(x-0.7f, y+0.5f, 0.0f);
+    glVertex3f(x-0.8f, y+0.65f, 0.0f);
+    glVertex3f(x-0.9f, y+0.61f, 0.0f);
+
+    glVertex3f(x-0.9f, y+0.3f, 0.0f);
+    glVertex3f(x-0.7f, y+0.3f, 0.0f);
+    glVertex3f(x-0.8f, y+0.11f, 0.0f);
+    glVertex3f(x-0.9f, y+0.15f, 0.0f);
+    
+    glEnd();
+
+    // Beautification Lines
+    glBegin(GL_LINES);
     glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x+0.13f, y+0.08f, 0.0f);
-    glVertex3f(x+0.13f, y+0.12f, 0.0f);
-    glVertex3f(x-0.13f, y+0.12f, 0.0f);
-    glVertex3f(x-0.13f, y+0.08f, 0.0f);
+    glVertex3f(x+0.2f,  y+0.4f, 0.0f);
+    glVertex3f(x+0.3f,  y+0.4f, 0.0f);
+
+    glVertex3f(x-0.5f, y+0.8f, 0.0f);
+    glVertex3f(x-0.4f, y+0.8f, 0.0f);
+
+    glVertex3f(x-0.5f, y+0.0f, 0.0f);
+    glVertex3f(x-0.4f, y+0.0f, 0.0f);
+    glEnd();
+
+    // Smoke line Behind
+    glBegin(GL_TRIANGLES);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glVertex3f(x-0.9f, y+0.4f, 0.0f);
+    glColor3f(R, G, B);
+    glVertex3f(x-1.8f, y+0.7f, 0.0f);
+    glColor3f(R, G, B);
+    glVertex3f(x-1.8f, y+0.0f, 0.0f);
     glEnd();
 
 }
@@ -584,6 +681,40 @@ void DrawLetterA(float x, float y)
 void update(void)
 {
     // Code
+
+    // Jet 2 x movement
+    jet2_x = jet2_x + 0.0005;
+
+    // Jet Rotation Values
+    if(angleRotationJet1<= 0.0f)
+        angleRotationJet1 = angleRotationJet1 + 0.01f;
+    if(angleRotationJet3>= 0.0f)
+    angleRotationJet3 = angleRotationJet3 - 0.01f;
+
+    // Jet 1 and 3 movements
+    if(angleRevolutionJet1<=270.0f)
+        angleRevolutionJet1 = angleRevolutionJet1 + 0.01f;
+    float angle= angleRevolutionJet1* (M_PI / 180);
+    jet1_x =  1.5 * cos(angle) - 1.55f;
+    jet1_y =  1.5 * sin(angle) + 1.45f;
+
+    if(angleRevolutionJet3>=90.0f)
+        angleRevolutionJet3 = angleRevolutionJet3 - 0.01f;
+    angle = angleRevolutionJet3* (M_PI / 180);
+    jet3_x =  1.5 * cos(angle) - 1.55f;
+    jet3_y =  1.5 * sin(angle) - 1.55f;
+
+    // if(angleRevolutionJet1<270.0f)
+    //     angleRevolutionJet1 = angleRevolutionJet1 - 0.01f;
+    // angle= angleRevolutionJet1* (M_PI / 180);
+    // jet1_x =  1.5 * cos(angle) - 1.55f;
+    // jet1_y =  1.5 * sin(angle) + 1.45f;
+
+    // if(angleRevolutionJet3<90.0f)
+    //     angleRevolutionJet3 = angleRevolutionJet3 + 0.01f;
+    // angle = angleRevolutionJet3* (M_PI / 180);
+    // jet3_x =  1.5 * cos(angle) - 1.55f;
+    // jet3_y =  1.5 * sin(angle) - 1.55f;
 
 }
 

@@ -356,59 +356,8 @@ void display(void)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-
-    glTranslatef(-1.5f,0.0f,-6.0f);
-    glRotatef(anglePyramid,0.0f,1.0f,0.0f); // Spin
-    glBindTexture(GL_TEXTURE_2D, texture_stone);
-
-    glBegin(GL_TRIANGLES);
-    /* X axis chya ujwya    bajula +ve
-       X axis chya davwya   bajula -ve
-       Y axis chya varchya  bajula +ve
-       Y axis chya khalchya bajula -ve
-       Z axis chya pudchya  bajula +ve
-       Z axis chya maagchya bajula -ve */
     
-    // Front Face
-	glColor3f(1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); //Apex
-	glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-
-    // Right Face
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, -1.0f);
-
-    // Back Face
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-
-    // Left Face
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-
-	glEnd();
-
-    glLoadIdentity();
-    glTranslatef(1.5f,0.0f,-6.0f);
+    glTranslatef(0.0f,0.0f,-6.0f);
     glScalef(0.75f, 0.75f, 0.75f);
     glRotatef(angleCube,1.0f,0.0f,0.0f);
     glRotatef(angleCube,0.0f,1.0f,0.0f);
@@ -492,12 +441,8 @@ void display(void)
 void update(void)
 {
     // Code
-    anglePyramid=anglePyramid+0.1f;
-    if(anglePyramid>=360.0f)
-        anglePyramid=anglePyramid-360.0f;
-    
     angleCube=angleCube+0.1f;
-    if(angleCube>=360.0f)
+    if(angleCube >= 360.0f)
         angleCube=angleCube-360.0f;
 }
 

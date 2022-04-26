@@ -25,7 +25,7 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-int Day=0 , Year = 0;
+int Day=0 , Year = 0, Ohoti = 0;
 GLUquadric *quadric = NULL;
 
 // Global Function Declarations
@@ -202,6 +202,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 'y':
                     Year = (Year - 3) % 360;
                     break;
+                case 'O':
+                    Ohoti = (Ohoti + 6) % 360;
+                    break;
+                case 'o':
+                    Ohoti = (Ohoti - 6) % 360;
+                    break;
                 default:
                     break;
             }
@@ -324,6 +330,8 @@ int initialize(void)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
     
+    // Create Quadric
+    quadric = gluNewQuadric();
 
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
@@ -358,15 +366,12 @@ void display(void)
     // Save the camera/view Matrix (Push)
     glPushMatrix();
     
-    glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
+    glRotatef(90.0f, 1.0f, 0.0f, 0.0f);         // Z-axis Varcha pole saral karun Y-axis varti aanla..
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    // Create Quadric
-    quadric = gluNewQuadric();
 
     glColor3f(1.0f,1.0f,0.0f);
     
-    // Draw Sphere
+    // Draw Sun
     gluSphere(quadric, 0.75, 30, 30);
 
     // Restore the saved camera matrix (Pop)
@@ -378,8 +383,9 @@ void display(void)
     // Rotate around sun
     glRotatef((GLfloat)Year, 0.0f, 1.0f, 0.0f);
 
-    // Translation from Earth
+    // Translation for Earth
     glTranslatef(1.5f, 0.0f, 0.0f);
+    glPushMatrix();  // Save the translation for moon
 
     glRotatef(90.0f, 1.0f, 0.0f, 0.0f);         // Z-axis Varcha pole saral karun Y-axis varti aanla..
 
@@ -388,13 +394,26 @@ void display(void)
 
     // Draw Earth
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-    quadric=gluNewQuadric();
-
+    
     glColor3f(0.4f, 0.9f, 1.0f);
     gluSphere(quadric, 0.2, 20, 20);
     glPopMatrix();
+
+    // Rotate Around Earth
+    glRotatef((GLfloat)Ohoti, 0.0f, 1.0f, 0.0f);
     
+    //Translation for moon from earth
+    glTranslatef(0.3f, 0.0f, 0.0f);
+
+    glRotatef(90.0f, 1.0f, 0.0f, 0.0f);         // Z-axis Varcha pole saral karun Y-axis varti aanla..
+
+    // Draw Moon
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    gluSphere(quadric, 0.05, 10, 10);
+    glPopMatrix();
+   
+
     SwapBuffers(ghdc);
 }
 
@@ -431,6 +450,11 @@ void uninitialize(void)
     {
         DestroyWindow(ghwnd);
         ghwnd=NULL;
+    }
+    if(quadric)
+    {
+        gluDeleteQuadric(quadric);
+        quadric=NULL;
     }
     if(gpFile)
     {

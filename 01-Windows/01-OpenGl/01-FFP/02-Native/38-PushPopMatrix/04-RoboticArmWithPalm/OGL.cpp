@@ -25,7 +25,7 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-int Elbow=0 , Shoulder = 0;
+int Elbow=0 , Shoulder = 0, Palm = 0;
 GLUquadric *quadric = NULL;
 
 // Global Function Declarations
@@ -202,6 +202,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 's':
                     Shoulder = (Shoulder - 3) % 360;
                     break;
+                case 'P':
+                    Palm = (Palm + 3) % 360;
+                    break;
+                case 'p':
+                    Palm = (Palm - 3) % 360;
+                    break;
                 default:
                     break;
             }
@@ -324,7 +330,7 @@ int initialize(void)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
     
-
+    quadric = gluNewQuadric();
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
@@ -363,7 +369,7 @@ void display(void)
     glScalef(2.0f, 0.5f, 1.0f);
     
     // Draw the arm
-    quadric = gluNewQuadric();
+   
     glColor3f(0.5f, 0.35f, 0.05f);
     gluSphere(quadric, 0.5f, 10, 10);
     glPopMatrix();
@@ -376,12 +382,24 @@ void display(void)
     glScalef(2.0f, 0.5f, 1.0f);
 
     // Draw Forearm
-    quadric = gluNewQuadric();
     glColor3f(0.5f, 0.35f, 0.05f);
     gluSphere(quadric, 0.5f, 10, 10);
-
     glPopMatrix();  // To Elbow
-    glPopMatrix();  // To Shoulder
+
+    // Palm
+    glTranslatef(1.0f, 0.0f, 0.0f);
+    glRotatef((GLfloat)Palm, 0.0f, 0.0f, 1.0f);
+    glTranslatef(0.5f, 0.0f, 0.0f);
+    glPushMatrix();
+    glScalef(2.0f, 0.5f, 1.0f);
+
+    // Draw Palm
+    glColor3f(0.5f, 0.35f, 0.05f);
+    gluSphere(quadric, 0.25f, 10, 10);
+    
+    glPopMatrix();  // To Wrist
+    glPopMatrix();  // To Elbow
+    glPopMatrix(); // To Shoulder
 
 
     SwapBuffers(ghdc);
@@ -420,6 +438,11 @@ void uninitialize(void)
     {
         DestroyWindow(ghwnd);
         ghwnd=NULL;
+    }
+    if(quadric)
+    {
+        gluDeleteQuadric(quadric);
+        quadric = NULL;
     }
     if(gpFile)
     {

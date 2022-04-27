@@ -741,7 +741,6 @@ void DrawJet(float x, float y, float R, float G, float B)
 void update(void)
 {
     // Code
-    fprintf(gpFile,"%f\t%f\t%f\t%f\t",colorMaxGrGr,colorMaxOrRe,colorMaxOrGr,colorMaxWh);
     // Alphabets Translations
     if(translatorI1x<=-1.3f)
         translatorI1x = translatorI1x + 0.0005f;

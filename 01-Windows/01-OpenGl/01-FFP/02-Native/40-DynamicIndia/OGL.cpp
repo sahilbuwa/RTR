@@ -32,7 +32,7 @@ float jet1_x= -2.0f,   jet1_y= -1.0f,
       jet3_x = -2.0f,  jet3_y = 1.0f;
 float angleRotationJet1 = -90.0f, angleRotationJet3 = 90.0f;
 float angleRevolutionJet1 = 180.0f, angleRevolutionJet3 = 180.0f;
-float translatorI1x = -2.0f, translatorNy = 1.5f, translatorI2y = -2.0f, translatorAx = 3.0f; 
+float translatorI1x = -2.0f, translatorNy = 1.5f, translatorI2y = -2.0f, translatorAx = 3.5f; 
 float colorMaxOrRe = 0.0f, colorMaxOrGr = 0.0f, colorMaxGrGr = 0.0f, colorMaxWh = 0.0f;
 
 // Global Function Declarations
@@ -311,6 +311,11 @@ int initialize(void)
     glClearColor(0.0f,0.0f,0.0f,1.0f);
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
+    // Gaane
+    PlaySound(MAKEINTRESOURCE(IDR_WAVE), GetModuleHandle(NULL),  SND_ASYNC | SND_RESOURCE);
+    // AadhiPaasun Fullscreen
+    ToggleFullScreen();
+    
     return 0;
 }
 
@@ -346,8 +351,8 @@ void display(void)
 
     DrawLetterI(translatorI1x, -0.1f);
     DrawLetterN(-0.5f, translatorNy);
-    DrawLetterD(0.2f,  -0.1f);
-    DrawLetterI(0.7f,  translatorI2y);
+    DrawLetterD(0.15f,  -0.1f);
+    DrawLetterI(0.65f,  translatorI2y);
     DrawLetterA(translatorAx,  -0.1f);
     if(jet1_x<1.6f && translatorAx <= 1.25f)
     {
@@ -501,7 +506,7 @@ void DrawLetterD(float x, float y)
     glColor3f(colorMaxOrRe, colorMaxOrGr, 0.0f);
     glVertex3f(x-0.3f, y+0.5f, 0.0f);
     glVertex3f(x-0.4f, y+0.5f, 0.0f);
-    glColor3f(1.0f, 1.0f, 1.0f);
+    glColor3f(colorMaxWh, colorMaxWh, colorMaxWh);
     glVertex3f(x-0.4f, y+0.1f, 0.0f);
     glVertex3f(x-0.3f, y+0.1f, 0.0f);
     glEnd();
@@ -511,7 +516,7 @@ void DrawLetterD(float x, float y)
     glColor3f(colorMaxWh, colorMaxWh, colorMaxWh);
     glVertex3f(x-0.3f, y+0.1f, 0.0f);
     glVertex3f(x-0.4f, y+0.1f, 0.0f);
-    glColor3f(0.0f, 1.0f, 0.0f);
+    glColor3f(0.0f, colorMaxGrGr, 0.0f);
     glVertex3f(x-0.4f, y-0.3f, 0.0f);
     glVertex3f(x-0.3f, y-0.3f, 0.0f);
     glEnd();
@@ -530,7 +535,7 @@ void DrawLetterD(float x, float y)
     glColor3f(colorMaxOrRe, colorMaxOrGr, 0.0f);
     glVertex3f(x+0.1f, y+0.4f, 0.0f);
     glVertex3f(x+0.0f, y+0.4f, 0.0f);
-    glColor3f(1.0f, 1.0f, 1.0f);
+    glColor3f(colorMaxWh, colorMaxWh, colorMaxWh);
     glVertex3f(x+0.0f, y+0.1f, 0.0f);
     glVertex3f(x+0.1f, y+0.1f, 0.0f);
     glEnd();
@@ -540,7 +545,7 @@ void DrawLetterD(float x, float y)
     glColor3f(colorMaxWh, colorMaxWh, colorMaxWh);
     glVertex3f(x+0.1f, y+0.1f, 0.0f);
     glVertex3f(x+0.0f, y+0.1f, 0.0f);
-    glColor3f(0.0f, 1.0f, 0.0f);
+    glColor3f(0.0f, colorMaxGrGr, 0.0f);
     glVertex3f(x+0.0f, y-0.2f, 0.0f);
     glVertex3f(x+0.1f, y-0.2f, 0.0f);
     glEnd();
@@ -738,7 +743,7 @@ void update(void)
     // Code
     fprintf(gpFile,"%f\t%f\t%f\t%f\t",colorMaxGrGr,colorMaxOrRe,colorMaxOrGr,colorMaxWh);
     // Alphabets Translations
-    if(translatorI1x<=-1.2f)
+    if(translatorI1x<=-1.3f)
         translatorI1x = translatorI1x + 0.0005f;
     else
     {
@@ -746,12 +751,14 @@ void update(void)
             translatorNy = translatorNy - 0.0005f;
         else
         {
-            if(colorMaxWh <=1.0f && colorMaxOrRe <=1.0f && colorMaxOrGr<=0.5f && colorMaxGrGr <= 1.0f )
+            if(colorMaxWh <= 1.0f)
             {
                 colorMaxWh = colorMaxWh + 0.0005f;
                 colorMaxOrRe = colorMaxOrRe + 0.0005;
                 colorMaxGrGr = colorMaxGrGr + 0.0005;
-                colorMaxOrGr = colorMaxOrGr + 0.0005;
+                if(colorMaxOrGr<0.5f)
+                    colorMaxOrGr = colorMaxOrGr + 0.0005;
+                
             }
             else
             {
@@ -760,7 +767,7 @@ void update(void)
                 else
                 {
                     if(translatorAx>=1.25f)
-                        translatorAx = translatorAx - 0.0005f;
+                        translatorAx = translatorAx - 0.0009f;
                 }
             }
         }

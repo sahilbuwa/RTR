@@ -1,3 +1,4 @@
 #include"OGL.h"
 MYICON ICON SAB.ico
+IDR_WAVE WAVE SainikHoTumchyasathi.wav
 

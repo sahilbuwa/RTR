@@ -3,8 +3,6 @@
 #include"OGL.h"  //Aplya path (local) madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
-#define _USE_MATH_DEFINES
-#include<math.h> // cos() , sin() sathi
 
 // OpenGL header files
 #include<GL/gl.h>
@@ -25,7 +23,10 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-float angleTriangle=0.0f;
+float anglePyramid=0.0f;
+float angleCube=0.0f;
+GLuint texture_stone , texture_kundali;
+
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -254,13 +255,15 @@ void ToggleFullScreen(void)
         ShowCursor(TRUE);
         gbFullScreen=FALSE;
     }
-
 }
 
 int initialize(void)
 {
+    // Declaration of user-defined functions
+    BOOL LoadGLTexture(GLuint* ,TCHAR[]);
     // Function Declarations
     void resize(int,int);
+    void uninitialize(void);
     // Variable Declarations
     PIXELFORMATDESCRIPTOR pfd;
     int iPixelFormatIndex=0;
@@ -276,6 +279,7 @@ int initialize(void)
     pfd.cGreenBits = 8;
     pfd.cBlueBits = 8;
     pfd.cAlphaBits = 8;
+    pfd.cDepthBits = 32; // 24 pan chaltai
     
     // GetDC
     ghdc = GetDC(ghwnd);
@@ -297,10 +301,34 @@ int initialize(void)
     // Make the rendering context as current context
     if(wglMakeCurrent(ghdc,ghrc)==FALSE)
         return -4;
+    if(LoadGLTexture(&texture_stone, MAKEINTRESOURCE(IDBITMAP_STONE))==FALSE)
+    {
+        fprintf(gpFile,"LoadGLTexture for stone Failed.\n");
+        uninitialize();
+        return -5;
+    }
+    if(LoadGLTexture(&texture_kundali, MAKEINTRESOURCE(IDBITMAP_KUNDALI))==FALSE)
+    {
+        fprintf(gpFile,"LoadGLTexture for kundali Failed.\n");
+        uninitialize();
+        return -6;
+    }
 
     // Here Starts OpenGL code
-    // Clear the screen using blue color
-    glClearColor(0.0f,0.0f,0.0f,1.0f);
+    // Clear the screen using black color
+    glClearColor(0.0f,0.0f,0.0f,0.0f);
+
+    // Depth Related Changes
+    glClearDepth(1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+
+    glShadeModel(GL_SMOOTH);
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
+    
+    // Enabling the texture
+    glEnable(GL_TEXTURE_2D);
+
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
@@ -322,47 +350,141 @@ void resize(int width, int height)
 
 void display(void)
 {
+    // Variable Declarations
+    
     // Code
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity(); 
-    
-    glTranslatef(0.0f, 0.0f, -3.1f);
+    glLoadIdentity();
 
-    // Kundali
-    // Motha Rectangle
-    glLineWidth(1.5f);
-    glBegin(GL_LINE_LOOP);
-    glColor3f(1.0f, 0.5f, 0.0f);
-    glVertex3f(1.0f*cos(M_PI_2/3.0),      1.0f*sin(M_PI_2/3.0), 0.0f);
-    glVertex3f(1.0f*cos(5.0f*(M_PI_2/3.0)), 1.0f*sin(5.0f*(M_PI_2/3.0)) , 0.0f);
-    glVertex3f(1.0f*cos(7.0f*(M_PI_2/3.0)), 1.0f*sin(7.0f*(M_PI_2/3.0)), 0.0f);
-    glVertex3f(1.0f*cos(-M_PI_2/3.0), 1.0f*sin(-M_PI_2/3.0), 0.0f);
+    glTranslatef(-1.5f,0.0f,-6.0f);
+    glRotatef(anglePyramid,0.0f,1.0f,0.0f); // Spin
+    glBindTexture(GL_TEXTURE_2D, texture_stone);
+
+    glBegin(GL_TRIANGLES);
+    /* X axis chya ujwya    bajula +ve
+       X axis chya davwya   bajula -ve
+       Y axis chya varchya  bajula +ve
+       Y axis chya khalchya bajula -ve
+       Z axis chya pudchya  bajula +ve
+       Z axis chya maagchya bajula -ve */
+    
+    // Front Face
+	glColor3f(1.0f, 1.0f, 1.0f);
+    glTexCoord2f(0.5f, 1.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f); //Apex
+	glTexCoord2f(0.0f, 0.0f);
+    glVertex3f(-1.0f, -1.0f, 1.0f);
+    glTexCoord2f(1.0f, 0.0f);
+	glVertex3f(1.0f, -1.0f, 1.0f);
+
+    // Right Face
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glTexCoord2f(0.5f, 1.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
+    glTexCoord2f(0.0f, 0.0f);
+	glVertex3f(1.0f, -1.0f, 1.0f);
+    glTexCoord2f(1.0f, 0.0f);
+	glVertex3f(1.0f, -1.0f, -1.0f);
+
+    // Back Face
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glTexCoord2f(0.5f, 1.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex3f(1.0f, -1.0f, -1.0f);
+    glTexCoord2f(1.0f, 0.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+
+    // Left Face
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glTexCoord2f(0.5f, 1.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
+    glTexCoord2f(0.0f, 0.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f(-1.0f, -1.0f, 1.0f);
+
 	glEnd();
-    
-    // Diagonals
-    glBegin(GL_LINES);
-    glColor3f(1.0f, 0.5f, 0.0f);
-    glVertex3f(1.0f*cos(M_PI_2/3.0),      1.0f*sin(M_PI_2/3.0), 0.0f);
-    glVertex3f(1.0f*cos(7.0f*(M_PI_2/3.0)), 1.0f*sin(7.0f*(M_PI_2/3.0)), 0.0f);
-    glVertex3f(1.0f*cos(5.0f*(M_PI_2/3.0)), 1.0f*sin(5.0f*(M_PI_2/3.0)) , 0.0f);
-    glVertex3f(1.0f*cos(-M_PI_2/3.0), 1.0f*sin(-M_PI_2/3.0), 0.0f);
-
-    glEnd();
 
     glLoadIdentity();
-    glTranslatef(0.0f, 0.0f, -3.0f);
-    glScalef(0.84f, 0.48f, 0.68f);
-    glRotatef(45.0f,0.0f,0.0f,1.0f);
+    glTranslatef(1.5f,0.0f,-6.0f);
+    glScalef(0.75f, 0.75f, 0.75f);
+    glRotatef(angleCube,1.0f,0.0f,0.0f);
+    glRotatef(angleCube,0.0f,1.0f,0.0f);
+    glRotatef(angleCube,0.0f,0.0f,1.0f);
+    glBindTexture(GL_TEXTURE_2D, texture_kundali);
+    
+    glBegin(GL_QUADS);
+    // Front Face
+	glColor3f(1.0f, 1.0f, 1.0f);
+    glTexCoord2f(1.0f, 1.0f);
+	glVertex3f(1.0f, 1.0f, 1.0f);
+    glTexCoord2f(0.0f, 1.0f);
+	glVertex3f(-1.0f, 1.0f, 1.0f);
+    glTexCoord2f(0.0f, 0.0f);
+	glVertex3f(-1.0f, -1.0f, 1.0f);
+    glTexCoord2f(1.0f, 0.0f);
+	glVertex3f(1.0f, -1.0f, 1.0f);
 
-    //Aatla rectangle
-    glBegin(GL_LINE_LOOP);
-    glColor3f(1.0f, 0.5f, 0.0f);
-    glVertex3f(1.0f*cos(M_PI_4),      1.0f*sin(M_PI_4), 0.0f);
-    glVertex3f(1.0f*cos(3.0f*M_PI_4), 1.0f*sin(3.0f*M_PI_4) , 0.0f);
-    glVertex3f(1.0f*cos(5.0f*M_PI_4), 1.0f*sin(5.0f*M_PI_4), 0.0f);
-    glVertex3f(1.0f*cos(7.0f*M_PI_4), 1.0f*sin(7.0f*M_PI_4), 0.0f);
+    // Right Face
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex3f(1.0f, 1.0f, -1.0f);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(1.0f, 1.0f, 1.0f);
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex3f(1.0f, -1.0f, 1.0f);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f(1.0f, -1.0f, -1.0f);
+
+    // Back Face
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex3f(-1.0f, 1.0f, -1.0f);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(1.0f, 1.0f, -1.0f);
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex3f(1.0f, -1.0f, -1.0f);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f(-1.0f, -1.0f, -1.0f);
+
+    // Left Face
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex3f(-1.0f, 1.0f, 1.0f);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(-1.0f, 1.0f, -1.0f);
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex3f(-1.0f, -1.0f, -1.0f);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f(-1.0f, -1.0f, 1.0f);
+
+    // Top Face
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex3f(1.0f, 1.0f, -1.0f);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(-1.0f, 1.0f, -1.0f);
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex3f(-1.0f, 1.0f, 1.0f);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f(1.0f, 1.0f, 1.0f);
+
+    // Bottom Face
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex3f(1.0f, -1.0f, -1.0f);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(-1.0f, -1.0f, -1.0f);
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex3f(-1.0f, -1.0f, 1.0f);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex3f(1.0f, -1.0f, 1.0f);
+
 	glEnd();
+
+    
 
     SwapBuffers(ghdc);
 }
@@ -370,7 +492,40 @@ void display(void)
 void update(void)
 {
     // Code
+    anglePyramid=anglePyramid+0.1f;
+    if(anglePyramid>=360.0f)
+        anglePyramid=anglePyramid-360.0f;
+    
+    angleCube=angleCube+0.1f;
+    if(angleCube>=360.0f)
+        angleCube=angleCube-360.0f;
+}
 
+BOOL LoadGLTexture(GLuint *texture, TCHAR imageResourceID[])
+{
+    // Variable Declarations
+    HBITMAP hBitmap = NULL;
+    BITMAP bmp;
+    BOOL bResult = FALSE;
+    // Code
+    hBitmap = (HBITMAP)LoadImage(GetModuleHandle(NULL), imageResourceID, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    if(hBitmap)
+    {
+        bResult = TRUE;
+        GetObject(hBitmap, sizeof(bmp), &bmp);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        glGenTextures(1, texture);
+        glBindTexture(GL_TEXTURE_2D, *texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+        // Create The Texture
+        gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bmp.bmWidth, bmp.bmHeight, GL_BGR_EXT, GL_UNSIGNED_BYTE, bmp.bmBits);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        DeleteObject(hBitmap);
+
+    }
+    return bResult;
 }
 
 void uninitialize(void)
@@ -400,6 +555,14 @@ void uninitialize(void)
     {
         DestroyWindow(ghwnd);
         ghwnd=NULL;
+    }
+    if(texture_stone)
+    {
+        glDeleteTextures(1, &texture_stone);
+    }
+    if(texture_kundali)
+    {
+        glDeleteTextures(1, &texture_kundali);
     }
     if(gpFile)
     {

@@ -4,7 +4,7 @@
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
 #define _USE_MATH_DEFINES
-#include<math.h> // cos() , sin() sathi
+#include<math.h>
 
 // OpenGL header files
 #include<GL/gl.h>
@@ -25,7 +25,8 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-float angleTriangle=0.0f;
+int Day=0 , Year = 0, Ohoti = 0;
+GLUquadric *quadric = NULL;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -189,6 +190,24 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 'f':
                     ToggleFullScreen();
                     break;
+                case 'D':
+                    Day = (Day + 6) % 360;
+                    break;
+                case 'd':
+                    Day = (Day - 6) % 360;
+                    break;
+                case 'Y':
+                    Year = (Year + 3) % 360;
+                    break;
+                case 'y':
+                    Year = (Year - 3) % 360;
+                    break;
+                case 'O':
+                    Ohoti = (Ohoti + 6) % 360;
+                    break;
+                case 'o':
+                    Ohoti = (Ohoti - 6) % 360;
+                    break;
                 default:
                     break;
             }
@@ -276,6 +295,7 @@ int initialize(void)
     pfd.cGreenBits = 8;
     pfd.cBlueBits = 8;
     pfd.cAlphaBits = 8;
+    pfd.cDepthBits = 32; // 24 pan chaltai
     
     // GetDC
     ghdc = GetDC(ghwnd);
@@ -299,8 +319,20 @@ int initialize(void)
         return -4;
 
     // Here Starts OpenGL code
-    // Clear the screen using blue color
-    glClearColor(0.0f,0.0f,0.0f,1.0f);
+    // Clear the screen using black color
+    glClearColor(0.0f,0.0f,0.0f,0.0f);
+
+    // Depth Related Changes
+    glClearDepth(1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+
+    glShadeModel(GL_SMOOTH);
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
+    
+    // Create Quadric
+    quadric = gluNewQuadric();
+
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
@@ -322,47 +354,65 @@ void resize(int width, int height)
 
 void display(void)
 {
+    // Variable Declarations
+    
     // Code
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity(); 
-    
-    glTranslatef(0.0f, 0.0f, -3.1f);
-
-    // Kundali
-    // Motha Rectangle
-    glLineWidth(1.5f);
-    glBegin(GL_LINE_LOOP);
-    glColor3f(1.0f, 0.5f, 0.0f);
-    glVertex3f(1.0f*cos(M_PI_2/3.0),      1.0f*sin(M_PI_2/3.0), 0.0f);
-    glVertex3f(1.0f*cos(5.0f*(M_PI_2/3.0)), 1.0f*sin(5.0f*(M_PI_2/3.0)) , 0.0f);
-    glVertex3f(1.0f*cos(7.0f*(M_PI_2/3.0)), 1.0f*sin(7.0f*(M_PI_2/3.0)), 0.0f);
-    glVertex3f(1.0f*cos(-M_PI_2/3.0), 1.0f*sin(-M_PI_2/3.0), 0.0f);
-	glEnd();
-    
-    // Diagonals
-    glBegin(GL_LINES);
-    glColor3f(1.0f, 0.5f, 0.0f);
-    glVertex3f(1.0f*cos(M_PI_2/3.0),      1.0f*sin(M_PI_2/3.0), 0.0f);
-    glVertex3f(1.0f*cos(7.0f*(M_PI_2/3.0)), 1.0f*sin(7.0f*(M_PI_2/3.0)), 0.0f);
-    glVertex3f(1.0f*cos(5.0f*(M_PI_2/3.0)), 1.0f*sin(5.0f*(M_PI_2/3.0)) , 0.0f);
-    glVertex3f(1.0f*cos(-M_PI_2/3.0), 1.0f*sin(-M_PI_2/3.0), 0.0f);
-
-    glEnd();
-
     glLoadIdentity();
-    glTranslatef(0.0f, 0.0f, -3.0f);
-    glScalef(0.84f, 0.48f, 0.68f);
-    glRotatef(45.0f,0.0f,0.0f,1.0f);
 
-    //Aatla rectangle
-    glBegin(GL_LINE_LOOP);
-    glColor3f(1.0f, 0.5f, 0.0f);
-    glVertex3f(1.0f*cos(M_PI_4),      1.0f*sin(M_PI_4), 0.0f);
-    glVertex3f(1.0f*cos(3.0f*M_PI_4), 1.0f*sin(3.0f*M_PI_4) , 0.0f);
-    glVertex3f(1.0f*cos(5.0f*M_PI_4), 1.0f*sin(5.0f*M_PI_4), 0.0f);
-    glVertex3f(1.0f*cos(7.0f*M_PI_4), 1.0f*sin(7.0f*M_PI_4), 0.0f);
-	glEnd();
+    // View Transformation
+    gluLookAt(0.0f, 0.0f, 5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+    // Save the camera/view Matrix (Push)
+    glPushMatrix();
+    
+    glRotatef(90.0f, 1.0f, 0.0f, 0.0f);         // Z-axis Varcha pole saral karun Y-axis varti aanla..
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    glColor3f(1.0f,1.0f,0.0f);
+    
+    // Draw Sun
+    gluSphere(quadric, 0.75, 30, 30);
+
+    // Restore the saved camera matrix (Pop)
+    glPopMatrix();
+
+    // Save the current view / camera matrix (Push)
+    glPushMatrix();
+
+    // Rotate around sun
+    glRotatef((GLfloat)Year, 0.0f, 1.0f, 0.0f);
+
+    // Translation for Earth
+    glTranslatef(1.5f, 0.0f, 0.0f);
+    glPushMatrix();  // Save the translation for moon
+
+    glRotatef(90.0f, 1.0f, 0.0f, 0.0f);         // Z-axis Varcha pole saral karun Y-axis varti aanla..
+
+    // Self-rotation / Spinning of Earth
+    glRotatef((GLfloat)Day, 0.0f, 0.0f, 1.0f);
+
+    // Draw Earth
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    
+    glColor3f(0.4f, 0.9f, 1.0f);
+    gluSphere(quadric, 0.2, 20, 20);
+    glPopMatrix();
+
+    // Rotate Around Earth
+    glRotatef((GLfloat)Ohoti, 0.0f, 1.0f, 0.0f);
+    
+    //Translation for moon from earth
+    glTranslatef(0.3f, 0.0f, 0.0f);
+
+    glRotatef(90.0f, 1.0f, 0.0f, 0.0f);         // Z-axis Varcha pole saral karun Y-axis varti aanla..
+
+    // Draw Moon
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    gluSphere(quadric, 0.05, 10, 10);
+    glPopMatrix();
+   
 
     SwapBuffers(ghdc);
 }
@@ -370,7 +420,7 @@ void display(void)
 void update(void)
 {
     // Code
-
+   
 }
 
 void uninitialize(void)
@@ -400,6 +450,11 @@ void uninitialize(void)
     {
         DestroyWindow(ghwnd);
         ghwnd=NULL;
+    }
+    if(quadric)
+    {
+        gluDeleteQuadric(quadric);
+        quadric=NULL;
     }
     if(gpFile)
     {

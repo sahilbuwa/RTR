@@ -4,7 +4,7 @@
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
 #define _USE_MATH_DEFINES
-#include<math.h> // cos() , sin() sathi
+#include<math.h>
 
 // OpenGL header files
 #include<GL/gl.h>
@@ -25,7 +25,8 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-float angleTriangle=0.0f;
+int Elbow=0 , Shoulder = 0;
+GLUquadric *quadric = NULL;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -189,6 +190,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 'f':
                     ToggleFullScreen();
                     break;
+                case 'E':
+                    Elbow = (Elbow + 3) % 360;
+                    break;
+                case 'e':
+                    Elbow = (Elbow - 3) % 360;
+                    break;
+                case 'S':
+                    Shoulder = (Shoulder + 3) % 360;
+                    break;
+                case 's':
+                    Shoulder = (Shoulder - 3) % 360;
+                    break;
                 default:
                     break;
             }
@@ -276,6 +289,7 @@ int initialize(void)
     pfd.cGreenBits = 8;
     pfd.cBlueBits = 8;
     pfd.cAlphaBits = 8;
+    pfd.cDepthBits = 32; // 24 pan chaltai
     
     // GetDC
     ghdc = GetDC(ghwnd);
@@ -299,8 +313,18 @@ int initialize(void)
         return -4;
 
     // Here Starts OpenGL code
-    // Clear the screen using blue color
-    glClearColor(0.0f,0.0f,0.0f,1.0f);
+    // Clear the screen using black color
+    glClearColor(0.0f,0.0f,0.0f,0.0f);
+
+    // Depth Related Changes
+    glClearDepth(1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+
+    glShadeModel(GL_SMOOTH);
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
+    
+
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
@@ -322,47 +346,43 @@ void resize(int width, int height)
 
 void display(void)
 {
+    // Variable Declarations
+    
     // Code
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity(); 
-    
-    glTranslatef(0.0f, 0.0f, -3.1f);
-
-    // Kundali
-    // Motha Rectangle
-    glLineWidth(1.5f);
-    glBegin(GL_LINE_LOOP);
-    glColor3f(1.0f, 0.5f, 0.0f);
-    glVertex3f(1.0f*cos(M_PI_2/3.0),      1.0f*sin(M_PI_2/3.0), 0.0f);
-    glVertex3f(1.0f*cos(5.0f*(M_PI_2/3.0)), 1.0f*sin(5.0f*(M_PI_2/3.0)) , 0.0f);
-    glVertex3f(1.0f*cos(7.0f*(M_PI_2/3.0)), 1.0f*sin(7.0f*(M_PI_2/3.0)), 0.0f);
-    glVertex3f(1.0f*cos(-M_PI_2/3.0), 1.0f*sin(-M_PI_2/3.0), 0.0f);
-	glEnd();
-    
-    // Diagonals
-    glBegin(GL_LINES);
-    glColor3f(1.0f, 0.5f, 0.0f);
-    glVertex3f(1.0f*cos(M_PI_2/3.0),      1.0f*sin(M_PI_2/3.0), 0.0f);
-    glVertex3f(1.0f*cos(7.0f*(M_PI_2/3.0)), 1.0f*sin(7.0f*(M_PI_2/3.0)), 0.0f);
-    glVertex3f(1.0f*cos(5.0f*(M_PI_2/3.0)), 1.0f*sin(5.0f*(M_PI_2/3.0)) , 0.0f);
-    glVertex3f(1.0f*cos(-M_PI_2/3.0), 1.0f*sin(-M_PI_2/3.0), 0.0f);
-
-    glEnd();
-
     glLoadIdentity();
-    glTranslatef(0.0f, 0.0f, -3.0f);
-    glScalef(0.84f, 0.48f, 0.68f);
-    glRotatef(45.0f,0.0f,0.0f,1.0f);
 
-    //Aatla rectangle
-    glBegin(GL_LINE_LOOP);
-    glColor3f(1.0f, 0.5f, 0.0f);
-    glVertex3f(1.0f*cos(M_PI_4),      1.0f*sin(M_PI_4), 0.0f);
-    glVertex3f(1.0f*cos(3.0f*M_PI_4), 1.0f*sin(3.0f*M_PI_4) , 0.0f);
-    glVertex3f(1.0f*cos(5.0f*M_PI_4), 1.0f*sin(5.0f*M_PI_4), 0.0f);
-    glVertex3f(1.0f*cos(7.0f*M_PI_4), 1.0f*sin(7.0f*M_PI_4), 0.0f);
-	glEnd();
+    glPolygonMode(GL_FRONT_AND_BACK , GL_FILL);
+    glTranslatef(0.0f, 0.0f, -12.0f);
+    glPushMatrix();
+
+    glRotatef((GLfloat)Shoulder, 0.0f, 0.0f, 1.0f);
+    glTranslatef(1.0f, 0.0f, 0.0f);
+    glPushMatrix();
+    glScalef(2.0f, 0.5f, 1.0f);
+    
+    // Draw the arm
+    quadric = gluNewQuadric();
+    glColor3f(0.5f, 0.35f, 0.05f);
+    gluSphere(quadric, 0.5f, 10, 10);
+    glPopMatrix();
+
+    // Forearm
+    glTranslatef(1.0f, 0.0f, 0.0f);
+    glRotatef((GLfloat)Elbow, 0.0f, 0.0f, 1.0f);
+    glTranslatef(1.0f, 0.0f, 0.0f);
+    glPushMatrix();
+    glScalef(2.0f, 0.5f, 1.0f);
+
+    // Draw Forearm
+    quadric = gluNewQuadric();
+    glColor3f(0.5f, 0.35f, 0.05f);
+    gluSphere(quadric, 0.5f, 10, 10);
+
+    glPopMatrix();  // To Elbow
+    glPopMatrix();  // To Shoulder
+
 
     SwapBuffers(ghdc);
 }
@@ -370,7 +390,7 @@ void display(void)
 void update(void)
 {
     // Code
-
+   
 }
 
 void uninitialize(void)

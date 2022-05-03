@@ -301,6 +301,7 @@ int initialize(void)
     // Make the rendering context as current context
     if(wglMakeCurrent(ghdc,ghrc)==FALSE)
         return -4;
+        
     if(LoadGLTexture(&texture_stone, MAKEINTRESOURCE(IDBITMAP_STONE))==FALSE)
     {
         fprintf(gpFile,"LoadGLTexture for stone Failed.\n");
@@ -357,7 +358,7 @@ void display(void)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    glTranslatef(0.0f,0.0f,-6.0f);
+    glTranslatef(0.0f,0.0f,-4.0f);
     glRotatef(anglePyramid,0.0f,1.0f,0.0f); // Spin
     glBindTexture(GL_TEXTURE_2D, texture_stone);
 
@@ -370,7 +371,6 @@ void display(void)
        Z axis chya maagchya bajula -ve */
     
     // Front Face
-	glColor3f(1.0f, 1.0f, 1.0f);
     glTexCoord2f(0.5f, 1.0f);
 	glVertex3f(0.0f, 1.0f, 0.0f); //Apex
 	glTexCoord2f(0.0f, 0.0f);
@@ -379,7 +379,6 @@ void display(void)
 	glVertex3f(1.0f, -1.0f, 1.0f);
 
     // Right Face
-    glColor3f(1.0f, 1.0f, 1.0f);
     glTexCoord2f(0.5f, 1.0f);
 	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
     glTexCoord2f(0.0f, 0.0f);
@@ -388,7 +387,6 @@ void display(void)
 	glVertex3f(1.0f, -1.0f, -1.0f);
 
     // Back Face
-    glColor3f(1.0f, 1.0f, 1.0f);
     glTexCoord2f(0.5f, 1.0f);
 	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
     glTexCoord2f(0.0f, 0.0f);
@@ -397,7 +395,6 @@ void display(void)
 	glVertex3f(-1.0f, -1.0f, -1.0f);
 
     // Left Face
-    glColor3f(1.0f, 1.0f, 1.0f);
     glTexCoord2f(0.5f, 1.0f);
 	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
     glTexCoord2f(0.0f, 0.0f);
@@ -406,9 +403,6 @@ void display(void)
     glVertex3f(-1.0f, -1.0f, 1.0f);
 
 	glEnd();
-
-    
-
     SwapBuffers(ghdc);
 }
 

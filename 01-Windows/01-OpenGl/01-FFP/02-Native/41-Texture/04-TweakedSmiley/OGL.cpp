@@ -3,8 +3,6 @@
 #include"OGL.h"  //Aplya path (local) madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
-#define _USE_MATH_DEFINES
-#include<math.h> // cos() , sin() sathi
 
 // OpenGL header files
 #include<GL/gl.h>
@@ -25,7 +23,8 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-float x=0.0f,y=0.0f;
+GLuint texture_smiley;
+int gKeypressed = -1;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -199,7 +198,24 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 27:
                     DestroyWindow(hwnd);
                     break;
+                case 49:
+                    gKeypressed = 1;
+                    glEnable(GL_TEXTURE_2D);
+                    break;
+                case 50:
+                    gKeypressed = 2;
+                    glEnable(GL_TEXTURE_2D);
+                    break;
+                case 51:
+                    gKeypressed = 3;
+                    glEnable(GL_TEXTURE_2D);
+                    break;
+                case 52:
+                    gKeypressed = 4;
+                    glEnable(GL_TEXTURE_2D);
+                    break;
                 default:
+                    glDisable(GL_TEXTURE_2D);
                     break;
             }
             break;
@@ -254,13 +270,15 @@ void ToggleFullScreen(void)
         ShowCursor(TRUE);
         gbFullScreen=FALSE;
     }
-
 }
 
 int initialize(void)
 {
+    // Declaration of user-defined functions
+    BOOL LoadGLTexture(GLuint* ,TCHAR[]);
     // Function Declarations
     void resize(int,int);
+    void uninitialize(void);
     // Variable Declarations
     PIXELFORMATDESCRIPTOR pfd;
     int iPixelFormatIndex=0;
@@ -276,6 +294,7 @@ int initialize(void)
     pfd.cGreenBits = 8;
     pfd.cBlueBits = 8;
     pfd.cAlphaBits = 8;
+    pfd.cDepthBits = 32; // 24 pan chaltai
     
     // GetDC
     ghdc = GetDC(ghwnd);
@@ -297,10 +316,28 @@ int initialize(void)
     // Make the rendering context as current context
     if(wglMakeCurrent(ghdc,ghrc)==FALSE)
         return -4;
+    if(LoadGLTexture(&texture_smiley, MAKEINTRESOURCE(IDBITMAP_SMILEY))==FALSE)
+    {
+        fprintf(gpFile,"LoadGLTexture for smiley Failed.\n");
+        uninitialize();
+        return -5;
+    }
 
     // Here Starts OpenGL code
-    // Clear the screen using blue color
-    glClearColor(0.0f,0.0f,0.0f,1.0f);
+    // Clear the screen using black color
+    glClearColor(0.0f,0.0f,0.0f,0.0f);
+
+    // Depth Related Changes
+    glClearDepth(1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+
+    glShadeModel(GL_SMOOTH);
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
+    
+    // Enabling the texture
+    // glEnable(GL_TEXTURE_2D);
+
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
@@ -322,270 +359,111 @@ void resize(int width, int height)
 
 void display(void)
 {
-    // Function Declarations
-    void DrawLetterI(float,float);
-    void DrawLetterN(float,float);
-    void DrawLetterD(float,float);
-    void DrawLetterA(float,float);
+    // Variable Declarations
+    
     // Code
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity(); 
-
-    glTranslatef(0.0f, 0.0f, -3.0f);
-    glScalef(1.0f,1.5f,0.0f);
-
-    DrawLetterI(-1.3f, -0.1f);
-    DrawLetterN(-0.5f, -0.1f);
-    DrawLetterD(0.2f,  -0.1f);
-    DrawLetterI(0.7f,  -0.1f);
-    DrawLetterA(1.3f,  -0.1f);
-
+    glLoadIdentity();
+    
+    glTranslatef(0.0f,0.0f,-4.0f);
+    glScalef(0.75f, 0.75f, 0.75f);
+    glBindTexture(GL_TEXTURE_2D, texture_smiley);
+    if(gKeypressed == 1)
+    {
+        glBegin(GL_QUADS);
+        glTexCoord2f(0.5f, 0.5f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.0f, 0.5f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glTexCoord2f(0.5f, 0.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glEnd();
+    }
+    else if(gKeypressed == 2)
+    {
+        glBegin(GL_QUADS);
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glEnd();
+    }
+    else if(gKeypressed == 3)
+    {
+        glBegin(GL_QUADS);
+        glTexCoord2f(2.0f, 2.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.0f, 2.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glTexCoord2f(2.0f, 0.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glEnd();
+    }
+    else if(gKeypressed == 4)
+    {
+        glBegin(GL_QUADS);
+        glTexCoord2f(0.5f, 0.5f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.5f, 0.5f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.5f, 0.5f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glTexCoord2f(0.5f, 0.5f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glEnd();
+    }
+    else
+    {
+        glBegin(GL_QUADS);
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glEnd();
+    }
     SwapBuffers(ghdc);
 }
-
-void DrawLetterI(float x, float y)
-{
-    // Upper quad
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
-    glVertex3f(x+0.25f, y+0.5f, 0.0f);
-    glVertex3f(x-0.25f, y+0.5f, 0.0f);
-    glVertex3f(x-0.25f, y+0.4f, 0.0f);
-    glVertex3f(x+0.25f, y+0.4f, 0.0f);
-    glEnd();
-    
-    // Middle Quad Upper
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
-    glVertex3f(x+0.05f, y+0.4f, 0.0f);
-    glVertex3f(x-0.05f, y+0.4f, 0.0f);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x-0.05f, y+0.1f, 0.0f);
-    glVertex3f(x+0.05f, y+0.1f, 0.0f);
-    glEnd();
-
-    // Middle Quad Lower
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x+0.05f, y+0.1f, 0.0f);
-    glVertex3f(x-0.05f, y+0.1f, 0.0f);
-    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
-    glVertex3f(x-0.05f, y-0.3f, 0.0f);
-    glVertex3f(x+0.05f, y-0.3f, 0.0f);
-    glEnd();
-
-    // Lower Quad
-    glBegin(GL_QUADS);
-    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
-    glVertex3f(x+0.25f, y-0.2f, 0.0f);
-    glVertex3f(x-0.25f, y-0.2f, 0.0f);
-    glVertex3f(x-0.25f, y-0.3f, 0.0f);
-    glVertex3f(x+0.25f, y-0.3f, 0.0f);
-    glEnd();
-}
-
-void DrawLetterN(float x, float y)
-{   
-    // Right Quad Upper
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
-    glVertex3f(x+0.1f, y+0.5f, 0.0f);
-    glVertex3f(x+0.0f, y+0.5f, 0.0f);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x+0.0f, y+0.1f, 0.0f);
-    glVertex3f(x+0.1f, y+0.1f, 0.0f);
-    glEnd();
-    
-    // Right Quad Lower
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x+0.1f, y+0.1f, 0.0f);
-    glVertex3f(x+0.0f, y+0.1f, 0.0f);
-    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
-    glVertex3f(x+0.0f, y-0.3f, 0.0f);
-    glVertex3f(x+0.1f, y-0.3f, 0.0f);
-    glEnd();
-    
-    // Middle Tirka Quad Upper
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
-    glVertex3f(x-0.3f, y+0.5f, 0.0f);
-    glVertex3f(x-0.4f, y+0.5f, 0.0f);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x-0.2f, y+0.1f, 0.0f);
-    glVertex3f(x-0.1f, y+0.1f, 0.0f);
-    glEnd();
-
-    // Middle Tirka Quad Lower
-    glBegin(GL_QUADS);
-    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
-    glVertex3f(x+0.0f, y-0.3f, 0.0f);
-    glVertex3f(x+0.1f, y-0.3f, 0.0f);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x-0.1f, y+0.1f, 0.0f);
-    glVertex3f(x-0.2f, y+0.1f, 0.0f);
-    glEnd();
-
-    // Left Quad Upper
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
-    glVertex3f(x-0.3f, y+0.5f, 0.0f);
-    glVertex3f(x-0.4f, y+0.5f, 0.0f);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x-0.4f, y+0.1f, 0.0f);
-    glVertex3f(x-0.3f, y+0.1f, 0.0f);
-    glEnd();
-
-    // Left Quad Lower
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x-0.3f, y+0.1f, 0.0f);
-    glVertex3f(x-0.4f, y+0.1f, 0.0f);
-    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
-    glVertex3f(x-0.4f, y-0.3f, 0.0f);
-    glVertex3f(x-0.3f, y-0.3f, 0.0f);
-    glEnd();
-}
-
-void DrawLetterD(float x, float y)
-{
-    // Left Vertical Quad Upper
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
-    glVertex3f(x-0.3f, y+0.5f, 0.0f);
-    glVertex3f(x-0.4f, y+0.5f, 0.0f);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x-0.4f, y+0.1f, 0.0f);
-    glVertex3f(x-0.3f, y+0.1f, 0.0f);
-    glEnd();
-
-    // Left Vertical Quad Lower
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x-0.3f, y+0.1f, 0.0f);
-    glVertex3f(x-0.4f, y+0.1f, 0.0f);
-    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
-    glVertex3f(x-0.4f, y-0.3f, 0.0f);
-    glVertex3f(x-0.3f, y-0.3f, 0.0f);
-    glEnd();
-
-    // Top Horizontal Quad
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
-    glVertex3f(x-0.3f, y+0.5f, 0.0f);
-    glVertex3f(x-0.3f, y+0.4f, 0.0f);
-    glVertex3f(x+0.0f, y+0.4f, 0.0f);
-    glVertex3f(x+0.0f, y+0.5f, 0.0f);
-    glEnd();
-
-    // Right Vertical Upper Quad
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
-    glVertex3f(x+0.1f, y+0.4f, 0.0f);
-    glVertex3f(x+0.0f, y+0.4f, 0.0f);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x+0.0f, y+0.1f, 0.0f);
-    glVertex3f(x+0.1f, y+0.1f, 0.0f);
-    glEnd();
-
-    // Right Vertical Lower Quad
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x+0.1f, y+0.1f, 0.0f);
-    glVertex3f(x+0.0f, y+0.1f, 0.0f);
-    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
-    glVertex3f(x+0.0f, y-0.2f, 0.0f);
-    glVertex3f(x+0.1f, y-0.2f, 0.0f);
-    glEnd();
-
-    // Bottom Horizontal Quad
-    glBegin(GL_QUADS);
-    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
-    glVertex3f(x-0.3f, y-0.3f, 0.0f);
-    glVertex3f(x-0.3f, y-0.2f, 0.0f);
-    glVertex3f(x+0.0f, y-0.2f, 0.0f);
-    glVertex3f(x+0.0f, y-0.3f, 0.0f);
-    glEnd();
-
-    // Bottom Right Corner
-    glBegin(GL_QUADS);
-    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
-    glVertex3f(x+0.0f, y-0.2f, 0.0f);
-    glVertex3f(x+0.0f, y-0.3f, 0.0f);
-    glVertex3f(x+0.1f, y-0.2f, 0.0f);
-    glVertex3f(x+0.0f, y-0.2f, 0.0f);
-    glEnd();
-
-    // Top Right Corner
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
-    glVertex3f(x+0.0f, y+0.4f, 0.0f);
-    glVertex3f(x+0.0f, y+0.5f, 0.0f);
-    glVertex3f(x+0.1f, y+0.4f, 0.0f);
-    glVertex3f(x+0.0f, y+0.4f, 0.0f);
-    glEnd();
-    
-}
-
-void DrawLetterA(float x, float y)
-{
-    // Left Upper Half
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
-    glVertex3f(x+0.05f, y+0.5f, 0.0f);
-    glVertex3f(x-0.05f, y+0.5f, 0.0f);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x-0.15f, y+0.1f, 0.0f);
-    glVertex3f(x-0.05f, y+0.1f, 0.0f);
-    glEnd();
-
-    // Left Lower Half
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x-0.05f, y+0.1f, 0.0f);
-    glVertex3f(x-0.15f, y+0.1f, 0.0f);
-    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
-    glVertex3f(x-0.25f, y-0.3f, 0.0f);
-    glVertex3f(x-0.15f, y-0.3f, 0.0f);
-    glEnd();
-    
-    // Right Upper Half 
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
-    glVertex3f(x+0.05f, y+0.5f, 0.0f);
-    glVertex3f(x-0.05f, y+0.5f, 0.0f);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x+0.05f, y+0.1f, 0.0f);
-    glVertex3f(x+0.15f, y+0.1f, 0.0f);
-    glEnd();
-
-    // Right Lower Half
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x+0.15f, y+0.1f, 0.0f);
-    glVertex3f(x+0.05f, y+0.1f, 0.0f);
-    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
-    glVertex3f(x+0.15f, y-0.3f, 0.0f);
-    glVertex3f(x+0.25f, y-0.3f, 0.0f);
-    glEnd();
-
-    // Madhli Advi Dandi
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(x+0.13f, y+0.08f, 0.0f);
-    glVertex3f(x+0.13f, y+0.12f, 0.0f);
-    glVertex3f(x-0.13f, y+0.12f, 0.0f);
-    glVertex3f(x-0.13f, y+0.08f, 0.0f);
-    glEnd();
-
-}
-
 
 void update(void)
 {
     // Code
+}
 
+BOOL LoadGLTexture(GLuint *texture, TCHAR imageResourceID[])
+{
+    // Variable Declarations
+    HBITMAP hBitmap = NULL;
+    BITMAP bmp;
+    BOOL bResult = FALSE;
+    // Code
+    hBitmap = (HBITMAP)LoadImage(GetModuleHandle(NULL), imageResourceID, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    if(hBitmap)
+    {
+        bResult = TRUE;
+        GetObject(hBitmap, sizeof(bmp), &bmp);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        glGenTextures(1, texture);
+        glBindTexture(GL_TEXTURE_2D, *texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+        // Create The Texture
+        gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bmp.bmWidth, bmp.bmHeight, GL_BGR_EXT, GL_UNSIGNED_BYTE, bmp.bmBits);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        DeleteObject(hBitmap);
+
+    }
+    return bResult;
 }
 
 void uninitialize(void)
@@ -615,6 +493,10 @@ void uninitialize(void)
     {
         DestroyWindow(ghwnd);
         ghwnd=NULL;
+    }
+    if(texture_smiley)
+    {
+        glDeleteTextures(1, &texture_smiley);
     }
     if(gpFile)
     {

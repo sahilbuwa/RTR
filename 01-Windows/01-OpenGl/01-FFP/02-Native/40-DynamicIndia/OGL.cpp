@@ -33,7 +33,9 @@ float jet1_x= -2.0f,   jet1_y= -1.0f,
 float angleRotationJet1 = -90.0f, angleRotationJet3 = 90.0f;
 float angleRevolutionJet1 = 180.0f, angleRevolutionJet3 = 180.0f;
 float translatorI1x = -2.0f, translatorNy = 1.5f, translatorI2y = -2.0f, translatorAx = 3.5f; 
-float colorMaxOrRe = 0.0f, colorMaxOrGr = 0.0f, colorMaxGrGr = 0.0f, colorMaxWh = 0.0f;
+float colorMaxOrRe = 0.0f, colorMaxOrGr = 0.0f, colorMaxOrBl = 0.0f,
+      colorMaxGrRe = 0.0f, colorMaxGrGr = 0.0f, colorMaxGrBl = 0.0f,
+      colorMaxWh = 0.0f;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -354,13 +356,14 @@ void display(void)
     DrawLetterD(0.15f,  -0.1f);
     DrawLetterI(0.65f,  translatorI2y);
     DrawLetterA(translatorAx,  -0.1f);
+
     if(jet1_x<1.6f && translatorAx <= 1.25f)
     {
         // Jet1
         glLoadIdentity();
         glTranslatef(jet1_x,jet1_y,-4.0f);
         glRotatef(angleRotationJet1,0.0f, 0.0f, 1.0f);
-        DrawJet(0.0f, -0.2f , 1.0f, 0.5f, 0.0f);
+        DrawJet(0.0f, -0.2f , 1.0f, (GLfloat)153/255, (GLfloat)51/255);
 
         // Jet2
         glLoadIdentity();
@@ -371,7 +374,7 @@ void display(void)
         glLoadIdentity();
         glTranslatef(jet3_x, jet3_y,-4.0f);
         glRotatef(angleRotationJet3,0.0f, 0.0f, 1.0f);
-        DrawJet(0.0f, -0.2f , 0.0f, 1.0f, 0.0f);
+        DrawJet(0.0f, -0.2f ,(GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
     }
     else if(jet1_x>=1.6f && translatorAx <= 1.25f)
     {
@@ -379,7 +382,7 @@ void display(void)
         glLoadIdentity();
         glTranslatef(jet1_x,jet1_y,-4.0f);
         glRotatef(angleRotationJet1,0.0f, 0.0f, 1.0f);
-        DrawJet(0.0f, -0.2f , 1.0f, 0.5f, 0.0f);
+        DrawJet(0.0f, -0.2f , 1.0f, (GLfloat)153/255, (GLfloat)51/255);
 
         // Jet2
         glLoadIdentity();
@@ -390,7 +393,7 @@ void display(void)
         glLoadIdentity();
         glTranslatef(jet3_x, jet3_y,-4.0f);
         glRotatef(angleRotationJet3,0.0f, 0.0f, 1.0f);
-        DrawJet(0.0f, -0.2f , 0.0f, 1.0f, 0.0f);
+        DrawJet(0.0f, -0.2f ,(GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
     }
     SwapBuffers(ghdc);
 }
@@ -399,7 +402,7 @@ void DrawLetterI(float x, float y)
 {
     // Upper quad
     glBegin(GL_QUADS);
-    glColor3f(1.0f, 0.5f, 0.0f);
+    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
     glVertex3f(x+0.25f, y+0.5f, 0.0f);
     glVertex3f(x-0.25f, y+0.5f, 0.0f);
     glVertex3f(x-0.25f, y+0.4f, 0.0f);
@@ -408,7 +411,7 @@ void DrawLetterI(float x, float y)
     
     // Middle Quad Upper
     glBegin(GL_QUADS);
-    glColor3f(1.0f, 0.5f, 0.0f);
+    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
     glVertex3f(x+0.05f, y+0.4f, 0.0f);
     glVertex3f(x-0.05f, y+0.4f, 0.0f);
     glColor3f(1.0f, 1.0f, 1.0f);
@@ -421,14 +424,14 @@ void DrawLetterI(float x, float y)
     glColor3f(1.0f, 1.0f, 1.0f);
     glVertex3f(x+0.05f, y+0.1f, 0.0f);
     glVertex3f(x-0.05f, y+0.1f, 0.0f);
-    glColor3f(0.0f, 1.0f, 0.0f);
+    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
     glVertex3f(x-0.05f, y-0.3f, 0.0f);
     glVertex3f(x+0.05f, y-0.3f, 0.0f);
     glEnd();
 
     // Lower Quad
     glBegin(GL_QUADS);
-    glColor3f(0.0f, 1.0f, 0.0f);
+    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
     glVertex3f(x+0.25f, y-0.2f, 0.0f);
     glVertex3f(x-0.25f, y-0.2f, 0.0f);
     glVertex3f(x-0.25f, y-0.3f, 0.0f);
@@ -440,7 +443,7 @@ void DrawLetterN(float x, float y)
 {   
     // Right Quad Upper
     glBegin(GL_QUADS);
-    glColor3f(1.0f, 0.5f, 0.0f);
+    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
     glVertex3f(x+0.1f, y+0.5f, 0.0f);
     glVertex3f(x+0.0f, y+0.5f, 0.0f);
     glColor3f(1.0f, 1.0f, 1.0f);
@@ -453,14 +456,14 @@ void DrawLetterN(float x, float y)
     glColor3f(1.0f, 1.0f, 1.0f);
     glVertex3f(x+0.1f, y+0.1f, 0.0f);
     glVertex3f(x+0.0f, y+0.1f, 0.0f);
-    glColor3f(0.0f, 1.0f, 0.0f);
+    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
     glVertex3f(x+0.0f, y-0.3f, 0.0f);
     glVertex3f(x+0.1f, y-0.3f, 0.0f);
     glEnd();
     
     // Middle Tirka Quad Upper
     glBegin(GL_QUADS);
-    glColor3f(1.0f, 0.5f, 0.0f);
+    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
     glVertex3f(x-0.3f, y+0.5f, 0.0f);
     glVertex3f(x-0.4f, y+0.5f, 0.0f);
     glColor3f(1.0f, 1.0f, 1.0f);
@@ -470,7 +473,7 @@ void DrawLetterN(float x, float y)
 
     // Middle Tirka Quad Lower
     glBegin(GL_QUADS);
-    glColor3f(0.0f, 1.0f, 0.0f);
+    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
     glVertex3f(x+0.0f, y-0.3f, 0.0f);
     glVertex3f(x+0.1f, y-0.3f, 0.0f);
     glColor3f(1.0f, 1.0f, 1.0f);
@@ -480,7 +483,7 @@ void DrawLetterN(float x, float y)
 
     // Left Quad Upper
     glBegin(GL_QUADS);
-    glColor3f(1.0f, 0.5f, 0.0f);
+    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
     glVertex3f(x-0.3f, y+0.5f, 0.0f);
     glVertex3f(x-0.4f, y+0.5f, 0.0f);
     glColor3f(1.0f, 1.0f, 1.0f);
@@ -493,7 +496,7 @@ void DrawLetterN(float x, float y)
     glColor3f(1.0f, 1.0f, 1.0f);
     glVertex3f(x-0.3f, y+0.1f, 0.0f);
     glVertex3f(x-0.4f, y+0.1f, 0.0f);
-    glColor3f(0.0f, 1.0f, 0.0f);
+    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
     glVertex3f(x-0.4f, y-0.3f, 0.0f);
     glVertex3f(x-0.3f, y-0.3f, 0.0f);
     glEnd();
@@ -583,7 +586,7 @@ void DrawLetterA(float x, float y)
 {
     // Left Upper Half
     glBegin(GL_QUADS);
-    glColor3f(1.0f, 0.5f, 0.0f);
+    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
     glVertex3f(x+0.05f, y+0.5f, 0.0f);
     glVertex3f(x-0.05f, y+0.5f, 0.0f);
     glColor3f(1.0f, 1.0f, 1.0f);
@@ -596,14 +599,14 @@ void DrawLetterA(float x, float y)
     glColor3f(1.0f, 1.0f, 1.0f);
     glVertex3f(x-0.05f, y+0.1f, 0.0f);
     glVertex3f(x-0.15f, y+0.1f, 0.0f);
-    glColor3f(0.0f, 1.0f, 0.0f);
+    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
     glVertex3f(x-0.25f, y-0.3f, 0.0f);
     glVertex3f(x-0.15f, y-0.3f, 0.0f);
     glEnd();
     
     // Right Upper Half 
     glBegin(GL_QUADS);
-    glColor3f(1.0f, 0.5f, 0.0f);
+    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
     glVertex3f(x+0.05f, y+0.5f, 0.0f);
     glVertex3f(x-0.05f, y+0.5f, 0.0f);
     glColor3f(1.0f, 1.0f, 1.0f);
@@ -616,7 +619,7 @@ void DrawLetterA(float x, float y)
     glColor3f(1.0f, 1.0f, 1.0f);
     glVertex3f(x+0.15f, y+0.1f, 0.0f);
     glVertex3f(x+0.05f, y+0.1f, 0.0f);
-    glColor3f(0.0f, 1.0f, 0.0f);
+    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
     glVertex3f(x+0.15f, y-0.3f, 0.0f);
     glVertex3f(x+0.25f, y-0.3f, 0.0f);
     glEnd();
@@ -626,7 +629,7 @@ void DrawLetterA(float x, float y)
         // Madhli Advi Dandi
         glBegin(GL_QUADS);
         // Hirvi Dandi
-        glColor3f(0.0f, 1.0f, 0.0f);
+        glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
         glVertex3f(x+0.06f, y+0.05f, 0.0f);
         glVertex3f(x+0.06f, y+0.08f, 0.0f);
         glVertex3f(x-0.06f, y+0.08f, 0.0f);
@@ -638,7 +641,7 @@ void DrawLetterA(float x, float y)
         glVertex3f(x-0.06f, y+0.11f, 0.0f);
         glVertex3f(x-0.06f, y+0.08f, 0.0f);
         // Orange Dandi
-        glColor3f(1.0f, 0.7f, 0.0f);
+        glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
         glVertex3f(x+0.05f, y+0.11f, 0.0f);
         glVertex3f(x+0.05f, y+0.14f, 0.0f);
         glVertex3f(x-0.05f, y+0.14f, 0.0f);
@@ -723,16 +726,20 @@ void DrawJet(float x, float y, float R, float G, float B)
     DrawLetterA(-4.0f,1.4f);
     glScalef(1.0f,1.0f,0.0f);
     glBegin(GL_LINES);
-    glColor3f(1.0f, 0.5f, 0.0f);
+    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
     glVertex3f(-3.2f,1.8f,0.0f);
     glVertex3f(-2.8f,1.8f,0.0f);
+
     glColor3f(1.0f, 1.0f, 1.0f);
     glVertex3f(-3.2f,1.5f,0.0f);
     glVertex3f(-3.0f,1.5f,0.0f);
-    glColor3f(1.0f, 0.5f, 0.0f);
+
+    glColor3f(1.0f, (GLfloat)153/255, (GLfloat)51/255);
     glVertex3f(-3.2f,1.8f,0.0f);
-    glColor3f(0.0f, 1.0f, 0.0f);
+
+    glColor3f((GLfloat)19/255, (GLfloat)136/255, (GLfloat)8/255);
     glVertex3f(-3.2f,1.2f,0.0f);
+
     glEnd();
 
 }
@@ -754,10 +761,27 @@ void update(void)
             {
                 colorMaxWh = colorMaxWh + 0.0005f;
                 colorMaxOrRe = colorMaxOrRe + 0.0005;
-                colorMaxGrGr = colorMaxGrGr + 0.0005;
-                if(colorMaxOrGr<0.5f)
+
+                if(colorMaxOrGr<(GLfloat)153/255)
+                {
                     colorMaxOrGr = colorMaxOrGr + 0.0005;
-                
+                }
+                if(colorMaxOrBl< (GLfloat)51/255)
+                {
+                    colorMaxOrBl = colorMaxOrBl + 0.0005;
+                }
+                if(colorMaxGrRe < (GLfloat)19/255)
+                {
+                    colorMaxGrRe = colorMaxGrRe + 0.0005;
+                }
+                if(colorMaxGrGr < (GLfloat)136/255)
+                {
+                    colorMaxGrGr = colorMaxGrGr + 0.0005;
+                }
+                if(colorMaxGrBl < (GLfloat)8/255)
+                {
+                    colorMaxGrBl = colorMaxGrBl + 0.0005;
+                }
             }
             else
             {

@@ -357,7 +357,7 @@ void display(void)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     
-    glTranslatef(0.0f,0.0f,-6.0f);
+    glTranslatef(0.0f,0.0f,-4.0f);
     glScalef(0.75f, 0.75f, 0.75f);
     glRotatef(angleCube,1.0f,0.0f,0.0f);
     glRotatef(angleCube,0.0f,1.0f,0.0f);
@@ -366,7 +366,6 @@ void display(void)
     
     glBegin(GL_QUADS);
     // Front Face
-	glColor3f(1.0f, 1.0f, 1.0f);
     glTexCoord2f(1.0f, 1.0f);
 	glVertex3f(1.0f, 1.0f, 1.0f);
     glTexCoord2f(0.0f, 1.0f);
@@ -377,7 +376,6 @@ void display(void)
 	glVertex3f(1.0f, -1.0f, 1.0f);
 
     // Right Face
-    glColor3f(1.0f, 1.0f, 1.0f);
     glTexCoord2f(1.0f, 1.0f);
     glVertex3f(1.0f, 1.0f, -1.0f);
     glTexCoord2f(0.0f, 1.0f);
@@ -388,7 +386,6 @@ void display(void)
     glVertex3f(1.0f, -1.0f, -1.0f);
 
     // Back Face
-    glColor3f(1.0f, 1.0f, 1.0f);
     glTexCoord2f(1.0f, 1.0f);
     glVertex3f(-1.0f, 1.0f, -1.0f);
     glTexCoord2f(0.0f, 1.0f);
@@ -399,7 +396,6 @@ void display(void)
     glVertex3f(-1.0f, -1.0f, -1.0f);
 
     // Left Face
-    glColor3f(1.0f, 1.0f, 1.0f);
     glTexCoord2f(1.0f, 1.0f);
     glVertex3f(-1.0f, 1.0f, 1.0f);
     glTexCoord2f(0.0f, 1.0f);
@@ -410,7 +406,6 @@ void display(void)
     glVertex3f(-1.0f, -1.0f, 1.0f);
 
     // Top Face
-    glColor3f(1.0f, 1.0f, 1.0f);
     glTexCoord2f(1.0f, 1.0f);
     glVertex3f(1.0f, 1.0f, -1.0f);
     glTexCoord2f(0.0f, 1.0f);
@@ -421,7 +416,6 @@ void display(void)
     glVertex3f(1.0f, 1.0f, 1.0f);
 
     // Bottom Face
-    glColor3f(1.0f, 1.0f, 1.0f);
     glTexCoord2f(1.0f, 1.0f);
     glVertex3f(1.0f, -1.0f, -1.0f);
     glTexCoord2f(0.0f, 1.0f);

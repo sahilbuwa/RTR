@@ -15,6 +15,9 @@
 // Defines
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
+#define Checkerboard_Width 64
+#define Checkerboard_Height 64
+
 
 // Global Variable Declarations
 HWND ghwnd=NULL;
@@ -23,8 +26,8 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-GLuint texture_smiley;
-int gKeypressed = -1;
+GLubyte checkerboard[Checkerboard_Width][Checkerboard_Height][4];
+GLuint texture_checkerboard;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -180,7 +183,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
             break;
         case WM_ERASEBKGND:
             return 0;
-        // As this is retained mode graphics, there is WM_PAINT to paint.    
+        // As this is retained mode graphics, there is no WM_PAINT to paint.    
         case WM_CHAR:
             switch(wParam)
             {
@@ -198,24 +201,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 27:
                     DestroyWindow(hwnd);
                     break;
-                case 49:
-                    gKeypressed = 1;
-                    glEnable(GL_TEXTURE_2D);
-                    break;
-                case 50:
-                    gKeypressed = 2;
-                    glEnable(GL_TEXTURE_2D);
-                    break;
-                case 51:
-                    gKeypressed = 3;
-                    glEnable(GL_TEXTURE_2D);
-                    break;
-                case 52:
-                    gKeypressed = 4;
-                    glEnable(GL_TEXTURE_2D);
-                    break;
                 default:
-                    glDisable(GL_TEXTURE_2D);
                     break;
             }
             break;
@@ -270,15 +256,15 @@ void ToggleFullScreen(void)
         ShowCursor(TRUE);
         gbFullScreen=FALSE;
     }
+
 }
 
 int initialize(void)
 {
-    // Declaration of user-defined functions
-    BOOL LoadGLTexture(GLuint* ,TCHAR[]);
     // Function Declarations
     void resize(int,int);
-    void uninitialize(void);
+    void LoadGLTexture(void);
+
     // Variable Declarations
     PIXELFORMATDESCRIPTOR pfd;
     int iPixelFormatIndex=0;
@@ -294,8 +280,8 @@ int initialize(void)
     pfd.cGreenBits = 8;
     pfd.cBlueBits = 8;
     pfd.cAlphaBits = 8;
-    pfd.cDepthBits = 32; // 24 pan chaltai
-    
+    pfd.cDepthBits = 32; // 24 pn chalel.
+
     // GetDC
     ghdc = GetDC(ghwnd);
 
@@ -316,31 +302,69 @@ int initialize(void)
     // Make the rendering context as current context
     if(wglMakeCurrent(ghdc,ghrc)==FALSE)
         return -4;
-    if(LoadGLTexture(&texture_smiley, MAKEINTRESOURCE(IDBITMAP_SMILEY))==FALSE)
-    {
-        fprintf(gpFile,"LoadGLTexture for smiley Failed.\n");
-        uninitialize();
-        return -5;
-    }
 
     // Here Starts OpenGL code
-    // Clear the screen using black color
-    glClearColor(0.0f,0.0f,0.0f,0.0f);
+    // Clear the screen using grey color
+    glClearColor(0.5f,0.5f,0.5f,1.0f);
 
-    // Depth Related Changes
     glClearDepth(1.0f);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
 
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
-    
-    // Enabling the texture
-    // glEnable(GL_TEXTURE_2D);
+
+    glEnable(GL_TEXTURE_2D);
+    LoadGLTexture();
 
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
+
     return 0;
+}
+
+void LoadGLTexture(void)
+{
+    // Function Declarations
+    void MakeCheckerBoard(void);
+
+    // Code
+    MakeCheckerBoard();
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    glGenTextures(1, &texture_checkerboard);
+    glBindTexture(GL_TEXTURE_2D, texture_checkerboard);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Checkerboard_Width, Checkerboard_Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, checkerboard);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void MakeCheckerBoard(void)
+{
+    // Variable Declarations
+    int c;
+
+    // Code
+    for(int i=0; i < Checkerboard_Width; i++)
+    {
+        for(int j=0; j < Checkerboard_Height; j++)
+        {
+            c = (((i & 0x8) == 0) ^ ((j & 0x8) == 0))*255;
+
+            checkerboard[i][j][0] = (GLubyte)c;
+            checkerboard[i][j][1] = (GLubyte)c;
+            checkerboard[i][j][2] = (GLubyte)c;
+            checkerboard[i][j][3] = (GLubyte)255;
+        }
+    }
 }
 
 void resize(int width, int height)
@@ -359,111 +383,46 @@ void resize(int width, int height)
 
 void display(void)
 {
-    // Variable Declarations
-    
     // Code
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    fprintf(gpFile, "%d\n",texture_smiley); 
+
     glTranslatef(0.0f,0.0f,-4.0f);
-    glScalef(0.75f, 0.75f, 0.75f);
-    glBindTexture(GL_TEXTURE_2D, texture_smiley);
-    if(gKeypressed == 1)
-    {
-        glBegin(GL_QUADS);
-        glTexCoord2f(0.5f, 0.5f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.0f, 0.5f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glTexCoord2f(0.5f, 0.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glEnd();
-    }
-    else if(gKeypressed == 2)
-    {
-        glBegin(GL_QUADS);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glEnd();
-    }
-    else if(gKeypressed == 3)
-    {
-        glBegin(GL_QUADS);
-        glTexCoord2f(2.0f, 2.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.0f, 2.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glTexCoord2f(2.0f, 0.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glEnd();
-    }
-    else if(gKeypressed == 4)
-    {
-        glBegin(GL_QUADS);
-        glTexCoord2f(0.5f, 0.5f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.5f, 0.5f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.5f, 0.5f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glTexCoord2f(0.5f, 0.5f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glEnd();
-    }
-    else
-    {
-        glBegin(GL_QUADS);
-        glColor3f(1.0f, 1.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glEnd();
-    }
+    glBindTexture(GL_TEXTURE_2D, texture_checkerboard);
+
+    // Checkerboard che ujwikadche 2 points XY plane varun 45 degrees -Z axis kade rotate kele mhanun he x ani z chya navya values 2.41421f and -1.41421f alyat....
+    glBegin(GL_QUADS);
+    glTexCoord2f(1.0f, 1.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(-2.0f, 1.0f, 0.0f);
+    glTexCoord2f(0.0f, 0.0f);
+	glVertex3f(-2.0f, -1.0f, 0.0f);
+    glTexCoord2f(1.0f, 0.0f);
+	glVertex3f(0.0f, -1.0f, 0.0f);
+	glEnd();
+
+    glBegin(GL_QUADS);
+    glTexCoord2f(1.0f, 1.0f);
+	glVertex3f(2.41421f, 1.0f, -1.41421f);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(1.0f, 1.0f, 0.0f);
+    glTexCoord2f(0.0f, 0.0f);
+	glVertex3f(1.0f, -1.0f, 0.0f);
+    glTexCoord2f(1.0f, 0.0f);
+	glVertex3f(2.41421f, -1.0f, -1.41421f);
+	glEnd();
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     SwapBuffers(ghdc);
 }
 
 void update(void)
 {
     // Code
-}
 
-BOOL LoadGLTexture(GLuint *texture, TCHAR imageResourceID[])
-{
-    // Variable Declarations
-    HBITMAP hBitmap = NULL;
-    BITMAP bmp;
-    BOOL bResult = FALSE;
-    // Code
-    hBitmap = (HBITMAP)LoadImage(GetModuleHandle(NULL), imageResourceID, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
-    if(hBitmap)
-    {
-        bResult = TRUE;
-        GetObject(hBitmap, sizeof(bmp), &bmp);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-        glGenTextures(1, texture);
-        glBindTexture(GL_TEXTURE_2D, *texture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-        // Create The Texture
-        gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bmp.bmWidth, bmp.bmHeight, GL_BGR_EXT, GL_UNSIGNED_BYTE, bmp.bmBits);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        DeleteObject(hBitmap);
-
-    }
-    return bResult;
 }
 
 void uninitialize(void)
@@ -494,9 +453,10 @@ void uninitialize(void)
         DestroyWindow(ghwnd);
         ghwnd=NULL;
     }
-    if(texture_smiley)
+    if(texture_checkerboard)
     {
-        glDeleteTextures(1, &texture_smiley);
+        glDeleteTextures(1, &texture_checkerboard);
+        texture_checkerboard = NULL;
     }
     if(gpFile)
     {

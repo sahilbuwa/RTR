@@ -3,6 +3,8 @@
 #include"OGL.h"  //Aplya path (local) madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
+#define _USE_MATH_DEFINES
+#include<math.h>
 
 // OpenGL header files
 #include<GL/gl.h>
@@ -23,8 +25,8 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-GLuint texture_smiley;
-int gKeypressed = -1;
+int Day=0 , Year = 0;
+GLUquadric *quadric = NULL;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -198,24 +200,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 27:
                     DestroyWindow(hwnd);
                     break;
-                case 49:
-                    gKeypressed = 1;
-                    glEnable(GL_TEXTURE_2D);
-                    break;
-                case 50:
-                    gKeypressed = 2;
-                    glEnable(GL_TEXTURE_2D);
-                    break;
-                case 51:
-                    gKeypressed = 3;
-                    glEnable(GL_TEXTURE_2D);
-                    break;
-                case 52:
-                    gKeypressed = 4;
-                    glEnable(GL_TEXTURE_2D);
-                    break;
                 default:
-                    glDisable(GL_TEXTURE_2D);
                     break;
             }
             break;
@@ -270,15 +255,13 @@ void ToggleFullScreen(void)
         ShowCursor(TRUE);
         gbFullScreen=FALSE;
     }
+
 }
 
 int initialize(void)
 {
-    // Declaration of user-defined functions
-    BOOL LoadGLTexture(GLuint* ,TCHAR[]);
     // Function Declarations
     void resize(int,int);
-    void uninitialize(void);
     // Variable Declarations
     PIXELFORMATDESCRIPTOR pfd;
     int iPixelFormatIndex=0;
@@ -316,12 +299,6 @@ int initialize(void)
     // Make the rendering context as current context
     if(wglMakeCurrent(ghdc,ghrc)==FALSE)
         return -4;
-    if(LoadGLTexture(&texture_smiley, MAKEINTRESOURCE(IDBITMAP_SMILEY))==FALSE)
-    {
-        fprintf(gpFile,"LoadGLTexture for smiley Failed.\n");
-        uninitialize();
-        return -5;
-    }
 
     // Here Starts OpenGL code
     // Clear the screen using black color
@@ -335,8 +312,8 @@ int initialize(void)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
     
-    // Enabling the texture
-    // glEnable(GL_TEXTURE_2D);
+     // Create Quadric
+    quadric = gluNewQuadric();
 
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
@@ -365,105 +342,27 @@ void display(void)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    fprintf(gpFile, "%d\n",texture_smiley); 
-    glTranslatef(0.0f,0.0f,-4.0f);
-    glScalef(0.75f, 0.75f, 0.75f);
-    glBindTexture(GL_TEXTURE_2D, texture_smiley);
-    if(gKeypressed == 1)
-    {
-        glBegin(GL_QUADS);
-        glTexCoord2f(0.5f, 0.5f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.0f, 0.5f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glTexCoord2f(0.5f, 0.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glEnd();
-    }
-    else if(gKeypressed == 2)
-    {
-        glBegin(GL_QUADS);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glEnd();
-    }
-    else if(gKeypressed == 3)
-    {
-        glBegin(GL_QUADS);
-        glTexCoord2f(2.0f, 2.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.0f, 2.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glTexCoord2f(2.0f, 0.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glEnd();
-    }
-    else if(gKeypressed == 4)
-    {
-        glBegin(GL_QUADS);
-        glTexCoord2f(0.5f, 0.5f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.5f, 0.5f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glTexCoord2f(0.5f, 0.5f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glTexCoord2f(0.5f, 0.5f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glEnd();
-    }
-    else
-    {
-        glBegin(GL_QUADS);
-        glColor3f(1.0f, 1.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        glEnd();
-    }
+
+    // View Transformation
+    gluLookAt(0.0f, 0.0f, 5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+    
+    glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    
+    glColor3f(1.0f,1.0f,1.0f);
+    
+    // Draw Sphere
+    gluSphere(quadric, 1.75, 50, 50);
+    glTranslatef(0.0f, 0.0f, -3.0f);
+    
+    
     SwapBuffers(ghdc);
 }
 
 void update(void)
 {
     // Code
-}
-
-BOOL LoadGLTexture(GLuint *texture, TCHAR imageResourceID[])
-{
-    // Variable Declarations
-    HBITMAP hBitmap = NULL;
-    BITMAP bmp;
-    BOOL bResult = FALSE;
-    // Code
-    hBitmap = (HBITMAP)LoadImage(GetModuleHandle(NULL), imageResourceID, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
-    if(hBitmap)
-    {
-        bResult = TRUE;
-        GetObject(hBitmap, sizeof(bmp), &bmp);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-        glGenTextures(1, texture);
-        glBindTexture(GL_TEXTURE_2D, *texture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-        // Create The Texture
-        gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bmp.bmWidth, bmp.bmHeight, GL_BGR_EXT, GL_UNSIGNED_BYTE, bmp.bmBits);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        DeleteObject(hBitmap);
-
-    }
-    return bResult;
+   
 }
 
 void uninitialize(void)
@@ -494,9 +393,10 @@ void uninitialize(void)
         DestroyWindow(ghwnd);
         ghwnd=NULL;
     }
-    if(texture_smiley)
+    if(quadric)
     {
-        glDeleteTextures(1, &texture_smiley);
+        gluDeleteQuadric(quadric);
+        quadric = NULL;
     }
     if(gpFile)
     {

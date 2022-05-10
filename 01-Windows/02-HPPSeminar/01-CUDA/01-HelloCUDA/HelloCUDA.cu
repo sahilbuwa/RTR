@@ -110,7 +110,7 @@ int main(void)
     result = cudaMemcpy(deviceInput2, hostInput2, size, cudaMemcpyHostToDevice);
     if(result != cudaSuccess)
     {
-        printf("Host to Device memory is failed for deviceInput1 array.\n");
+        printf("Host to Device memory is failed for deviceInput2 array.\n");
         cleanup();
         exit(EXIT_FAILURE);
     }
@@ -125,7 +125,7 @@ int main(void)
     result = cudaMemcpy(deviceOutput, hostOutput, size, cudaMemcpyHostToDevice);
     if(result != cudaSuccess)
     {
-        printf("Device to host memory is failed for hostOutput array.\n");
+        printf("Device to host data copy is failed for hostOutput array.\n");
         cleanup();
         exit(EXIT_FAILURE);
     }

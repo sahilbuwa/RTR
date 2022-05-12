@@ -122,7 +122,7 @@ int main(void)
     vecAddGPU <<<dimGrid, dimBlock >>> (deviceInput1, deviceInput2, deviceOutput, iNumberOfArrayElements);
 
     // Copy data from device array into host array
-    result = cudaMemcpy(deviceOutput, hostOutput, size, cudaMemcpyHostToDevice);
+    result = cudaMemcpy(hostOutput, deviceOutput, size, cudaMemcpyDeviceToHost);
     if(result != cudaSuccess)
     {
         printf("Device to host data copy is failed for hostOutput array.\n");
@@ -133,7 +133,7 @@ int main(void)
     // Vector addition on host
     for (int i=0; i < iNumberOfArrayElements; i++)
     {
-        printf("%f + %f\n",hostInput1[i], hostInput2[i], hostOutput[i]);
+        printf("%f + %f = %f\n",hostInput1[i], hostInput2[i], hostOutput[i]);
     }
 
     // Clean-up

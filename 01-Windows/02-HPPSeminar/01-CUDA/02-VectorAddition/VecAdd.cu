@@ -171,7 +171,7 @@ int main(void)
     // Output
     printf("Array1 begins from 0th index %.6f to %dth index %.6f\n", hostInput1[0], iNumberOfArrayElements - 1, hostInput1[iNumberOfArrayElements - 1]);
     printf("Array2 begins from 0th index %.6f to %dth index %.6f\n", hostInput2[0], iNumberOfArrayElements - 1, hostInput2[iNumberOfArrayElements - 1]);
-    printf("CUDA kernel grid dimension = %d,%d,%d and Block dimension = %d,%d,%d\n". dimGrid.x, dimGrid.y, dimGrid.z, dimBlock.x, dimBlock.y, dimBlock.z);
+    printf("CUDA kernel grid dimension = %d,%d,%d and Block dimension = %d,%d,%d\n", dimGrid.x, dimGrid.y, dimGrid.z, dimBlock.x, dimBlock.y, dimBlock.z);
     printf("Output array begins from 0th index %.6f to %dth index %.6f\n",hostOutput[0], iNumberOfArrayElements - 1, hostOutput[iNumberOfArrayElements - 1]);
     printf("Time taken for Vector Addition on CPU = %.6f\n", timeOnCPU);
     printf("Time taken for Vector Addition on GPU = %.6f\n", timeOnGPU);

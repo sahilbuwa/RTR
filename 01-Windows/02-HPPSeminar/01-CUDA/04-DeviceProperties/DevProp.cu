@@ -35,7 +35,7 @@ void PrintCUDADeviceProperties(void)
             cudaDeviceProp dev_prop;
             int driverVersion = 0, runtimeVersion = 0;
 
-            re_cuda_rt = cudaGetDeviceProperties(&dev_prop, i);
+            ret_cuda_rt = cudaGetDeviceProperties(&dev_prop, i);
             if(ret_cuda_rt != cudaSuccess)
             {
                 printf("%s in %s at line %d\n", cudaGetErrorString(ret_cuda_rt), __FILE__, __LINE__);
@@ -65,7 +65,7 @@ void PrintCUDADeviceProperties(void)
             printf("********** GPU Device Memory Information***************\n");
             printf("=============================================================\n");
             printf("GPU Device Total Memory         : %.0f GB = %.0f MB = %llu Bytes\n",((float)dev_prop.totalGlobalMem / 1046576.0f) / 1024.0f, (float)dev_prop.totalGlobalMem / 1048576.0f, (unsigned long long) dev_prop.totalGlobalMem);
-            printf("GPU Device Constant Memory      :%lu Bytes\n", (unsigned long long)dev_prop.totalConstMem);
+            printf("GPU Device Constant Memory      :%llu Bytes\n", (unsigned long long)dev_prop.totalConstMem);
             printf("GPU Device Shared Memory Per SMProcessor : %lu\n", (unsigned long)dev_prop.sharedMemPerBlock);
             printf("\n");
             printf("******* GPU DEVICE MULTIPROCESSOR INFORMATION *********\n");
@@ -83,10 +83,10 @@ void PrintCUDADeviceProperties(void)
             printf("\n");
             printf("**************** GPU DEVICE DRIVER INFORMATION *****************\n");
             printf("=============================================================\n");
-            printf("GPU Device has ECC support                              :%s\n", dev_prop.ECCEnables ? "Enabled" : "Disabled");
+            printf("GPU Device has ECC support                              :%s\n", dev_prop.ECCEnabled ? "Enabled" : "Disabled");
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
 
-            printf("GPU Device Driver Mode ( TCC or WDDM ) \n", dev_prop.tccDriver ? "TCC (Tesla Compute Cluster Driver)" : "WDDM (Windows Display Driver Model )");
+            printf("GPU Device Driver Mode ( TCC or WDDM ) :%s\n", dev_prop.tccDriver ? "TCC (Tesla Compute Cluster Driver)" : "WDDM (Windows Display Driver Model )");
 #endif
             printf("*****************************************************************************\n");
         }

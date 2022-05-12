@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
     timer = NULL;
 
     // Copy data from device matrix into host matrix
-    reuslt = cudaMemcpy(hostC, deviceC, sizeC, cudaMemcpyDeviceToHost);
+    result = cudaMemcpy(hostC, deviceC, sizeC, cudaMemcpyDeviceToHost);
     if(result != cudaSuccess)
     {
         printf("Device to Host data copy is failed for hostC matrix.\n");

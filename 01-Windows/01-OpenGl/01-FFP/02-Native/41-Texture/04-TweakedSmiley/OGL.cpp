@@ -365,7 +365,7 @@ void display(void)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    
+    fprintf(gpFile, "%d\n",texture_smiley); 
     glTranslatef(0.0f,0.0f,-4.0f);
     glScalef(0.75f, 0.75f, 0.75f);
     glBindTexture(GL_TEXTURE_2D, texture_smiley);

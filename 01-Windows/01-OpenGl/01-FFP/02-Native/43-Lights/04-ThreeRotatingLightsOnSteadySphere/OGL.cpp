@@ -25,8 +25,30 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-int Elbow=0 , Shoulder = 0;
 GLUquadric *quadric = NULL;
+BOOL bLight = FALSE;
+
+GLfloat lightAmbientZero[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuseZero[] = {1.0f, 0.0f, 0.0f, 1.0f}; // Red
+GLfloat lightSpecularZero[] = {1.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightPositionZero[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+GLfloat lightAmbientOne[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuseOne[] = {0.0f, 1.0f, 0.0f, 1.0f}; // Green
+GLfloat lightSpecularOne[] = {0.0f, 1.0f, 0.0f, 1.0f};
+GLfloat lightPositionOne[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+GLfloat lightAmbientTwo[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuseTwo[] = {0.0f, 0.0f, 1.0f, 1.0f}; // Blue
+GLfloat lightSpecularTwo[] = {0.0f, 0.0f, 1.0f, 1.0f};
+GLfloat lightPositionTwo[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+GLfloat materialAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat materialDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialShininess = 50.0f;
+
+GLfloat lightAngleZero = 0.0f, lightAngleOne = 0.0f, lightAngleTwo = 0.0f;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -190,17 +212,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 'f':
                     ToggleFullScreen();
                     break;
-                case 'E':
-                    Elbow = (Elbow + 3) % 360;
-                    break;
-                case 'e':
-                    Elbow = (Elbow - 3) % 360;
-                    break;
-                case 'S':
-                    Shoulder = (Shoulder + 3) % 360;
-                    break;
-                case 's':
-                    Shoulder = (Shoulder - 3) % 360;
+                case 'L':
+                case 'l':
+                    if (bLight == FALSE)
+                    {
+                        glEnable(GL_LIGHTING);
+                        bLight = TRUE;
+                    }
+                    else
+                    {
+                        glDisable(GL_LIGHTING);
+                        bLight = FALSE;
+                    }
                     break;
                 default:
                     break;
@@ -314,7 +337,7 @@ int initialize(void)
 
     // Here Starts OpenGL code
     // Clear the screen using black color
-    glClearColor(0.0f,0.0f,0.0f,0.0f);
+    glClearColor(0.0f,0.0f,0.0f,1.0f);
 
     // Depth Related Changes
     glClearDepth(1.0f);
@@ -324,8 +347,33 @@ int initialize(void)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
     
-    // Quadric making
+    // Light initialize
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbientZero);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuseZero);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecularZero);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPositionZero);
+    glEnable(GL_LIGHT0);
+
+    glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbientOne);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuseOne);
+    glLightfv(GL_LIGHT1, GL_SPECULAR, lightSpecularOne);
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPositionOne);
+    glEnable(GL_LIGHT1);
+
+    glLightfv(GL_LIGHT2, GL_AMBIENT, lightAmbientTwo);
+    glLightfv(GL_LIGHT2, GL_DIFFUSE, lightDiffuseTwo);
+    glLightfv(GL_LIGHT2, GL_SPECULAR, lightSpecularTwo);
+    glLightfv(GL_LIGHT2, GL_POSITION, lightPositionTwo);
+    glEnable(GL_LIGHT2);
+
+    glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+    glMaterialf(GL_FRONT, GL_SHININESS, materialShininess);
+    
+    // Create Quadric
     quadric = gluNewQuadric();
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
@@ -347,47 +395,51 @@ void resize(int width, int height)
 
 void display(void)
 {
-    // Variable Declarations
-    
     // Code
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    // Rotating 0th Light
+    glRotatef(lightAngleZero, 1.0f, 0.0f, 0.0f);
+    lightPositionZero[1] = lightAngleZero;
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPositionZero);
 
-    glPolygonMode(GL_FRONT_AND_BACK , GL_FILL);
-    glTranslatef(0.0f, 0.0f, -12.0f);
-    glPushMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    // Rotating 1st Light
+    glRotatef(lightAngleOne, 0.0f, 1.0f, 0.0f);
+    lightPositionOne[2] = lightAngleOne;
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPositionOne);
 
-    glRotatef((GLfloat)Shoulder, 0.0f, 0.0f, 1.0f);
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glPushMatrix();
-    glScalef(2.0f, 0.5f, 1.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    // Rotating 2nd Light
+    glRotatef(lightAngleTwo, 0.0f, 0.0f, 1.0f);
+    lightPositionTwo[0] = lightAngleTwo;
+    glLightfv(GL_LIGHT2, GL_POSITION, lightPositionTwo);
+
+    glTranslatef(0.0f, 0.0f, -4.0f);
+    // Draw Sphere
+    gluSphere(quadric, 1.0, 50, 50);
     
-    glColor3f(0.5f, 0.35f, 0.05f);
-    gluSphere(quadric, 0.5f, 10, 10);
-    glPopMatrix();
-
-    // Forearm
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glRotatef((GLfloat)Elbow, 0.0f, 0.0f, 1.0f);
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glPushMatrix();
-    glScalef(2.0f, 0.5f, 1.0f);
-
-    glColor3f(0.5f, 0.35f, 0.05f);
-    gluSphere(quadric, 0.5f, 10, 10);
-
-    glPopMatrix();  // To Elbow
-    glPopMatrix();  // To Shoulder
-
-
     SwapBuffers(ghdc);
 }
 
 void update(void)
 {
     // Code
-   
+    lightAngleZero = lightAngleZero + 0.01f;
+    if(lightAngleZero > 360.0f)
+        lightAngleZero = 0.0f;
+
+    lightAngleOne = lightAngleOne + 0.01f;
+    if(lightAngleOne > 360.0f)
+        lightAngleOne = 0.0f;
+
+    lightAngleTwo = lightAngleTwo + 0.01f;
+    if(lightAngleTwo > 360.0f)
+        lightAngleTwo = 0.0f;
+
 }
 
 void uninitialize(void)

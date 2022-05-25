@@ -3,8 +3,6 @@
 #include"OGL.h"  //Aplya path (local) madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
-#define _USE_MATH_DEFINES
-#include<math.h>
 
 // OpenGL header files
 #include<GL/gl.h>
@@ -25,7 +23,10 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-int Elbow=0 , Shoulder = 0;
+GLfloat lightAmbient[] = {0.5f, 0.5f, 0.5f, 1.0f};
+GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightPosition[] = {0.0f, 0.0f, 2.0f, 1.0f};
+BOOL gbLight = FALSE;
 GLUquadric *quadric = NULL;
 
 // Global Function Declarations
@@ -190,17 +191,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 'f':
                     ToggleFullScreen();
                     break;
-                case 'E':
-                    Elbow = (Elbow + 3) % 360;
-                    break;
-                case 'e':
-                    Elbow = (Elbow - 3) % 360;
-                    break;
-                case 'S':
-                    Shoulder = (Shoulder + 3) % 360;
-                    break;
-                case 's':
-                    Shoulder = (Shoulder - 3) % 360;
+                case 'L':
+                case 'l':
+                    if (gbLight == FALSE)
+                    {
+                        glEnable(GL_LIGHTING);
+                        gbLight = TRUE;
+                    }
+                    else
+                    {
+                        glDisable(GL_LIGHTING);
+                        gbLight = FALSE;
+                    }
                     break;
                 default:
                     break;
@@ -324,8 +326,14 @@ int initialize(void)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
     
-    // Quadric making
+    glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbient);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuse);
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPosition);
+    glEnable(GL_LIGHT1);
+
     quadric = gluNewQuadric();
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
@@ -354,32 +362,9 @@ void display(void)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    glPolygonMode(GL_FRONT_AND_BACK , GL_FILL);
-    glTranslatef(0.0f, 0.0f, -12.0f);
-    glPushMatrix();
-
-    glRotatef((GLfloat)Shoulder, 0.0f, 0.0f, 1.0f);
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glPushMatrix();
-    glScalef(2.0f, 0.5f, 1.0f);
-    
-    glColor3f(0.5f, 0.35f, 0.05f);
-    gluSphere(quadric, 0.5f, 10, 10);
-    glPopMatrix();
-
-    // Forearm
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glRotatef((GLfloat)Elbow, 0.0f, 0.0f, 1.0f);
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glPushMatrix();
-    glScalef(2.0f, 0.5f, 1.0f);
-
-    glColor3f(0.5f, 0.35f, 0.05f);
-    gluSphere(quadric, 0.5f, 10, 10);
-
-    glPopMatrix();  // To Elbow
-    glPopMatrix();  // To Shoulder
-
+    glTranslatef(0.0f,0.0f,-4.0f);
+    // Draw Sphere
+    gluSphere(quadric, 1.0f, 50, 50);
 
     SwapBuffers(ghdc);
 }
@@ -387,7 +372,7 @@ void display(void)
 void update(void)
 {
     // Code
-   
+
 }
 
 void uninitialize(void)
@@ -417,11 +402,6 @@ void uninitialize(void)
     {
         DestroyWindow(ghwnd);
         ghwnd=NULL;
-    }
-    if(quadric)
-    {
-        gluDeleteQuadric(quadric);
-        quadric = NULL;
     }
     if(gpFile)
     {

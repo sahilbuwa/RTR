@@ -25,8 +25,31 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-int Elbow=0 , Shoulder = 0;
 GLUquadric *quadric = NULL;
+
+
+GLfloat lightAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightPosition[] = {1.0f, 1.0f, 1.0f, 1.0f};
+
+GLfloat materialAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat materialDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialShininess = 50.0f; 
+
+/*
+GLfloat lightAmbient[] = {0.1f, 0.1f, 0.1f, 1.0f};
+GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightPosition[] = {100.0f, 100.0f, 100.0f, 1.0f};
+
+GLfloat materialAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat materialDiffuse[] = {0.5f, 0.2f, 0.7f, 1.0f};
+GLfloat materialSpecular[] = {0.7f, 0.7f, 0.7f, 1.0f};
+GLfloat materialShininess = 128.0f;
+*/
+BOOL bLight = FALSE;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -190,17 +213,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 'f':
                     ToggleFullScreen();
                     break;
-                case 'E':
-                    Elbow = (Elbow + 3) % 360;
-                    break;
-                case 'e':
-                    Elbow = (Elbow - 3) % 360;
-                    break;
-                case 'S':
-                    Shoulder = (Shoulder + 3) % 360;
-                    break;
-                case 's':
-                    Shoulder = (Shoulder - 3) % 360;
+                case 'L':
+                case 'l':
+                    if (bLight == FALSE)
+                    {
+                        glEnable(GL_LIGHTING);
+                        bLight = TRUE;
+                    }
+                    else
+                    {
+                        glDisable(GL_LIGHTING);
+                        bLight = FALSE;
+                    }
                     break;
                 default:
                     break;
@@ -324,8 +348,24 @@ int initialize(void)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
     
-    // Quadric making
+     // Create Quadric
     quadric = gluNewQuadric();
+
+    // Light chi tayari
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+    glEnable(GL_LIGHT0);
+
+    glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+    glMaterialf(GL_FRONT, GL_SHININESS, materialShininess);
+
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
@@ -341,7 +381,7 @@ void resize(int width, int height)
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-    gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
+    gluPerspective(45.0f, (GLfloat)width/(GLfloat)height, 0.1f, 100.0f);
 
 }
 
@@ -354,33 +394,12 @@ void display(void)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    glPolygonMode(GL_FRONT_AND_BACK , GL_FILL);
-    glTranslatef(0.0f, 0.0f, -12.0f);
-    glPushMatrix();
-
-    glRotatef((GLfloat)Shoulder, 0.0f, 0.0f, 1.0f);
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glPushMatrix();
-    glScalef(2.0f, 0.5f, 1.0f);
+    // View Transformation
+    glTranslatef(0.0f, 0.0f, -4.0f);
+    // Draw Sphere
+    gluSphere(quadric, 1.0f, 50, 50);
     
-    glColor3f(0.5f, 0.35f, 0.05f);
-    gluSphere(quadric, 0.5f, 10, 10);
-    glPopMatrix();
-
-    // Forearm
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glRotatef((GLfloat)Elbow, 0.0f, 0.0f, 1.0f);
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glPushMatrix();
-    glScalef(2.0f, 0.5f, 1.0f);
-
-    glColor3f(0.5f, 0.35f, 0.05f);
-    gluSphere(quadric, 0.5f, 10, 10);
-
-    glPopMatrix();  // To Elbow
-    glPopMatrix();  // To Shoulder
-
-
+    
     SwapBuffers(ghdc);
 }
 

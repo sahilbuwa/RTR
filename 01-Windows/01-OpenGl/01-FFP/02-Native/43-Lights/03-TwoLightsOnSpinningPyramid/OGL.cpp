@@ -3,8 +3,6 @@
 #include"OGL.h"  //Aplya path (local) madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
-#define _USE_MATH_DEFINES
-#include<math.h>
 
 // OpenGL header files
 #include<GL/gl.h>
@@ -25,8 +23,23 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-int Elbow=0 , Shoulder = 0;
-GLUquadric *quadric = NULL;
+float anglePyramid=0.0f;
+BOOL bLight = FALSE;
+
+GLfloat lightAmbientZero[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuseZero[] = {1.0f, 0.0f, 0.0f, 1.0f}; // Red
+GLfloat lightSpecularZero[] = {1.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightPositionZero[] = {-2.0f, 0.0f, 0.0f, 1.0f};
+
+GLfloat lightAmbientOne[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuseOne[] = {0.0f, 0.0f, 1.0f, 1.0f}; // Blue
+GLfloat lightSpecularOne[] = {0.0f, 0.0f, 1.0f, 1.0f};
+GLfloat lightPositionOne[] = {2.0f, 0.0f, 0.0f, 1.0f};
+
+GLfloat materialAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat materialDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialShininess = 50.0f;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -190,17 +203,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 'f':
                     ToggleFullScreen();
                     break;
-                case 'E':
-                    Elbow = (Elbow + 3) % 360;
-                    break;
-                case 'e':
-                    Elbow = (Elbow - 3) % 360;
-                    break;
-                case 'S':
-                    Shoulder = (Shoulder + 3) % 360;
-                    break;
-                case 's':
-                    Shoulder = (Shoulder - 3) % 360;
+                case 'L':
+                case 'l':
+                    if (bLight == FALSE)
+                    {
+                        glEnable(GL_LIGHTING);
+                        bLight = TRUE;
+                    }
+                    else
+                    {
+                        glDisable(GL_LIGHTING);
+                        bLight = FALSE;
+                    }
                     break;
                 default:
                     break;
@@ -324,8 +338,23 @@ int initialize(void)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
     
-    // Quadric making
-    quadric = gluNewQuadric();
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbientZero);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuseZero);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecularZero);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPositionZero);
+    glEnable(GL_LIGHT0);
+
+    glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbientOne);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuseOne);
+    glLightfv(GL_LIGHT1, GL_SPECULAR, lightSpecularOne);
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPositionOne);
+    glEnable(GL_LIGHT1);
+
+    glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+    glMaterialf(GL_FRONT, GL_SHININESS, materialShininess);
+    
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
@@ -341,7 +370,7 @@ void resize(int width, int height)
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-    gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
+    gluPerspective(45.0f, (GLfloat)width/(GLfloat)height, 0.1f, 100.0f);
 
 }
 
@@ -354,32 +383,46 @@ void display(void)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    glPolygonMode(GL_FRONT_AND_BACK , GL_FILL);
-    glTranslatef(0.0f, 0.0f, -12.0f);
-    glPushMatrix();
-
-    glRotatef((GLfloat)Shoulder, 0.0f, 0.0f, 1.0f);
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glPushMatrix();
-    glScalef(2.0f, 0.5f, 1.0f);
+    glTranslatef(0.0f,0.0f,-5.0f);
+    glRotatef(anglePyramid,0.0f,1.0f,0.0f); // Spin
     
-    glColor3f(0.5f, 0.35f, 0.05f);
-    gluSphere(quadric, 0.5f, 10, 10);
-    glPopMatrix();
+    glBegin(GL_TRIANGLES);
+    /* X axis chya ujwya    bajula +ve
+       X axis chya davwya   bajula -ve
+       Y axis chya varchya  bajula +ve
+       Y axis chya khalchya bajula -ve
+       Z axis chya pudchya  bajula +ve
+       Z axis chya maagchya bajula -ve */
+    
+    // Front Face
+	glColor3f(1.0f, 1.0f, 1.0f);
+    glNormal3f(0.0f, 0.447214f, 0.894428f);
+	glVertex3f(0.0f, 1.0f, 0.0f); //Apex
+	glVertex3f(-1.0f, -1.0f, 1.0f);
+	glVertex3f(1.0f, -1.0f, 1.0f);
 
-    // Forearm
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glRotatef((GLfloat)Elbow, 0.0f, 0.0f, 1.0f);
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glPushMatrix();
-    glScalef(2.0f, 0.5f, 1.0f);
+    // Right Face
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glNormal3f(0.894428f, 0.447214f, 0.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
+	glVertex3f(1.0f, -1.0f, 1.0f);
+	glVertex3f(1.0f, -1.0f, -1.0f);
 
-    glColor3f(0.5f, 0.35f, 0.05f);
-    gluSphere(quadric, 0.5f, 10, 10);
+    // Back Face
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glNormal3f(0.0f, 0.447214f, -0.894428f);
+	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
+    glVertex3f(1.0f, -1.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
 
-    glPopMatrix();  // To Elbow
-    glPopMatrix();  // To Shoulder
+    // Left Face
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glNormal3f(-0.894428f, 0.447214f, 0.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+    glVertex3f(-1.0f, -1.0f, 1.0f);
 
+	glEnd();
 
     SwapBuffers(ghdc);
 }
@@ -387,7 +430,9 @@ void display(void)
 void update(void)
 {
     // Code
-   
+    anglePyramid=anglePyramid+0.1f;
+    if(anglePyramid>=360.0f)
+        anglePyramid=anglePyramid-360.0f;
 }
 
 void uninitialize(void)
@@ -417,11 +462,6 @@ void uninitialize(void)
     {
         DestroyWindow(ghwnd);
         ghwnd=NULL;
-    }
-    if(quadric)
-    {
-        gluDeleteQuadric(quadric);
-        quadric = NULL;
     }
     if(gpFile)
     {

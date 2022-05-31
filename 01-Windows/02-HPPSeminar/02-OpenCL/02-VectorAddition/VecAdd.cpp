@@ -98,4 +98,44 @@ int main(void)
         exit(EXIT_FAILURE);
     }
     
+    // Create OpenCL compute context 
+    oclContext = clCreateContext(NULL, 1, &oclDeviceID, NULL, NULL, &result);
+    if(result != CL_SUCCESS)
+    {
+        printf("clCreateContext() failed : %d\n", result);
+        cleanup();
+        exit(EXIT_FAILURE);
+    }
+
+    // Create Command Queue
+    oclCommandQueue = clCreateCommandQueue(oclContext, oclDeviceID, 0, &result);
+    if(result != CL_SUCCESS)
+    {
+        printf("clCreateCommandQueue() failed : %d\n", result);
+        cleanup();
+        exit(EXIT_FAILURE);
+    }
+
+    // Create Opencl program from .cl
+    oclProgram = clCreateProgramWithSource(oclContext, 1, (const char **)&oclSourceCode, NULL, &result);
+    if(result != CL_SUCCESS)
+    {
+        printf("clCreateProgramWithSource() failed : %d\n", result);
+        cleanup();
+        exit(EXIT_FAILURE);
+    }
+
+    // Build OpenCL program
+    result = clBuildProgram(oclProgram, 0, NULL, NULL, NULL, NULL);
+    if(result != CL_SUCCESS)
+    {
+        size_t len;
+        char buffer[2048];
+        clGetProgramBuildInfo(oclProgram, oclDeviceID, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
+        printf("Program Build Log : %s\n", buffer);
+        printf("clBuildProgram() failed : %d\n", result);
+        cleanup();
+        exit(EXIT_FAILURE);
+    }
+    
 }

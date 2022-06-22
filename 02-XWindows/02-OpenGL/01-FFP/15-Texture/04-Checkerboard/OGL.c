@@ -14,14 +14,17 @@
 #include<GL/glu.h> // OpenGL utility
 
 // Texture Library Header
-#include<SOIL/SOIL.h> // Simple OpenGL Imaging Library
+//#include<SOIL/SOIL.h> // Simple OpenGL Imaging Library // No need here as we are making our own texture.
 
 // Macros
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
+#define Checkerboard_Width 64
+#define Checkerboard_Height 64
+
 
 // Global Variables
-// Visual info is not uninitialized as we have not created it but matched its params....
+// Visual info is not uninitialized as we have not created it but matched its params.
 Display *display = NULL; // 77 member struct
 XVisualInfo *visualInfo = NULL; // 10 member struct - 1 member 'visual' which has 8 members. Haa ata apan pointer kelai mhanun . la -> madhe badalne
 Colormap colormap;
@@ -31,9 +34,9 @@ Bool fullscreen = False;
 GLXContext glxContext;
 Bool bActiveWindow = False;
 FILE *gpFile=NULL;
-float anglePyramid=0.0f;
-float angleCube=0.0f;
-GLuint texture_stone , texture_kundali;
+int gKeypressed = -1;
+GLubyte checkerboard[Checkerboard_Width][Checkerboard_Height][4];
+GLuint texture_checkerboard;
 
 // Entry-point function
 int main(void)
@@ -44,7 +47,6 @@ int main(void)
 	int initialize(void);
     void resize(int, int);
     void draw(void);
-	void update(void);
 	
 	// Local Variables
 	int defaultScreen;
@@ -184,7 +186,7 @@ int main(void)
 		}
 		if(bActiveWindow == True)
 		{
-			update();
+			//update();
 			draw();
 		}
 	}
@@ -223,7 +225,7 @@ void toggleFullscreen(void)
 int initialize(void)
 {
 	// Declaration of user-defined functions
-    Bool loadGLTexture(GLuint* ,const char*);
+    Bool loadGLTexture(void);
     // Function Declarations
     void resize(int,int);
     void uninitialize(void);
@@ -231,21 +233,6 @@ int initialize(void)
 	// Code
 	glxContext = glXCreateContext(display, visualInfo, NULL, True); // Sharing of existing glxContext in 3rd param for other gpus
 	glXMakeCurrent(display, window, glxContext);
-	
-	// Texture call
-	if(loadGLTexture(&texture_stone, "Stone.bmp")==False)
-    {
-        fprintf(gpFile,"LoadGLTexture for stone Failed.\n");
-        uninitialize();
-        return -5;
-    }
-    if(loadGLTexture(&texture_kundali, "Vijay_Kundali.bmp")==False)
-    {
-        fprintf(gpFile,"LoadGLTexture for kundali Failed.\n");
-        uninitialize();
-        return -6;
-	}
-
 
     // Here Starts OpenGL code
     // Clear the screen using black color
@@ -261,6 +248,7 @@ int initialize(void)
     
     // Enabling the texture
     glEnable(GL_TEXTURE_2D);
+    loadGLTexture();
 
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
@@ -291,158 +279,84 @@ void draw(void)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     
-    glTranslatef(-1.5f,0.0f,-6.0f);
-    glRotatef(anglePyramid,0.0f,1.0f,0.0f); // Spin
-    glBindTexture(GL_TEXTURE_2D, texture_stone);
+    glTranslatef(0.0f,0.0f,-4.0f);
+    glBindTexture(GL_TEXTURE_2D, texture_checkerboard);
 
-    glBegin(GL_TRIANGLES);
-    /* X axis chya ujwya    bajula +ve
-       X axis chya davwya   bajula -ve
-       Y axis chya varchya  bajula +ve
-       Y axis chya khalchya bajula -ve
-       Z axis chya pudchya  bajula +ve
-       Z axis chya maagchya bajula -ve */
-    
-    // Front Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); //Apex
-	glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-
-    // Right Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, -1.0f);
-
-    // Back Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-
-    // Left Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-
-	glEnd();
-
-    glLoadIdentity();
-    glTranslatef(1.5f,0.0f,-6.0f);
-    glScalef(0.75f, 0.75f, 0.75f);
-    glRotatef(angleCube,1.0f,0.0f,0.0f);
-    glRotatef(angleCube,0.0f,1.0f,0.0f);
-    glRotatef(angleCube,0.0f,0.0f,1.0f);
-    glBindTexture(GL_TEXTURE_2D, texture_kundali);
-    
+    // Checkerboard che ujwikadche 2 points XY plane varun 45 degrees -Z axis kade rotate kele mhanun he x ani z chya navya values 2.41421f and -1.41421f alyat....
     glBegin(GL_QUADS);
-    // Front Face
     glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(1.0f, 1.0f, 1.0f);
+	glVertex3f(0.0f, 1.0f, 0.0f);
     glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-1.0f, 1.0f, 1.0f);
+    glVertex3f(-2.0f, 1.0f, 0.0f);
     glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
+	glVertex3f(-2.0f, -1.0f, 0.0f);
     glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-
-    // Right Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-
-    // Back Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-
-    // Left Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-
-    // Top Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-
-    // Bottom Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-
+	glVertex3f(0.0f, -1.0f, 0.0f);
 	glEnd();
+
+    glBegin(GL_QUADS);
+    glTexCoord2f(1.0f, 1.0f);
+	glVertex3f(2.41421f, 1.0f, -1.41421f);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(1.0f, 1.0f, 0.0f);
+    glTexCoord2f(0.0f, 0.0f);
+	glVertex3f(1.0f, -1.0f, 0.0f);
+    glTexCoord2f(1.0f, 0.0f);
+	glVertex3f(2.41421f, -1.0f, -1.41421f);
+	glEnd();
+
+    glBindTexture(GL_TEXTURE_2D, 0);
 	
 	glXSwapBuffers(display, window);
 }
 
-void update(void)
+Bool loadGLTexture(void)
 {
-    // Code
-    anglePyramid=anglePyramid+0.1f;
-    if(anglePyramid>=360.0f)
-        anglePyramid=anglePyramid-360.0f;
-    
-    angleCube=angleCube+0.1f;
-    if(angleCube>=360.0f)
-        angleCube=angleCube-360.0f;
-}
-
-Bool loadGLTexture(GLuint* texture, const char * path)
-{
+	// Function Declarations
+    void MakeCheckerBoard(void);
 	// Variable Declarations
 	int width, height;
 	unsigned char* imageData = NULL;
-	// Code
-	imageData = SOIL_load_image(path, &width, &height, NULL, SOIL_LOAD_RGB);
-	if(imageData == NULL)
-		return False;
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-    glGenTextures(1, texture);
-    glBindTexture(GL_TEXTURE_2D, *texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
-    // Create The Texture
-    gluBuild2DMipmaps(GL_TEXTURE_2D, 3, width, height, GL_RGB, GL_UNSIGNED_BYTE, imageData);
+    // Code
+    MakeCheckerBoard();
+
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    glGenTextures(1, &texture_checkerboard);
+    glBindTexture(GL_TEXTURE_2D, texture_checkerboard);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Checkerboard_Width, Checkerboard_Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, checkerboard);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     glBindTexture(GL_TEXTURE_2D, 0);
-    SOIL_free_image_data(imageData);
     return True;
+}
+
+void MakeCheckerBoard(void)
+{
+    // Variable Declarations
+    int c;
+
+    // Code
+    for(int i=0; i < Checkerboard_Width; i++)
+    {
+        for(int j=0; j < Checkerboard_Height; j++)
+        {
+            c = (((i & 0x8) == 0) ^ ((j & 0x8) == 0))*255;
+
+            checkerboard[i][j][0] = (GLubyte)c;
+            checkerboard[i][j][1] = (GLubyte)c;
+            checkerboard[i][j][2] = (GLubyte)c;
+            checkerboard[i][j][3] = (GLubyte)255;
+        }
+    }
 }
 
 void uninitialize(void)
@@ -468,13 +382,9 @@ void uninitialize(void)
 	{
 		XDestroyWindow(display, window);
 	}
-	if(texture_kundali)
+	if(texture_checkerboard)
     {
-        glDeleteTextures(1, &texture_kundali);
-    }
-	if(texture_stone)
-    {
-        glDeleteTextures(1, &texture_stone);
+        glDeleteTextures(1, &texture_checkerboard);
     }
 	if(colormap)
 	{

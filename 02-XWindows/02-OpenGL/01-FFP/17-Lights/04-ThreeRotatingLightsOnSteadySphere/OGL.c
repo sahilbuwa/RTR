@@ -27,13 +27,35 @@ XVisualInfo *visualInfo = NULL; // 10 member struct - 1 member 'visual' which ha
 Colormap colormap;
 Window window;
 Bool fullscreen = False;
+FILE *gpFile=NULL;
 // OpenGL related variables
 GLXContext glxContext;
 Bool bActiveWindow = False;
-FILE *gpFile=NULL;
-float anglePyramid=0.0f;
-float angleCube=0.0f;
-GLuint texture_stone , texture_kundali;
+GLUquadric *quadric = NULL;
+
+GLfloat lightAmbientZero[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuseZero[] = {1.0f, 0.0f, 0.0f, 1.0f}; // Red
+GLfloat lightSpecularZero[] = {1.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightPositionZero[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+GLfloat lightAmbientOne[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuseOne[] = {0.0f, 1.0f, 0.0f, 1.0f}; // Green
+GLfloat lightSpecularOne[] = {0.0f, 1.0f, 0.0f, 1.0f};
+GLfloat lightPositionOne[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+GLfloat lightAmbientTwo[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuseTwo[] = {0.0f, 0.0f, 1.0f, 1.0f}; // Blue
+GLfloat lightSpecularTwo[] = {0.0f, 0.0f, 1.0f, 1.0f};
+GLfloat lightPositionTwo[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+GLfloat materialAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat materialDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialShininess = 50.0f;
+
+GLfloat lightAngleZero = 0.0f, lightAngleOne = 0.0f, lightAngleTwo = 0.0f;
+
+Bool gbLight = False;
 
 // Entry-point function
 int main(void)
@@ -153,6 +175,21 @@ int main(void)
 						case XK_Escape:
 							bDone = True;
 							break;
+						case 'L':
+						case 'l':
+							if (gbLight == False)
+							{
+								glEnable(GL_LIGHTING);
+								gbLight = True;
+							}
+							else
+							{
+								glDisable(GL_LIGHTING);
+								gbLight = False;
+							}
+							break;
+						default:
+							break;
 					}
 					XLookupString(&event.xkey, keys, sizeof(keys), NULL, NULL); // struct XComposeStatus (struct) , if keys are pressed repetatively then this struct is used... , WM_CHAR similar
 					switch(keys[0])
@@ -223,7 +260,6 @@ void toggleFullscreen(void)
 int initialize(void)
 {
 	// Declaration of user-defined functions
-    Bool loadGLTexture(GLuint* ,const char*);
     // Function Declarations
     void resize(int,int);
     void uninitialize(void);
@@ -231,21 +267,6 @@ int initialize(void)
 	// Code
 	glxContext = glXCreateContext(display, visualInfo, NULL, True); // Sharing of existing glxContext in 3rd param for other gpus
 	glXMakeCurrent(display, window, glxContext);
-	
-	// Texture call
-	if(loadGLTexture(&texture_stone, "Stone.bmp")==False)
-    {
-        fprintf(gpFile,"LoadGLTexture for stone Failed.\n");
-        uninitialize();
-        return -5;
-    }
-    if(loadGLTexture(&texture_kundali, "Vijay_Kundali.bmp")==False)
-    {
-        fprintf(gpFile,"LoadGLTexture for kundali Failed.\n");
-        uninitialize();
-        return -6;
-	}
-
 
     // Here Starts OpenGL code
     // Clear the screen using black color
@@ -258,9 +279,35 @@ int initialize(void)
 
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
+
+    // Light initialize
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbientZero);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuseZero);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecularZero);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPositionZero);
+    glEnable(GL_LIGHT0);
+
+    glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbientOne);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuseOne);
+    glLightfv(GL_LIGHT1, GL_SPECULAR, lightSpecularOne);
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPositionOne);
+    glEnable(GL_LIGHT1);
+
+    glLightfv(GL_LIGHT2, GL_AMBIENT, lightAmbientTwo);
+    glLightfv(GL_LIGHT2, GL_DIFFUSE, lightDiffuseTwo);
+    glLightfv(GL_LIGHT2, GL_SPECULAR, lightSpecularTwo);
+    glLightfv(GL_LIGHT2, GL_POSITION, lightPositionTwo);
+    glEnable(GL_LIGHT2);
+
+    glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+    glMaterialf(GL_FRONT, GL_SHININESS, materialShininess);
     
-    // Enabling the texture
-    glEnable(GL_TEXTURE_2D);
+    // Create Quadric
+    quadric = gluNewQuadric();
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
@@ -291,122 +338,28 @@ void draw(void)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     
-    glTranslatef(-1.5f,0.0f,-6.0f);
-    glRotatef(anglePyramid,0.0f,1.0f,0.0f); // Spin
-    glBindTexture(GL_TEXTURE_2D, texture_stone);
+    // Rotating 0th Light
+    glRotatef(lightAngleZero, 1.0f, 0.0f, 0.0f);
+    lightPositionZero[1] = lightAngleZero;
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPositionZero);
 
-    glBegin(GL_TRIANGLES);
-    /* X axis chya ujwya    bajula +ve
-       X axis chya davwya   bajula -ve
-       Y axis chya varchya  bajula +ve
-       Y axis chya khalchya bajula -ve
-       Z axis chya pudchya  bajula +ve
-       Z axis chya maagchya bajula -ve */
-    
-    // Front Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); //Apex
-	glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-
-    // Right Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, -1.0f);
-
-    // Back Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-
-    // Left Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-
-	glEnd();
-
+    glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glTranslatef(1.5f,0.0f,-6.0f);
-    glScalef(0.75f, 0.75f, 0.75f);
-    glRotatef(angleCube,1.0f,0.0f,0.0f);
-    glRotatef(angleCube,0.0f,1.0f,0.0f);
-    glRotatef(angleCube,0.0f,0.0f,1.0f);
-    glBindTexture(GL_TEXTURE_2D, texture_kundali);
-    
-    glBegin(GL_QUADS);
-    // Front Face
-    glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
+    // Rotating 1st Light
+    glRotatef(lightAngleOne, 0.0f, 1.0f, 0.0f);
+    lightPositionOne[2] = lightAngleOne;
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPositionOne);
 
-    // Right Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    // Rotating 2nd Light
+    glRotatef(lightAngleTwo, 0.0f, 0.0f, 1.0f);
+    lightPositionTwo[0] = lightAngleTwo;
+    glLightfv(GL_LIGHT2, GL_POSITION, lightPositionTwo);
 
-    // Back Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-
-    // Left Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-
-    // Top Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-
-    // Bottom Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-
-	glEnd();
+    glTranslatef(0.0f, 0.0f, -4.0f);
+    // Draw Sphere
+    gluSphere(quadric, 1.0, 50, 50);
 	
 	glXSwapBuffers(display, window);
 }
@@ -414,35 +367,17 @@ void draw(void)
 void update(void)
 {
     // Code
-    anglePyramid=anglePyramid+0.1f;
-    if(anglePyramid>=360.0f)
-        anglePyramid=anglePyramid-360.0f;
-    
-    angleCube=angleCube+0.1f;
-    if(angleCube>=360.0f)
-        angleCube=angleCube-360.0f;
-}
+	lightAngleZero = lightAngleZero + 0.1f;
+    if(lightAngleZero > 360.0f)
+        lightAngleZero = 0.0f;
 
-Bool loadGLTexture(GLuint* texture, const char * path)
-{
-	// Variable Declarations
-	int width, height;
-	unsigned char* imageData = NULL;
-	// Code
-	imageData = SOIL_load_image(path, &width, &height, NULL, SOIL_LOAD_RGB);
-	if(imageData == NULL)
-		return False;
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-    glGenTextures(1, texture);
-    glBindTexture(GL_TEXTURE_2D, *texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    lightAngleOne = lightAngleOne + 0.1f;
+    if(lightAngleOne > 360.0f)
+        lightAngleOne = 0.0f;
 
-    // Create The Texture
-    gluBuild2DMipmaps(GL_TEXTURE_2D, 3, width, height, GL_RGB, GL_UNSIGNED_BYTE, imageData);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    SOIL_free_image_data(imageData);
-    return True;
+    lightAngleTwo = lightAngleTwo + 0.1f;
+    if(lightAngleTwo > 360.0f)
+        lightAngleTwo = 0.0f;
 }
 
 void uninitialize(void)
@@ -468,14 +403,6 @@ void uninitialize(void)
 	{
 		XDestroyWindow(display, window);
 	}
-	if(texture_kundali)
-    {
-        glDeleteTextures(1, &texture_kundali);
-    }
-	if(texture_stone)
-    {
-        glDeleteTextures(1, &texture_stone);
-    }
 	if(colormap)
 	{
 		XFreeColormap(display, colormap);
@@ -484,6 +411,11 @@ void uninitialize(void)
 	{
 		XCloseDisplay(display);
 		display = NULL;
+	}
+	if(quadric)
+	{
+		gluDeleteQuadric(quadric);
+		quadric = NULL;
 	}
 	if(gpFile)
     {

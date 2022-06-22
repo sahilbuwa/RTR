@@ -27,13 +27,16 @@ XVisualInfo *visualInfo = NULL; // 10 member struct - 1 member 'visual' which ha
 Colormap colormap;
 Window window;
 Bool fullscreen = False;
+FILE *gpFile=NULL;
 // OpenGL related variables
 GLXContext glxContext;
 Bool bActiveWindow = False;
-FILE *gpFile=NULL;
-float anglePyramid=0.0f;
 float angleCube=0.0f;
-GLuint texture_stone , texture_kundali;
+GLfloat lightAmbient[] = {0.5f, 0.5f, 0.5f, 1.0f};
+GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightPosition[] = {0.0f, 0.0f, 2.0f, 1.0f};
+
+Bool gbLight = False;
 
 // Entry-point function
 int main(void)
@@ -153,6 +156,21 @@ int main(void)
 						case XK_Escape:
 							bDone = True;
 							break;
+						case 'L':
+						case 'l':
+							if (gbLight == False)
+							{
+								glEnable(GL_LIGHTING);
+								gbLight = True;
+							}
+							else
+							{
+								glDisable(GL_LIGHTING);
+								gbLight = False;
+							}
+							break;
+						default:
+							break;
 					}
 					XLookupString(&event.xkey, keys, sizeof(keys), NULL, NULL); // struct XComposeStatus (struct) , if keys are pressed repetatively then this struct is used... , WM_CHAR similar
 					switch(keys[0])
@@ -231,21 +249,6 @@ int initialize(void)
 	// Code
 	glxContext = glXCreateContext(display, visualInfo, NULL, True); // Sharing of existing glxContext in 3rd param for other gpus
 	glXMakeCurrent(display, window, glxContext);
-	
-	// Texture call
-	if(loadGLTexture(&texture_stone, "Stone.bmp")==False)
-    {
-        fprintf(gpFile,"LoadGLTexture for stone Failed.\n");
-        uninitialize();
-        return -5;
-    }
-    if(loadGLTexture(&texture_kundali, "Vijay_Kundali.bmp")==False)
-    {
-        fprintf(gpFile,"LoadGLTexture for kundali Failed.\n");
-        uninitialize();
-        return -6;
-	}
-
 
     // Here Starts OpenGL code
     // Clear the screen using black color
@@ -259,8 +262,10 @@ int initialize(void)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
     
-    // Enabling the texture
-    glEnable(GL_TEXTURE_2D);
+    glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbient);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuse);
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPosition);
+    glEnable(GL_LIGHT1);
 
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
@@ -291,119 +296,52 @@ void draw(void)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     
-    glTranslatef(-1.5f,0.0f,-6.0f);
-    glRotatef(anglePyramid,0.0f,1.0f,0.0f); // Spin
-    glBindTexture(GL_TEXTURE_2D, texture_stone);
-
-    glBegin(GL_TRIANGLES);
-    /* X axis chya ujwya    bajula +ve
-       X axis chya davwya   bajula -ve
-       Y axis chya varchya  bajula +ve
-       Y axis chya khalchya bajula -ve
-       Z axis chya pudchya  bajula +ve
-       Z axis chya maagchya bajula -ve */
-    
-    // Front Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); //Apex
-	glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-
-    // Right Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, -1.0f);
-
-    // Back Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-
-    // Left Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-
-	glEnd();
-
-    glLoadIdentity();
-    glTranslatef(1.5f,0.0f,-6.0f);
-    glScalef(0.75f, 0.75f, 0.75f);
+    glTranslatef(0.0f,0.0f,-6.0f);
     glRotatef(angleCube,1.0f,0.0f,0.0f);
     glRotatef(angleCube,0.0f,1.0f,0.0f);
     glRotatef(angleCube,0.0f,0.0f,1.0f);
-    glBindTexture(GL_TEXTURE_2D, texture_kundali);
     
     glBegin(GL_QUADS);
     // Front Face
-    glTexCoord2f(1.0f, 1.0f);
+	glNormal3f(0.0f, 0.0f, 1.0f);
 	glVertex3f(1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 1.0f);
 	glVertex3f(-1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 0.0f);
 	glVertex3f(-1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
 	glVertex3f(1.0f, -1.0f, 1.0f);
 
     // Right Face
-    glTexCoord2f(1.0f, 1.0f);
+    glNormal3f(1.0f, 0.0f, 0.0f);
     glVertex3f(1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
     glVertex3f(1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 0.0f);
     glVertex3f(1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
     glVertex3f(1.0f, -1.0f, -1.0f);
 
     // Back Face
-    glTexCoord2f(1.0f, 1.0f);
+    glNormal3f(0.0f, 0.0f, -1.0f);
     glVertex3f(-1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
     glVertex3f(1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
     glVertex3f(1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
     glVertex3f(-1.0f, -1.0f, -1.0f);
 
     // Left Face
-    glTexCoord2f(1.0f, 1.0f);
+    glNormal3f(-1.0f, 0.0f, 0.0f);
     glVertex3f(-1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 1.0f);
     glVertex3f(-1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
     glVertex3f(-1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
     glVertex3f(-1.0f, -1.0f, 1.0f);
 
     // Top Face
-    glTexCoord2f(1.0f, 1.0f);
+    glNormal3f(0.0f, 1.0f, 0.0f);
     glVertex3f(1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
     glVertex3f(-1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
     glVertex3f(-1.0f, 1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
     glVertex3f(1.0f, 1.0f, 1.0f);
 
     // Bottom Face
-    glTexCoord2f(1.0f, 1.0f);
+    glNormal3f(0.0f, -1.0f, 0.0f);
     glVertex3f(1.0f, -1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
     glVertex3f(-1.0f, -1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
     glVertex3f(-1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
     glVertex3f(1.0f, -1.0f, 1.0f);
 
 	glEnd();
@@ -414,13 +352,10 @@ void draw(void)
 void update(void)
 {
     // Code
-    anglePyramid=anglePyramid+0.1f;
-    if(anglePyramid>=360.0f)
-        anglePyramid=anglePyramid-360.0f;
-    
-    angleCube=angleCube+0.1f;
+	angleCube=angleCube+0.1f;
     if(angleCube>=360.0f)
         angleCube=angleCube-360.0f;
+   
 }
 
 Bool loadGLTexture(GLuint* texture, const char * path)
@@ -468,14 +403,6 @@ void uninitialize(void)
 	{
 		XDestroyWindow(display, window);
 	}
-	if(texture_kundali)
-    {
-        glDeleteTextures(1, &texture_kundali);
-    }
-	if(texture_stone)
-    {
-        glDeleteTextures(1, &texture_stone);
-    }
 	if(colormap)
 	{
 		XFreeColormap(display, colormap);

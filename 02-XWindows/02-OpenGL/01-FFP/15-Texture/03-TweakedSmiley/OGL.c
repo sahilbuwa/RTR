@@ -30,10 +30,9 @@ Bool fullscreen = False;
 // OpenGL related variables
 GLXContext glxContext;
 Bool bActiveWindow = False;
+GLuint texture_smiley;
 FILE *gpFile=NULL;
-float anglePyramid=0.0f;
-float angleCube=0.0f;
-GLuint texture_stone , texture_kundali;
+int gKeypressed = -1;
 
 // Entry-point function
 int main(void)
@@ -44,7 +43,6 @@ int main(void)
 	int initialize(void);
     void resize(int, int);
     void draw(void);
-	void update(void);
 	
 	// Local Variables
 	int defaultScreen;
@@ -153,6 +151,25 @@ int main(void)
 						case XK_Escape:
 							bDone = True;
 							break;
+						case 49:
+							gKeypressed = 1;
+							glEnable(GL_TEXTURE_2D);
+							break;
+						case 50:
+							gKeypressed = 2;
+							glEnable(GL_TEXTURE_2D);
+							break;
+						case 51:
+							gKeypressed = 3;
+							glEnable(GL_TEXTURE_2D);
+							break;
+						case 52:
+							gKeypressed = 4;
+							glEnable(GL_TEXTURE_2D);
+							break;
+						default:
+							glDisable(GL_TEXTURE_2D);
+							break;
 					}
 					XLookupString(&event.xkey, keys, sizeof(keys), NULL, NULL); // struct XComposeStatus (struct) , if keys are pressed repetatively then this struct is used... , WM_CHAR similar
 					switch(keys[0])
@@ -184,7 +201,7 @@ int main(void)
 		}
 		if(bActiveWindow == True)
 		{
-			update();
+			//update();
 			draw();
 		}
 	}
@@ -233,19 +250,12 @@ int initialize(void)
 	glXMakeCurrent(display, window, glxContext);
 	
 	// Texture call
-	if(loadGLTexture(&texture_stone, "Stone.bmp")==False)
+	if(loadGLTexture(&texture_smiley, "smiley.bmp")==False)
     {
-        fprintf(gpFile,"LoadGLTexture for stone Failed.\n");
+        fprintf(gpFile,"LoadGLTexture for smiley Failed.\n");
         uninitialize();
         return -5;
     }
-    if(loadGLTexture(&texture_kundali, "Vijay_Kundali.bmp")==False)
-    {
-        fprintf(gpFile,"LoadGLTexture for kundali Failed.\n");
-        uninitialize();
-        return -6;
-	}
-
 
     // Here Starts OpenGL code
     // Clear the screen using black color
@@ -260,7 +270,7 @@ int initialize(void)
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
     
     // Enabling the texture
-    glEnable(GL_TEXTURE_2D);
+    //glEnable(GL_TEXTURE_2D);
 
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
@@ -291,136 +301,73 @@ void draw(void)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     
-    glTranslatef(-1.5f,0.0f,-6.0f);
-    glRotatef(anglePyramid,0.0f,1.0f,0.0f); // Spin
-    glBindTexture(GL_TEXTURE_2D, texture_stone);
-
-    glBegin(GL_TRIANGLES);
-    /* X axis chya ujwya    bajula +ve
-       X axis chya davwya   bajula -ve
-       Y axis chya varchya  bajula +ve
-       Y axis chya khalchya bajula -ve
-       Z axis chya pudchya  bajula +ve
-       Z axis chya maagchya bajula -ve */
-    
-    // Front Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); //Apex
-	glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-
-    // Right Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, -1.0f);
-
-    // Back Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-
-    // Left Face
-    glTexCoord2f(0.5f, 1.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f); // Apex
-    glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-
-	glEnd();
-
-    glLoadIdentity();
-    glTranslatef(1.5f,0.0f,-6.0f);
+    glTranslatef(0.0f,0.0f,-4.0f);
     glScalef(0.75f, 0.75f, 0.75f);
-    glRotatef(angleCube,1.0f,0.0f,0.0f);
-    glRotatef(angleCube,0.0f,1.0f,0.0f);
-    glRotatef(angleCube,0.0f,0.0f,1.0f);
-    glBindTexture(GL_TEXTURE_2D, texture_kundali);
-    
-    glBegin(GL_QUADS);
-    // Front Face
-    glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-
-    // Right Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-
-    // Back Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-
-    // Left Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-
-    // Top Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-
-    // Bottom Face
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-
-	glEnd();
+    glBindTexture(GL_TEXTURE_2D, texture_smiley);
+    if(gKeypressed == 1)
+    {
+        glBegin(GL_QUADS);
+        glTexCoord2f(0.5f, 0.5f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.0f, 0.5f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glTexCoord2f(0.5f, 0.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glEnd();
+    }
+    else if(gKeypressed == 2)
+    {
+        glBegin(GL_QUADS);
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glEnd();
+    }
+    else if(gKeypressed == 3)
+    {
+        glBegin(GL_QUADS);
+        glTexCoord2f(2.0f, 2.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.0f, 2.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glTexCoord2f(2.0f, 0.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glEnd();
+    }
+    else if(gKeypressed == 4)
+    {
+        glBegin(GL_QUADS);
+        glTexCoord2f(0.5f, 0.5f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.5f, 0.5f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glTexCoord2f(0.5f, 0.5f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glTexCoord2f(0.5f, 0.5f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glEnd();
+    }
+    else
+    {
+        glBegin(GL_QUADS);
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        glEnd();
+    }
 	
 	glXSwapBuffers(display, window);
-}
-
-void update(void)
-{
-    // Code
-    anglePyramid=anglePyramid+0.1f;
-    if(anglePyramid>=360.0f)
-        anglePyramid=anglePyramid-360.0f;
-    
-    angleCube=angleCube+0.1f;
-    if(angleCube>=360.0f)
-        angleCube=angleCube-360.0f;
 }
 
 Bool loadGLTexture(GLuint* texture, const char * path)
@@ -468,13 +415,9 @@ void uninitialize(void)
 	{
 		XDestroyWindow(display, window);
 	}
-	if(texture_kundali)
+	if(texture_smiley)
     {
-        glDeleteTextures(1, &texture_kundali);
-    }
-	if(texture_stone)
-    {
-        glDeleteTextures(1, &texture_stone);
+        glDeleteTextures(1, &texture_smiley);
     }
 	if(colormap)
 	{

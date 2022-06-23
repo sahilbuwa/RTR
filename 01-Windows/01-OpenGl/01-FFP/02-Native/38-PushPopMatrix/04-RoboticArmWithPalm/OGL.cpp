@@ -369,7 +369,6 @@ void display(void)
     glScalef(2.0f, 0.5f, 1.0f);
     
     // Draw the arm
-   
     glColor3f(0.5f, 0.35f, 0.05f);
     gluSphere(quadric, 0.5f, 10, 10);
     glPopMatrix();

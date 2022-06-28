@@ -1,6 +1,5 @@
 // Header files
 #include<windows.h> //SDK path madhli header file declare karaichi padhhat
-#include"OGL.h"  //Aplya path (local) madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
 #define _USE_MATH_DEFINES
@@ -9,6 +8,10 @@
 // OpenGL header files
 #include<GL/gl.h>
 #include<GL/glu.h>
+
+//Personal Libraries
+#include"OGL.h"  //Teapot sathi
+#include"OGL1.h" //Aplya path (local) madhli header file declare karaichi padhhat
 
 // OpenGL Libraries
 #pragma comment(lib,"OpenGL32.lib") 
@@ -25,8 +28,13 @@ HGLRC ghrc=NULL;
 BOOL gbFullScreen=FALSE;
 FILE *gpFile=NULL;
 BOOL gbActiveWindow=FALSE;
-int Elbow=0 , Shoulder = 0, Palm = 0;
-GLUquadric *quadric = NULL;
+float angle = 0.0f;
+GLfloat lightAmbient[] = {0.5f, 0.5f, 0.5f, 1.0f};
+GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightPosition[] = {0.0f, 0.0f, 2.0f, 1.0f};
+BOOL gbLight = FALSE;
+BOOL bTexture = FALSE;
+GLuint texture_marble;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -190,24 +198,32 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                 case 'f':
                     ToggleFullScreen();
                     break;
-                case 'E':
-                    Elbow = (Elbow + 3) % 360;
-                    break;
-                case 'e':
-                    Elbow = (Elbow - 3) % 360;
-                    break;
-                case 'S':
-                    Shoulder = (Shoulder + 3) % 360;
-                    break;
-                case 's':
-                    Shoulder = (Shoulder - 3) % 360;
-                    break;
-                case 'P':
-                    Palm = (Palm + 3) % 360;
-                    break;
-                case 'p':
-                    Palm = (Palm - 3) % 360;
-                    break;
+                case 'L':
+                case 'l':
+				    if (gbLight == FALSE)
+				    {
+				        glEnable(GL_LIGHTING);
+				        gbLight = TRUE;
+				    }
+				    else
+				    {
+				        glDisable(GL_LIGHTING);
+				        gbLight = FALSE;
+				    }
+				    break;
+				case 't':
+				case 'T':
+				    if (bTexture == FALSE)
+				    {
+				        glEnable(GL_TEXTURE_2D);
+				        bTexture = TRUE;
+				    }
+				    else
+				    {
+				        glDisable(GL_TEXTURE_2D);
+				        bTexture = FALSE;
+				    }
+				    break;
                 default:
                     break;
             }
@@ -280,9 +296,13 @@ int initialize(void)
 {
     // Function Declarations
     void resize(int,int);
+    BOOL LoadGLTexture(GLuint*,TCHAR[]);
+    void uninitialize(void);
+
     // Variable Declarations
     PIXELFORMATDESCRIPTOR pfd;
     int iPixelFormatIndex=0;
+    
     // Code
     ZeroMemory(&pfd,sizeof(PIXELFORMATDESCRIPTOR));
     // Initialization of PIXELFORMATDESCRIPTOR structure
@@ -318,9 +338,15 @@ int initialize(void)
     if(wglMakeCurrent(ghdc,ghrc)==FALSE)
         return -4;
 
+    if(LoadGLTexture(&texture_marble, MAKEINTRESOURCE(IDBITMAP_MARBLE))==FALSE)
+    {
+        fprintf(gpFile,"LoadGLTexture for smiley Failed.\n");
+        uninitialize();
+        return -5;
+    }
     // Here Starts OpenGL code
     // Clear the screen using black color
-    glClearColor(0.0f,0.0f,0.0f,0.0f);
+    glClearColor(0.0f,0.0f,0.0f,1.0f);
 
     // Depth Related Changes
     glClearDepth(1.0f);
@@ -330,7 +356,12 @@ int initialize(void)
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
     
-    quadric = gluNewQuadric();
+    // Light initialize
+    glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbient);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuse);
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPosition);
+    glEnable(GL_LIGHT1);
+
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
@@ -353,61 +384,73 @@ void resize(int width, int height)
 void display(void)
 {
     // Variable Declarations
-    
+    int vi, ni, ti;
+    int i, j;
     // Code
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-
-    glPolygonMode(GL_FRONT_AND_BACK , GL_FILL);
-    glTranslatef(0.0f, 0.0f, -12.0f);
-    glPushMatrix();
-
-    glRotatef((GLfloat)Shoulder, 0.0f, 0.0f, 1.0f);
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glPushMatrix();
-    glScalef(2.0f, 0.5f, 1.0f);
     
-    // Draw the arm
-    glColor3f(0.5f, 0.35f, 0.05f);
-    gluSphere(quadric, 0.5f, 10, 10);
-    glPopMatrix();
-
-    // Forearm
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glRotatef((GLfloat)Elbow, 0.0f, 0.0f, 1.0f);
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glPushMatrix();
-    glScalef(2.0f, 0.5f, 1.0f);
-
-    // Draw Forearm
-    glColor3f(0.5f, 0.35f, 0.05f);
-    gluSphere(quadric, 0.5f, 10, 10);
-    glPopMatrix();  // To Elbow
-
-    // Palm
-    glTranslatef(1.0f, 0.0f, 0.0f);
-    glRotatef((GLfloat)Palm, 0.0f, 0.0f, 1.0f);
-    glTranslatef(0.5f, 0.0f, 0.0f);
-    glPushMatrix();
-    glScalef(2.0f, 0.5f, 1.0f);
-
-    // Draw Palm
-    glColor3f(0.5f, 0.35f, 0.05f);
-    gluSphere(quadric, 0.25f, 10, 10);
+    glTranslatef(0.0f,0.0f,-2.0f);
+    glRotatef((GLfloat)angle, 0.0f, 1.0f, 0.0f);
     
-    glPopMatrix();  // To Wrist
-    glPopMatrix();  // To Elbow
-    glPopMatrix(); // To Shoulder
-
-
+    if(bTexture == TRUE)
+    	glBindTexture(GL_TEXTURE_2D, texture_marble);
+    else
+    	glBindTexture(GL_TEXTURE_2D, 0);
+    
+    glBegin(GL_TRIANGLES);
+	for(i = 0; i < sizeof(face_indicies)/sizeof(face_indicies[0]); i++)
+	{
+		for(j = 0; j < 3; j++)
+		{
+			vi = face_indicies[i][j];
+			ni = face_indicies[i][j+3];
+			ti = face_indicies[i][j+6];
+			glNormal3f(normals[ni][0], normals[ni][1], normals[ni][2]);
+			glTexCoord2f(textures[ti][0],textures[ti][1]);
+			glVertex3f(vertices[vi][0], vertices[vi][1], vertices[vi][2]);
+		}
+	}
+	glEnd();
+    
     SwapBuffers(ghdc);
 }
 
 void update(void)
 {
     // Code
-   
+    angle=angle+0.1f;
+    if(angle>=360.0f)
+        angle=angle-360.0f;
+
+}
+
+BOOL LoadGLTexture(GLuint *texture, TCHAR imageResourceID[])
+{
+    // Variable Declarations
+    HBITMAP hBitmap = NULL;
+    BITMAP bmp;
+    BOOL bResult = FALSE;
+    // Code
+    hBitmap = (HBITMAP)LoadImage(GetModuleHandle(NULL), imageResourceID, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+    if(hBitmap)
+    {
+        bResult = TRUE;
+        GetObject(hBitmap, sizeof(bmp), &bmp);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        glGenTextures(1, texture);
+        glBindTexture(GL_TEXTURE_2D, *texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+        // Create The Texture
+        gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bmp.bmWidth, bmp.bmHeight, GL_BGR_EXT, GL_UNSIGNED_BYTE, bmp.bmBits);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        DeleteObject(hBitmap);
+
+    }
+    return bResult;
 }
 
 void uninitialize(void)
@@ -438,10 +481,9 @@ void uninitialize(void)
         DestroyWindow(ghwnd);
         ghwnd=NULL;
     }
-    if(quadric)
+    if(texture_marble)
     {
-        gluDeleteQuadric(quadric);
-        quadric = NULL;
+        glDeleteTextures(1, &texture_marble);
     }
     if(gpFile)
     {

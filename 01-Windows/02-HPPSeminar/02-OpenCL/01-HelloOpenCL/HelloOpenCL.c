@@ -1,6 +1,7 @@
 // Header Files 
 // Standard Headers
 #include<stdio.h>
+#include<stdlib.h> // EXIT_FAILURE
 
 // OpenCL headers
 #include<CL/opencl.h>
@@ -26,7 +27,7 @@ cl_mem deviceInput2 = NULL;
 cl_mem deviceOutput = NULL;
 
 // OpenCL Kernel
-const char *oclSourceCode = "__kernel void vecAddGPU(__gloval float *in1, __global float *in2, __global float *out, int len)"\
+const char *oclSourceCode = "__kernel void vecAddGPU(__global float *in1, __global float *in2, __global float *out, int len)"\
 "{"\
 "int i=get_global_id(0);"\
 "if(i<len)"\
@@ -218,6 +219,7 @@ int main(void)
     }
 
     result = clEnqueueWriteBuffer(oclCommandQueue, deviceInput2, CL_FALSE, 0, size, hostInput2, 0, NULL, NULL);
+    if(result != CL_SUCCESS)
     {
         printf("clEnqueueWriteBuffer() failed for 2nd input device buffer : %d\n", result);
         cleanup();
@@ -227,6 +229,7 @@ int main(void)
     // Kernel Configuration
     size_t global_size = 5; // 1D 5 element array operation
     result = clEnqueueNDRangeKernel(oclCommandQueue, oclKernel, 1, NULL, &global_size, NULL, 0, NULL, NULL);
+    if(result != CL_SUCCESS)
     {
         printf("clEnqueueNDRangeKernel() failed: %d\n", result);
         cleanup();
@@ -237,6 +240,7 @@ int main(void)
 
     // Read back result from the device (i.e. from deviceOutput) into cpu variable (i.e hostOutput)
     result = clEnqueueReadBuffer(oclCommandQueue, deviceOutput, CL_TRUE, 0, size, hostOutput, 0, NULL, NULL);
+    if(result != CL_SUCCESS)
     {
         printf("clEnqueueReadBuffer() failed: %d\n", result);
         cleanup();

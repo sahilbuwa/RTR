@@ -1,0 +1,3 @@
+#include"OGL1.h"
+MYICON ICON SAB.ico
+IDBITMAP_MARBLE BITMAP marble.bmp

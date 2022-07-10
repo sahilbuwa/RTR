@@ -187,7 +187,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
             break;
         case WM_ERASEBKGND:
             return 0;
-        // As this is retained mode graphics, there is WM_PAINT to paint.    
+        // As this is retained mode graphics, there is no WM_PAINT to paint.    
         case WM_CHAR:
             switch(wParam)
             {

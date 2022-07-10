@@ -330,25 +330,6 @@ void resize(int width, int height)
     glLoadIdentity();
 
     gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
-
-    // if(width<=height)
-    // {
-    //     glOrtho(-100.0f,
-    //              100.0f,
-    //             ((-100.0f)*(((GLfloat)height)/((GLfloat)width))),
-    //             ((100.0f)*(((GLfloat)height)/((GLfloat)width))),
-    //             -100.0f,
-    //             100.0f);
-    // }
-    // else
-    // {
-    //     glOrtho(((-100.0f)*((GLfloat)width/(GLfloat)height)),
-    //             ((100.0f)*(GLfloat)width/(GLfloat)height),
-    //             -100.0f,
-    //              100.0f,
-    //             -100.0f,
-    //              100.0f);
-    // }
 }
 
 void display(void)
@@ -359,88 +340,156 @@ void display(void)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     glMatrixMode(GL_MODELVIEW);
-    
+    glEnable(GL_LINE_SMOOTH);
     glViewport(0,0,(GLsizei)gWidth*0.33f,(GLsizei)gHeight/2);
     glLoadIdentity();
-    glTranslatef(0.0f, 0.0f, -8.0f);
-
-	glBegin(GL_POINTS);
+    glTranslatef(-2.0f, -1.0f, -8.0f);
+    
+    glBegin(GL_LINE_LOOP);
 	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
-	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
 	glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
-
-    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
 	glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
+
+    glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
 
     glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 0.0f, 0.0f);
+	glEnd();
+
+    glBegin(GL_LINES);
+
+	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+
+	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
+
+	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
+
+    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
 	glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
 
+    glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
     glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
 	glEnd();
     
     glViewport((GLsizei)gWidth*0.33f,0,((GLsizei)gWidth)/3,(GLsizei)gHeight/2);
     glLoadIdentity();
-    glTranslatef(0.0f, 0.0f, -8.0f);
-    glBegin(GL_POINTS);
-	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+    glTranslatef(-2.0f, -1.0f, -8.0f);
+    glBegin(GL_LINES);
+
+	glVertex3f(0.0f * 1.33f, 3.0f, 0.0f);
 	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 3.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 3.0f, 0.0f);
+	glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 3.0f, 0.0f);
+	glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 3.0f, 0.0f);
+	glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 3.0f, 0.0f);
+	glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
+	glEnd();
+
+    glBegin(GL_LINES);
+
+	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
 	glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
 
-    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
-	glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
 
-    glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
-	glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
-
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
     glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
 	glEnd();
 
     glViewport((GLsizei)gWidth*0.66f,0,(GLsizei)gWidth/3,(GLsizei)gHeight/2);
     glLoadIdentity();
-    glTranslatef(0.0f, 0.0f, -8.0f);
-    glBegin(GL_POINTS);
+    glTranslatef(-2.0f, -1.0f, -8.0f);
+
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 0.0f, 0.0f);
+    glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+
+    glColor3f(0.0f, 1.0f, 0.0f);
+    glVertex3f(1.0f * 1.33f, 0.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+
+    glColor3f(0.0f, 0.0f, 1.0f);
+    glVertex3f(2.0f * 1.33f, 0.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
+    glEnd();
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glBegin(GL_LINES);
+
 	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
-	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
 	glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
 
+    glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+
+	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
+
+	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
+
     glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
-	glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
 
     glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
 	glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
 
+    glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
     glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
 	glEnd();
-
     glViewport(0,(GLsizei)gHeight/2,(GLsizei)gWidth*0.33f,(GLsizei)gHeight/2);
     glLoadIdentity();
-    glTranslatef(0.0f, 0.0f, -8.0f);
-    glTranslatef(-2.0f, -2.0f, 0.0f);
-    glPointSize(3.0f);
+    glTranslatef(-2.0f, -1.0f, -8.0f);
+    glPointSize(4.0f);
 
     glBegin(GL_POINTS);
 	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
@@ -463,56 +512,67 @@ void display(void)
 	glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
 	glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
 	glEnd();
+    glPointSize(1.0f);
+
     glViewport((GLsizei)gWidth*0.33f,(GLsizei)gHeight/2,((GLsizei)gWidth)/3,(GLsizei)gHeight/2);
     glLoadIdentity();
-    glTranslatef(0.0f, 0.0f, -8.0f);
-    glBegin(GL_POINTS);
+    glTranslatef(-2.0f, -1.0f, -8.0f);
+    glBegin(GL_LINE_LOOP);
 	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
-	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
 	glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
-
-    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
 	glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
+
+    glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
 
     glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
-	glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
-
-    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 0.0f, 0.0f);
 	glEnd();
 
     glViewport((GLsizei)gWidth*0.66f,(GLsizei)gHeight/2,(GLsizei)gWidth/3,(GLsizei)gHeight/2);
     glLoadIdentity();
-    glTranslatef(0.0f, 0.0f, -8.0f);
-    glBegin(GL_POINTS);
+    glTranslatef(-2.0f, -1.0f, -8.0f);
+    glBegin(GL_LINES);
+
 	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
-	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
 	glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
 
+    glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+
+	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
+
+	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
+
     glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
-	glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
 
     glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
 	glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
 
+    glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
     glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
-	glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
 	glEnd();
     
+    glDisable(GL_LINE_SMOOTH);
     SwapBuffers(ghdc);
 }
 

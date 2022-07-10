@@ -1,12 +1,14 @@
 // Standard Header files
-#include<windows.h> //SDK path madhli header file declare karaichi padhhat
-#include"OGL.h"  // Aplya path (local) madhli header file declare karaichi padhhat
+#include<windows.h> // SDK path madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
 
 // OpenGL header files
 #include<GL/glew.h> // This must be above gl.h inclusion. 
 #include<GL/gl.h>
+
+// Aplya Local Header Files
+#include"OGL.h"  // Aplya path (local) madhli header file declare karaichi padhhat
 
 // OpenGL Libraries
 #pragma comment(lib,"glew32.lib")
@@ -17,12 +19,12 @@
 #define WIN_HEIGHT 600
 
 // Global Variable Declarations
-HWND ghwnd=NULL;
-HDC ghdc=NULL;
-HGLRC ghrc=NULL;
-BOOL gbFullScreen=FALSE;
-FILE *gpFile=NULL;
-BOOL gbActiveWindow=FALSE;
+HWND ghwnd = NULL;
+HDC ghdc = NULL;
+HGLRC ghrc = NULL;
+BOOL gbFullScreen = FALSE;
+FILE *gpFile = NULL;
+BOOL gbActiveWindow = FALSE;
 // Programmable Pipeline Related Variables
 
 // Global Function Declarations

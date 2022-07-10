@@ -435,15 +435,9 @@ int initialize(void)
     // Declaration of vertex data arrays
     const GLfloat triangleVertices[] = 
     {
-        0.0f,
-        50.0f,
-        0.0f,
-        -50.0f,
-        -50.0f,
-        0.0f,
-        50.0f,
-        -50.0f,
-        0.0f
+        0.0f, 50.0f, 0.0f,
+        -50.0f, -50.0f, 0.0f,
+        50.0f, -50.0f, 0.0f
     };
 
     // Vao and Vbo related code

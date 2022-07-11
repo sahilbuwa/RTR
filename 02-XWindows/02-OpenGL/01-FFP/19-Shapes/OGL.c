@@ -11,7 +11,13 @@
 //OpenGL Headers
 #include<GL/gl.h>  // For OpenGL functionality
 #include<GL/glx.h> // Bridging APIs
-#include<GL/glu.h> // GL utilities
+#include<GL/glu.h> // OpenGL utility
+
+// Texture Library Header
+#include<SOIL/SOIL.h> // Simple OpenGL Imaging Library
+
+// Model Header File
+#include"OGL.h"
 
 // Macros
 #define WIN_WIDTH 800
@@ -24,12 +30,17 @@ XVisualInfo *visualInfo = NULL; // 10 member struct - 1 member 'visual' which ha
 Colormap colormap;
 Window window;
 Bool fullscreen = False;
-FILE *gpFile=NULL;
 // OpenGL related variables
 GLXContext glxContext;
 Bool bActiveWindow = False;
-float angleTriangle=0.0f;
-float angleRectangle=0.0f;
+GLuint texture;
+FILE *gpFile=NULL;
+float angle = 0.0f;
+GLfloat lightAmbient[] = {0.5f, 0.5f, 0.5f, 1.0f};
+GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightPosition[] = {0.0f, 0.0f, 2.0f, 1.0f};
+Bool gbLight = False;
+Bool bTexture = False;
 
 // Entry-point function
 int main(void)
@@ -37,10 +48,10 @@ int main(void)
 	// Function Declarations
 	void uninitialize(void);
 	void toggleFullscreen(void);
-	void initialize(void);
+	int initialize(void);
     void resize(int, int);
     void draw(void);
-	void update(void);
+    void update(void);
 	
 	// Local Variables
 	int defaultScreen;
@@ -61,6 +72,7 @@ int main(void)
 		GLX_GREEN_SIZE,8,
 		GLX_BLUE_SIZE,8,
 		GLX_ALPHA_SIZE,8,
+		GLX_DEPTH_SIZE,24,
 		None
 	};
 	Bool bDone;
@@ -68,15 +80,15 @@ int main(void)
 
 	// Code
 	gpFile = fopen("Log.txt","w");
-    if(gpFile == NULL)
+    if(gpFile == False)
     {
-        fprintf(gpFile, "Creation of log file failed. Exiting...\n");
+        printf("Creation of log file failed. Exiting...\n");
         exit(0);
     }
     else
     {
         fprintf(gpFile,"Log File Is Successfully Created. \n");
-    }
+    }	
 	display = XOpenDisplay(NULL); // Availables the display , NULL can also be command line argument from int main() for networking
 	if(display == NULL)
 	{
@@ -123,7 +135,7 @@ int main(void)
 
 	// Initialize Call
 	initialize();
-
+	
 	// Message Loop
 	
 	while(bDone == False)
@@ -165,6 +177,32 @@ int main(void)
 								fullscreen = False;
 							}
 							break;
+						case 'L':
+                		case 'l':
+				            if (gbLight == False)
+				            {
+				                glEnable(GL_LIGHTING);
+				                gbLight = True;
+				            }
+				            else
+				            {
+				                glDisable(GL_LIGHTING);
+				                gbLight = False;
+				            }
+				            break;
+				        case 't':
+				        case 'T':
+				        	if (bTexture == False)
+				            {
+				                glEnable(GL_TEXTURE_2D);
+				                bTexture = True;
+				            }
+				            else
+				            {
+				                glDisable(GL_TEXTURE_2D);
+				                bTexture = False;
+				            }
+				        	break;
 					}
 					break;
 				case ConfigureNotify:
@@ -215,79 +253,128 @@ void toggleFullscreen(void)
                  );
 }
 
-void initialize(void)
+int initialize(void)
 {
-	// Function Declarations
+	// Declaration of user-defined functions
+    Bool loadGLTexture(GLuint* ,const char*);
+    // Function Declarations
     void resize(int,int);
+    void uninitialize(void);
+    
 	// Code
 	glxContext = glXCreateContext(display, visualInfo, NULL, True); // Sharing of existing glxContext in 3rd param for other gpus
 	glXMakeCurrent(display, window, glxContext);
+	
+	// Texture call
+	if(loadGLTexture(&texture, "marble.bmp")==False)
+    {
+        fprintf(gpFile,"LoadGLTexture for smiley Failed.\n");
+        uninitialize();
+        return -5;
+    }
 
-	// Here starts OpenGL Functionality
-	// Clearing the screen by Black Color
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	// Warmup Resize Call
+    // Here Starts OpenGL code
+    // Clear the screen using black color
+    glClearColor(0.0f,0.0f,0.0f,0.0f);
+
+    // Depth Related Changes
+    glClearDepth(1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+
+    glShadeModel(GL_SMOOTH);
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
+    
+	glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbient);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuse);
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPosition);
+    glEnable(GL_LIGHT1);
+    
+    // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
+    return 0;
 
 }
 
 void resize(int width, int height)
 {
-	if(height == 0)
-		height = 1;
-	glViewport(0, 0, (GLsizei)width, (GLsizei)height);
-	glMatrixMode(GL_PROJECTION);
+    // Code
+    if(height==0)
+        height=1; // To avoid divided by 0 error(illegal statement) in future calls..
+
+    glViewport(0,0,(GLsizei)width,(GLsizei)height);
+    glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-	gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
+    gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
+
 }
 
 void draw(void)
 {
-	// Code
-	glClear(GL_COLOR_BUFFER_BIT);
-	glMatrixMode(GL_MODELVIEW);
+	// Variable Declarations
+    int vi, ni, ti;
+    int i, j;
+    // Code
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-
-	glTranslatef(-1.5f,0.0f,-6.0f);
-    glRotatef(angleTriangle,0.0f,1.0f,0.0f); // Spin
+    
+    glTranslatef(0.0f,0.0f,-2.0f);
+    glRotatef((GLfloat)angle, 0.0f, 1.0f, 0.0f);
+    
+    if(bTexture == True)
+    	glBindTexture(GL_TEXTURE_2D, texture);
+    else
+    	glBindTexture(GL_TEXTURE_2D, 0);
     
     glBegin(GL_TRIANGLES);
-	glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f);
-	glColor3f(0.0f, 1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-	glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 0.0f);
+	for(i = 0; i < sizeof(face_indicies)/sizeof(face_indicies[0]); i++)
+	{
+		for(j = 0; j < 3; j++)
+		{
+			vi = face_indicies[i][j];
+			ni = face_indicies[i][j+3];
+			ti = face_indicies[i][j+6];
+			glNormal3f(normals[ni][0], normals[ni][1], normals[ni][2]);
+			glTexCoord2f(textures[ti][0],textures[ti][1]);
+			glVertex3f(vertices[vi][0], vertices[vi][1], vertices[vi][2]);
+		}
+	}
 	glEnd();
-
-    glLoadIdentity();
-
-    glTranslatef(1.5f,0.0f,-6.0f);
-    glRotatef(angleRectangle,1.0f,0.0f,0.0f); // Rolling
-    
-    glBegin(GL_QUADS);
-	glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(1.0f, 1.0f, 0.0f);
-	glVertex3f(-1.0f, 1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 0.0f);
-	glEnd();
-
+	
 	glXSwapBuffers(display, window);
 }
 
 void update(void)
 {
     // Code
-    angleTriangle=angleTriangle+1.0f;
-    if(angleTriangle>=360.0f)
-        angleTriangle=angleTriangle-360.0f;
+    angle=angle+0.1f;
+    if(angle>=360.0f)
+        angle=angle-360.0f;
 
-    angleRectangle=angleRectangle+1.0f;
-    if(angleRectangle>=360.0f)
-        angleRectangle=angleRectangle-360.0f;
+}
 
+Bool loadGLTexture(GLuint* texture, const char * path)
+{
+	// Variable Declarations
+	int width, height;
+	unsigned char* imageData = NULL;
+	// Code
+	imageData = SOIL_load_image(path, &width, &height, NULL, SOIL_LOAD_RGB);
+	if(imageData == NULL)
+		return False;
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    glGenTextures(1, texture);
+    glBindTexture(GL_TEXTURE_2D, *texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+    // Create The Texture
+    gluBuild2DMipmaps(GL_TEXTURE_2D, 3, width, height, GL_RGB, GL_UNSIGNED_BYTE, imageData);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    SOIL_free_image_data(imageData);
+    return True;
 }
 
 void uninitialize(void)
@@ -313,6 +400,10 @@ void uninitialize(void)
 	{
 		XDestroyWindow(display, window);
 	}
+	if(texture)
+    {
+        glDeleteTextures(1, &texture);
+    }
 	if(colormap)
 	{
 		XFreeColormap(display, colormap);
@@ -329,3 +420,4 @@ void uninitialize(void)
         gpFile=NULL;
     }
 }
+

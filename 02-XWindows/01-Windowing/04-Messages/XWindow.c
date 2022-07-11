@@ -88,13 +88,15 @@ int main(void)
 		XNextEvent(display, &event); // GetMessage() similar 
 		switch(event.type)
 		{
-			case MapNotify: // WM_CREATE
+			case MapNotify:	// WM_CREATE
+				printf("MapNotify entered.\n"); 
 				break;
 			case KeyPress:
 				keysym = XkbKeycodeToKeysym(display, event.xkey.keycode, 0, 0);			
 				switch(keysym)
 				{
 					case XK_Escape:
+						printf("EscapeKey clicked.\n");
 						uninitialize();
 						exit(0);
 						break;
@@ -121,6 +123,7 @@ int main(void)
 				printf("Window has lost the focus.\n");
 				break;
 			case 33:
+				printf("EscapeKey clicked.\n");
 				uninitialize();
 				exit(0);
 				break;

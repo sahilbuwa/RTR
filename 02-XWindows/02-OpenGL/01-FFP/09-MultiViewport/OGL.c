@@ -24,6 +24,7 @@ XVisualInfo *visualInfo = NULL; // 10 member struct - 1 member 'visual' which ha
 Colormap colormap;
 Window window;
 Bool fullscreen = False;
+FILE *gpFile=NULL;
 // OpenGL related variables
 GLXContext glxContext;
 Bool bActiveWindow = False;
@@ -66,10 +67,20 @@ int main(void)
 	static int winWidth, winHeight;
 
 	// Code
+	gpFile = fopen("Log.txt","w");
+    if(gpFile == NULL)
+    {
+        fprintf(gpFile, "Creation of log file failed. Exiting...\n");
+        exit(0);
+    }
+    else
+    {
+        fprintf(gpFile,"Log File Is Successfully Created. \n");
+    }
 	display = XOpenDisplay(NULL); // Availables the display , NULL can also be command line argument from int main() for networking
 	if(display == NULL)
 	{
-		printf("ERROR:XOpenDisplay() failed.\n");
+		fprintf(gpFile,"ERROR:XOpenDisplay() failed.\n");
 		uninitialize();
 		exit(1);
 	}
@@ -78,7 +89,7 @@ int main(void)
 	visualInfo = glXChooseVisual(display, defaultScreen, frameBufferAttributes); // Major Change - changing to opengl for graphics
 	if(visualInfo == NULL)
 	{
-		printf("ERROR:glxChooseVisual() failed.\n");
+		fprintf(gpFile,"ERROR:glxChooseVisual() failed.\n");
 		uninitialize();
 		exit(1);
 	}	
@@ -96,7 +107,7 @@ int main(void)
 	window = XCreateWindow(display, RootWindow(display, visualInfo->screen), 0, 0, WIN_WIDTH, WIN_HEIGHT, 0, visualInfo->depth, InputOutput, visualInfo->visual, styleMask, &windowAttributes);
 	if(!window)
 	{
-		printf("ERROR:XCreateWindow() failed.\n");
+		fprintf(gpFile,"ERROR:XCreateWindow() failed.\n");
 		uninitialize();
 		exit(1);
 	}
@@ -330,4 +341,10 @@ void uninitialize(void)
 		XCloseDisplay(display);
 		display = NULL;
 	}
+	if(gpFile)
+    {
+        fprintf(gpFile,"Log File Is Successfully Closed.\n");
+        fclose(gpFile);
+        gpFile=NULL;
+    }
 }

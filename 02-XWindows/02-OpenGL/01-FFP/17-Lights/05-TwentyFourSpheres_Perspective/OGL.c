@@ -11,7 +11,10 @@
 //OpenGL Headers
 #include<GL/gl.h>  // For OpenGL functionality
 #include<GL/glx.h> // Bridging APIs
-#include<GL/glu.h> // GL utilities
+#include<GL/glu.h> // OpenGL utility
+
+// Texture Library Header
+#include<SOIL/SOIL.h> // Simple OpenGL Imaging Library
 
 // Macros
 #define WIN_WIDTH 800
@@ -28,8 +31,31 @@ FILE *gpFile=NULL;
 // OpenGL related variables
 GLXContext glxContext;
 Bool bActiveWindow = False;
-float angleTriangle=0.0f;
-float angleRectangle=0.0f;
+GLUquadric *quadric = NULL;
+
+GLfloat lightAmbientZero[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuseZero[] = {1.0f, 0.0f, 0.0f, 1.0f}; // Red
+GLfloat lightSpecularZero[] = {1.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightPositionZero[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+GLfloat lightAmbientOne[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuseOne[] = {0.0f, 1.0f, 0.0f, 1.0f}; // Green
+GLfloat lightSpecularOne[] = {0.0f, 1.0f, 0.0f, 1.0f};
+GLfloat lightPositionOne[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+GLfloat lightAmbientTwo[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuseTwo[] = {0.0f, 0.0f, 1.0f, 1.0f}; // Blue
+GLfloat lightSpecularTwo[] = {0.0f, 0.0f, 1.0f, 1.0f};
+GLfloat lightPositionTwo[] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+GLfloat materialAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat materialDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialShininess = 50.0f;
+
+GLfloat lightAngleZero = 0.0f, lightAngleOne = 0.0f, lightAngleTwo = 0.0f;
+
+Bool gbLight = False;
 
 // Entry-point function
 int main(void)
@@ -37,7 +63,7 @@ int main(void)
 	// Function Declarations
 	void uninitialize(void);
 	void toggleFullscreen(void);
-	void initialize(void);
+	int initialize(void);
     void resize(int, int);
     void draw(void);
 	void update(void);
@@ -61,6 +87,7 @@ int main(void)
 		GLX_GREEN_SIZE,8,
 		GLX_BLUE_SIZE,8,
 		GLX_ALPHA_SIZE,8,
+		GLX_DEPTH_SIZE,24,
 		None
 	};
 	Bool bDone;
@@ -68,15 +95,15 @@ int main(void)
 
 	// Code
 	gpFile = fopen("Log.txt","w");
-    if(gpFile == NULL)
+    if(gpFile == 0)
     {
-        fprintf(gpFile, "Creation of log file failed. Exiting...\n");
+        printf("Creation of log file failed. Exiting...\n");
         exit(0);
     }
     else
     {
         fprintf(gpFile,"Log File Is Successfully Created. \n");
-    }
+    }	
 	display = XOpenDisplay(NULL); // Availables the display , NULL can also be command line argument from int main() for networking
 	if(display == NULL)
 	{
@@ -123,7 +150,7 @@ int main(void)
 
 	// Initialize Call
 	initialize();
-
+	
 	// Message Loop
 	
 	while(bDone == False)
@@ -147,6 +174,21 @@ int main(void)
 					{
 						case XK_Escape:
 							bDone = True;
+							break;
+						case 'L':
+						case 'l':
+							if (gbLight == False)
+							{
+								glEnable(GL_LIGHTING);
+								gbLight = True;
+							}
+							else
+							{
+								glDisable(GL_LIGHTING);
+								gbLight = False;
+							}
+							break;
+						default:
 							break;
 					}
 					XLookupString(&event.xkey, keys, sizeof(keys), NULL, NULL); // struct XComposeStatus (struct) , if keys are pressed repetatively then this struct is used... , WM_CHAR similar
@@ -215,79 +257,127 @@ void toggleFullscreen(void)
                  );
 }
 
-void initialize(void)
+int initialize(void)
 {
-	// Function Declarations
+	// Declaration of user-defined functions
+    // Function Declarations
     void resize(int,int);
+    void uninitialize(void);
+    
 	// Code
 	glxContext = glXCreateContext(display, visualInfo, NULL, True); // Sharing of existing glxContext in 3rd param for other gpus
 	glXMakeCurrent(display, window, glxContext);
 
-	// Here starts OpenGL Functionality
-	// Clearing the screen by Black Color
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	// Warmup Resize Call
+    // Here Starts OpenGL code
+    // Clear the screen using black color
+    glClearColor(0.0f,0.0f,0.0f,0.0f);
+
+    // Depth Related Changes
+    glClearDepth(1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+
+    glShadeModel(GL_SMOOTH);
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
+
+    // Light initialize
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbientZero);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuseZero);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecularZero);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPositionZero);
+    glEnable(GL_LIGHT0);
+
+    glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbientOne);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuseOne);
+    glLightfv(GL_LIGHT1, GL_SPECULAR, lightSpecularOne);
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPositionOne);
+    glEnable(GL_LIGHT1);
+
+    glLightfv(GL_LIGHT2, GL_AMBIENT, lightAmbientTwo);
+    glLightfv(GL_LIGHT2, GL_DIFFUSE, lightDiffuseTwo);
+    glLightfv(GL_LIGHT2, GL_SPECULAR, lightSpecularTwo);
+    glLightfv(GL_LIGHT2, GL_POSITION, lightPositionTwo);
+    glEnable(GL_LIGHT2);
+
+    glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+    glMaterialf(GL_FRONT, GL_SHININESS, materialShininess);
+    
+    // Create Quadric
+    quadric = gluNewQuadric();
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
+    return 0;
 
 }
 
 void resize(int width, int height)
 {
-	if(height == 0)
-		height = 1;
-	glViewport(0, 0, (GLsizei)width, (GLsizei)height);
-	glMatrixMode(GL_PROJECTION);
+    // Code
+    if(height==0)
+        height=1; // To avoid divided by 0 error(illegal statement) in future calls..
+
+    glViewport(0,0,(GLsizei)width,(GLsizei)height);
+    glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-	gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
+    gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
+
 }
 
 void draw(void)
 {
-	// Code
-	glClear(GL_COLOR_BUFFER_BIT);
-	glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-	glTranslatef(-1.5f,0.0f,-6.0f);
-    glRotatef(angleTriangle,0.0f,1.0f,0.0f); // Spin
+	// Variable Declarations
     
-    glBegin(GL_TRIANGLES);
-	glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(0.0f, 1.0f, 0.0f);
-	glColor3f(0.0f, 1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-	glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 0.0f);
-	glEnd();
-
+    // Code
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-
-    glTranslatef(1.5f,0.0f,-6.0f);
-    glRotatef(angleRectangle,1.0f,0.0f,0.0f); // Rolling
     
-    glBegin(GL_QUADS);
-	glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f(1.0f, 1.0f, 0.0f);
-	glVertex3f(-1.0f, 1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-	glVertex3f(1.0f, -1.0f, 0.0f);
-	glEnd();
+    // Rotating 0th Light
+    glRotatef(lightAngleZero, 1.0f, 0.0f, 0.0f);
+    lightPositionZero[1] = lightAngleZero;
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPositionZero);
 
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    // Rotating 1st Light
+    glRotatef(lightAngleOne, 0.0f, 1.0f, 0.0f);
+    lightPositionOne[2] = lightAngleOne;
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPositionOne);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    // Rotating 2nd Light
+    glRotatef(lightAngleTwo, 0.0f, 0.0f, 1.0f);
+    lightPositionTwo[0] = lightAngleTwo;
+    glLightfv(GL_LIGHT2, GL_POSITION, lightPositionTwo);
+
+    glTranslatef(0.0f, 0.0f, -4.0f);
+    // Draw Sphere
+    gluSphere(quadric, 1.0, 50, 50);
+	
 	glXSwapBuffers(display, window);
 }
 
 void update(void)
 {
     // Code
-    angleTriangle=angleTriangle+1.0f;
-    if(angleTriangle>=360.0f)
-        angleTriangle=angleTriangle-360.0f;
+	lightAngleZero = lightAngleZero + 0.1f;
+    if(lightAngleZero > 360.0f)
+        lightAngleZero = 0.0f;
 
-    angleRectangle=angleRectangle+1.0f;
-    if(angleRectangle>=360.0f)
-        angleRectangle=angleRectangle-360.0f;
+    lightAngleOne = lightAngleOne + 0.1f;
+    if(lightAngleOne > 360.0f)
+        lightAngleOne = 0.0f;
 
+    lightAngleTwo = lightAngleTwo + 0.1f;
+    if(lightAngleTwo > 360.0f)
+        lightAngleTwo = 0.0f;
 }
 
 void uninitialize(void)
@@ -322,6 +412,11 @@ void uninitialize(void)
 		XCloseDisplay(display);
 		display = NULL;
 	}
+	if(quadric)
+	{
+		gluDeleteQuadric(quadric);
+		quadric = NULL;
+	}
 	if(gpFile)
     {
         fprintf(gpFile,"Log File Is Successfully Closed.\n");
@@ -329,3 +424,4 @@ void uninitialize(void)
         gpFile=NULL;
     }
 }
+

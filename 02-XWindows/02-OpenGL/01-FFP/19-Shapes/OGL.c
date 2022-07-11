@@ -13,12 +13,6 @@
 #include<GL/glx.h> // Bridging APIs
 #include<GL/glu.h> // OpenGL utility
 
-// Texture Library Header
-#include<SOIL/SOIL.h> // Simple OpenGL Imaging Library
-
-// Model Header File
-#include"OGL.h"
-
 // Macros
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
@@ -33,14 +27,8 @@ Bool fullscreen = False;
 // OpenGL related variables
 GLXContext glxContext;
 Bool bActiveWindow = False;
-GLuint texture;
 FILE *gpFile=NULL;
-float angle = 0.0f;
-GLfloat lightAmbient[] = {0.5f, 0.5f, 0.5f, 1.0f};
-GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
-GLfloat lightPosition[] = {0.0f, 0.0f, 2.0f, 1.0f};
-Bool gbLight = False;
-Bool bTexture = False;
+GLfloat gWidth, gHeight;
 
 // Entry-point function
 int main(void)
@@ -92,7 +80,7 @@ int main(void)
 	display = XOpenDisplay(NULL); // Availables the display , NULL can also be command line argument from int main() for networking
 	if(display == NULL)
 	{
-		printf("ERROR:XOpenDisplay() failed.\n");
+		fprintf(gpFile,"ERROR:XOpenDisplay() failed.\n");
 		uninitialize();
 		exit(1);
 	}
@@ -101,7 +89,7 @@ int main(void)
 	visualInfo = glXChooseVisual(display, defaultScreen, frameBufferAttributes); // Major Change - changing to opengl for graphics
 	if(visualInfo == NULL)
 	{
-		printf("ERROR:glxChooseVisual() failed.\n");
+		fprintf(gpFile,"ERROR:glxChooseVisual() failed.\n");
 		uninitialize();
 		exit(1);
 	}	
@@ -119,7 +107,7 @@ int main(void)
 	window = XCreateWindow(display, RootWindow(display, visualInfo->screen), 0, 0, WIN_WIDTH, WIN_HEIGHT, 0, visualInfo->depth, InputOutput, visualInfo->visual, styleMask, &windowAttributes);
 	if(!window)
 	{
-		printf("ERROR:XCreateWindow() failed.\n");
+		fprintf(gpFile,"ERROR:XCreateWindow() failed.\n");
 		uninitialize();
 		exit(1);
 	}
@@ -177,32 +165,6 @@ int main(void)
 								fullscreen = False;
 							}
 							break;
-						case 'L':
-                		case 'l':
-				            if (gbLight == False)
-				            {
-				                glEnable(GL_LIGHTING);
-				                gbLight = True;
-				            }
-				            else
-				            {
-				                glDisable(GL_LIGHTING);
-				                gbLight = False;
-				            }
-				            break;
-				        case 't':
-				        case 'T':
-				        	if (bTexture == False)
-				            {
-				                glEnable(GL_TEXTURE_2D);
-				                bTexture = True;
-				            }
-				            else
-				            {
-				                glDisable(GL_TEXTURE_2D);
-				                bTexture = False;
-				            }
-				        	break;
 					}
 					break;
 				case ConfigureNotify:
@@ -256,7 +218,7 @@ void toggleFullscreen(void)
 int initialize(void)
 {
 	// Declaration of user-defined functions
-    Bool loadGLTexture(GLuint* ,const char*);
+
     // Function Declarations
     void resize(int,int);
     void uninitialize(void);
@@ -264,14 +226,6 @@ int initialize(void)
 	// Code
 	glxContext = glXCreateContext(display, visualInfo, NULL, True); // Sharing of existing glxContext in 3rd param for other gpus
 	glXMakeCurrent(display, window, glxContext);
-	
-	// Texture call
-	if(loadGLTexture(&texture, "marble.bmp")==False)
-    {
-        fprintf(gpFile,"LoadGLTexture for smiley Failed.\n");
-        uninitialize();
-        return -5;
-    }
 
     // Here Starts OpenGL code
     // Clear the screen using black color
@@ -284,12 +238,7 @@ int initialize(void)
 
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
-    
-	glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbient);
-    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuse);
-    glLightfv(GL_LIGHT1, GL_POSITION, lightPosition);
-    glEnable(GL_LIGHT1);
-    
+
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
@@ -302,6 +251,9 @@ void resize(int width, int height)
     if(height==0)
         height=1; // To avoid divided by 0 error(illegal statement) in future calls..
 
+	gWidth = width;
+    gHeight = height;
+
     glViewport(0,0,(GLsizei)width,(GLsizei)height);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -313,35 +265,244 @@ void resize(int width, int height)
 void draw(void)
 {
 	// Variable Declarations
-    int vi, ni, ti;
-    int i, j;
+    
     // Code
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
     glMatrixMode(GL_MODELVIEW);
+    glEnable(GL_LINE_SMOOTH);
+    glViewport(0,0,(GLsizei)gWidth*0.33f,(GLsizei)gHeight/2);
     glLoadIdentity();
+    glTranslatef(-2.0f, -1.0f, -8.0f);
     
-    glTranslatef(0.0f,0.0f,-2.0f);
-    glRotatef((GLfloat)angle, 0.0f, 1.0f, 0.0f);
-    
-    if(bTexture == True)
-    	glBindTexture(GL_TEXTURE_2D, texture);
-    else
-    	glBindTexture(GL_TEXTURE_2D, 0);
-    
-    glBegin(GL_TRIANGLES);
-	for(i = 0; i < sizeof(face_indicies)/sizeof(face_indicies[0]); i++)
-	{
-		for(j = 0; j < 3; j++)
-		{
-			vi = face_indicies[i][j];
-			ni = face_indicies[i][j+3];
-			ti = face_indicies[i][j+6];
-			glNormal3f(normals[ni][0], normals[ni][1], normals[ni][2]);
-			glTexCoord2f(textures[ti][0],textures[ti][1]);
-			glVertex3f(vertices[vi][0], vertices[vi][1], vertices[vi][2]);
-		}
-	}
+    glBegin(GL_LINE_LOOP);
+	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
+
+    glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
+
+    glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 0.0f, 0.0f);
 	glEnd();
+
+    glBegin(GL_LINES);
+
+	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+
+	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
+
+	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
+
+    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
+	glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+	glEnd();
+    
+    glViewport((GLsizei)gWidth*0.33f,0,((GLsizei)gWidth)/3,(GLsizei)gHeight/2);
+    glLoadIdentity();
+    glTranslatef(-2.0f, -1.0f, -8.0f);
+    glBegin(GL_LINES);
+
+	glVertex3f(0.0f * 1.33f, 3.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 3.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 3.0f, 0.0f);
+	glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 3.0f, 0.0f);
+	glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 3.0f, 0.0f);
+	glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 3.0f, 0.0f);
+	glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
+	glEnd();
+
+    glBegin(GL_LINES);
+
+	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+	glEnd();
+
+    glViewport((GLsizei)gWidth*0.66f,0,(GLsizei)gWidth/3,(GLsizei)gHeight/2);
+    glLoadIdentity();
+    glTranslatef(-2.0f, -1.0f, -8.0f);
+
+    glBegin(GL_QUADS);
+    glColor3f(1.0f, 0.0f, 0.0f);
+    glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+
+    glColor3f(0.0f, 1.0f, 0.0f);
+    glVertex3f(1.0f * 1.33f, 0.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+
+    glColor3f(0.0f, 0.0f, 1.0f);
+    glVertex3f(2.0f * 1.33f, 0.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
+    glEnd();
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glBegin(GL_LINES);
+
+	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+
+	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
+
+	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
+
+    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
+	glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+	glEnd();
+    glViewport(0,(GLsizei)gHeight/2,(GLsizei)gWidth*0.33f,(GLsizei)gHeight/2);
+    glLoadIdentity();
+    glTranslatef(-2.0f, -1.0f, -8.0f);
+    glPointSize(4.0f);
+
+    glBegin(GL_POINTS);
+	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
+	glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
+	glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
+	glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+	glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
+	glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
+	glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+	glEnd();
+    glPointSize(1.0f);
+
+    glViewport((GLsizei)gWidth*0.33f,(GLsizei)gHeight/2,((GLsizei)gWidth)/3,(GLsizei)gHeight/2);
+    glLoadIdentity();
+    glTranslatef(-2.0f, -1.0f, -8.0f);
+    glBegin(GL_LINE_LOOP);
+	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
+
+    glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 2.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
+
+    glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
+    glVertex3f(2.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
+	glVertex3f(1.0f* 1.33f, 1.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 0.0f, 0.0f);
+	glEnd();
+
+    glViewport((GLsizei)gWidth*0.66f,(GLsizei)gHeight/2,(GLsizei)gWidth/3,(GLsizei)gHeight/2);
+    glLoadIdentity();
+    glTranslatef(-2.0f, -1.0f, -8.0f);
+    glBegin(GL_LINES);
+
+	glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+	glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(0.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(3.0f* 1.33f, 3.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+
+	glVertex3f(0.0f* 1.33f, 1.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 1.0f, 0.0f);
+
+	glVertex3f(0.0f* 1.33f, 2.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 2.0f, 0.0f);
+
+    glVertex3f(1.0f* 1.33f, 0.0f, 0.0f);
+    glVertex3f(1.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(2.0f* 1.33f, 0.0f, 0.0f);
+	glVertex3f(2.0f* 1.33f, 3.0f, 0.0f);
+
+    glVertex3f(0.0f * 1.33f, 0.0f, 0.0f);
+    glVertex3f(3.0f* 1.33f, 0.0f, 0.0f);
+	glEnd();
+    
+    glDisable(GL_LINE_SMOOTH);
 	
 	glXSwapBuffers(display, window);
 }
@@ -349,32 +510,6 @@ void draw(void)
 void update(void)
 {
     // Code
-    angle=angle+0.1f;
-    if(angle>=360.0f)
-        angle=angle-360.0f;
-
-}
-
-Bool loadGLTexture(GLuint* texture, const char * path)
-{
-	// Variable Declarations
-	int width, height;
-	unsigned char* imageData = NULL;
-	// Code
-	imageData = SOIL_load_image(path, &width, &height, NULL, SOIL_LOAD_RGB);
-	if(imageData == NULL)
-		return False;
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-    glGenTextures(1, texture);
-    glBindTexture(GL_TEXTURE_2D, *texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-    // Create The Texture
-    gluBuild2DMipmaps(GL_TEXTURE_2D, 3, width, height, GL_RGB, GL_UNSIGNED_BYTE, imageData);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    SOIL_free_image_data(imageData);
-    return True;
 }
 
 void uninitialize(void)
@@ -400,10 +535,6 @@ void uninitialize(void)
 	{
 		XDestroyWindow(display, window);
 	}
-	if(texture)
-    {
-        glDeleteTextures(1, &texture);
-    }
 	if(colormap)
 	{
 		XFreeColormap(display, colormap);

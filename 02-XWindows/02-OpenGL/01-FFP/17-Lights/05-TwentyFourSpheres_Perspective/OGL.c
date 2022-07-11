@@ -2,6 +2,7 @@
 #include<stdio.h> // For standard IO
 #include<stdlib.h> // exit() sathi
 #include<memory.h> // For memset()
+#include<math.h> // For sin(), cos()
 
 // X11 Headers
 #include<X11/Xlib.h> // windows.h saarkhi 
@@ -30,32 +31,22 @@ Bool fullscreen = False;
 FILE *gpFile=NULL;
 // OpenGL related variables
 GLXContext glxContext;
-Bool bActiveWindow = False;
 GLUquadric *quadric = NULL;
+Bool bActiveWindow = False;
+Bool bLight = False;
+GLfloat lightAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightPosition[] = {0.0f, 0.0f, 0.0f, 1.0f};
 
-GLfloat lightAmbientZero[] = {0.0f, 0.0f, 0.0f, 1.0f};
-GLfloat lightDiffuseZero[] = {1.0f, 0.0f, 0.0f, 1.0f}; // Red
-GLfloat lightSpecularZero[] = {1.0f, 0.0f, 0.0f, 1.0f};
-GLfloat lightPositionZero[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat light_Model_Ambient[] = {0.2f, 0.2f, 0.2f, 0.1f};
+GLfloat light_Model_Local_Viewer[] = {0.0f};
 
-GLfloat lightAmbientOne[] = {0.0f, 0.0f, 0.0f, 1.0f};
-GLfloat lightDiffuseOne[] = {0.0f, 1.0f, 0.0f, 1.0f}; // Green
-GLfloat lightSpecularOne[] = {0.0f, 1.0f, 0.0f, 1.0f};
-GLfloat lightPositionOne[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat angleForXRotation = 0.0f;
+GLfloat angleForYRotation = 0.0f;
+GLfloat angleForZRotation = 0.0f;
 
-GLfloat lightAmbientTwo[] = {0.0f, 0.0f, 0.0f, 1.0f};
-GLfloat lightDiffuseTwo[] = {0.0f, 0.0f, 1.0f, 1.0f}; // Blue
-GLfloat lightSpecularTwo[] = {0.0f, 0.0f, 1.0f, 1.0f};
-GLfloat lightPositionTwo[] = {0.0f, 0.0f, 0.0f, 1.0f};
-
-GLfloat materialAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
-GLfloat materialDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
-GLfloat materialSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
-GLfloat materialShininess = 50.0f;
-
-GLfloat lightAngleZero = 0.0f, lightAngleOne = 0.0f, lightAngleTwo = 0.0f;
-
-Bool gbLight = False;
+GLint keyPressed = 0;
 
 // Entry-point function
 int main(void)
@@ -175,19 +166,6 @@ int main(void)
 						case XK_Escape:
 							bDone = True;
 							break;
-						case 'L':
-						case 'l':
-							if (gbLight == False)
-							{
-								glEnable(GL_LIGHTING);
-								gbLight = True;
-							}
-							else
-							{
-								glDisable(GL_LIGHTING);
-								gbLight = False;
-							}
-							break;
 						default:
 							break;
 					}
@@ -206,6 +184,37 @@ int main(void)
 								toggleFullscreen();
 								fullscreen = False;
 							}
+							break;
+						case 'l':
+						case 'L':
+							if(bLight == False)
+							{
+								glEnable(GL_LIGHTING);
+								bLight = True;
+							}
+							else
+							{
+								glDisable(GL_LIGHTING);
+								bLight = False;
+							}
+							break;
+						case 'x':
+						case 'X':
+							keyPressed = 1;
+							angleForXRotation = 0.0f;   // Reset
+							break;
+						case 'y':
+						case 'Y':
+							keyPressed = 2;
+							angleForYRotation = 0.0f;   // Reset
+							break;
+						case 'z':
+						case 'Z':
+							keyPressed = 3;
+							angleForZRotation = 0.0f;   // Reset
+							break;
+						default:
+							keyPressed = 0;
 							break;
 					}
 					break;
@@ -269,9 +278,10 @@ int initialize(void)
 	glXMakeCurrent(display, window, glxContext);
 
     // Here Starts OpenGL code
-    // Clear the screen using black color
-    glClearColor(0.0f,0.0f,0.0f,0.0f);
+    // Clear the screen using dark gray color
+    glClearColor(0.5f,0.5f,0.5f,1.0f);
 
+    // Depth Related Changes
     // Depth Related Changes
     glClearDepth(1.0f);
     glEnable(GL_DEPTH_TEST);
@@ -279,34 +289,20 @@ int initialize(void)
 
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
+    
+    glEnable(GL_AUTO_NORMAL);
+    glEnable(GL_NORMALIZE);
 
-    // Light initialize
-    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbientZero);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuseZero);
-    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecularZero);
-    glLightfv(GL_LIGHT0, GL_POSITION, lightPositionZero);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, light_Model_Ambient);
+    glLightModelfv(GL_LIGHT_MODEL_LOCAL_VIEWER, light_Model_Local_Viewer);
     glEnable(GL_LIGHT0);
 
-    glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbientOne);
-    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuseOne);
-    glLightfv(GL_LIGHT1, GL_SPECULAR, lightSpecularOne);
-    glLightfv(GL_LIGHT1, GL_POSITION, lightPositionOne);
-    glEnable(GL_LIGHT1);
-
-    glLightfv(GL_LIGHT2, GL_AMBIENT, lightAmbientTwo);
-    glLightfv(GL_LIGHT2, GL_DIFFUSE, lightDiffuseTwo);
-    glLightfv(GL_LIGHT2, GL_SPECULAR, lightSpecularTwo);
-    glLightfv(GL_LIGHT2, GL_POSITION, lightPositionTwo);
-    glEnable(GL_LIGHT2);
-
-    glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
-    glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
-    glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
-    glMaterialf(GL_FRONT, GL_SHININESS, materialShininess);
-    
     // Create Quadric
     quadric = gluNewQuadric();
-
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     // Warmup Resize Call
@@ -331,35 +327,21 @@ void resize(int width, int height)
 
 void draw(void)
 {
-	// Variable Declarations
+	// Function Declarations
+    void draw24Spheres(void);
+    // Variable Declarations
     
     // Code
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    
-    // Rotating 0th Light
-    glRotatef(lightAngleZero, 1.0f, 0.0f, 0.0f);
-    lightPositionZero[1] = lightAngleZero;
-    glLightfv(GL_LIGHT0, GL_POSITION, lightPositionZero);
+
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    // Rotating 1st Light
-    glRotatef(lightAngleOne, 0.0f, 1.0f, 0.0f);
-    lightPositionOne[2] = lightAngleOne;
-    glLightfv(GL_LIGHT1, GL_POSITION, lightPositionOne);
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    // Rotating 2nd Light
-    glRotatef(lightAngleTwo, 0.0f, 0.0f, 1.0f);
-    lightPositionTwo[0] = lightAngleTwo;
-    glLightfv(GL_LIGHT2, GL_POSITION, lightPositionTwo);
-
-    glTranslatef(0.0f, 0.0f, -4.0f);
-    // Draw Sphere
-    gluSphere(quadric, 1.0, 50, 50);
+    draw24Spheres();
 	
 	glXSwapBuffers(display, window);
 }
@@ -367,17 +349,868 @@ void draw(void)
 void update(void)
 {
     // Code
-	lightAngleZero = lightAngleZero + 0.1f;
-    if(lightAngleZero > 360.0f)
-        lightAngleZero = 0.0f;
+    if(keyPressed == 1)
+    {
+        angleForXRotation = angleForXRotation + 0.5f;
+        if(angleForXRotation > 360.0f)
+            angleForXRotation = angleForXRotation - 360.0f;
+        lightPosition[1] = 100.0f * cosf(angleForXRotation * M_PI / 180.0f);
+        lightPosition[2] = 100.0f * sinf(angleForXRotation * M_PI / 180.0f);
+    }
 
-    lightAngleOne = lightAngleOne + 0.1f;
-    if(lightAngleOne > 360.0f)
-        lightAngleOne = 0.0f;
+    if(keyPressed == 2)
+    {
+        angleForXRotation = angleForXRotation + 0.5f;
+        if(angleForXRotation > 360.0f)
+            angleForXRotation = angleForXRotation - 360.0f;
+        lightPosition[2] = 100.0f * cosf(angleForXRotation * M_PI / 180.0f);
+        lightPosition[0] = 100.0f * sinf(angleForXRotation * M_PI / 180.0f);
+    }
 
-    lightAngleTwo = lightAngleTwo + 0.1f;
-    if(lightAngleTwo > 360.0f)
-        lightAngleTwo = 0.0f;
+    if(keyPressed == 3)
+    {
+        angleForXRotation = angleForXRotation + 0.5f;
+        if(angleForXRotation > 360.0f)
+            angleForXRotation = angleForXRotation - 360.0f;
+        lightPosition[0] = 100.0f * cosf(angleForXRotation * M_PI / 180.0f);
+        lightPosition[1] = 100.0f * sinf(angleForXRotation * M_PI / 180.0f);
+    }
+}
+
+void draw24Spheres(void)
+{
+    // Variable Declarations
+    GLfloat materialAmbient[4];
+    GLfloat materialDiffuse[4];
+    GLfloat materialSpecular[4];
+    GLfloat shininess;
+
+    // Code
+    // ***** 1st sphere on 1st column, emerald *****
+	// ambient material
+	materialAmbient[0] = 0.0215; // r
+	materialAmbient[1] = 0.1745; // g
+	materialAmbient[2] = 0.0215; // b
+	materialAmbient[3] = 1.0f;   // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.07568; // r
+	materialDiffuse[1] = 0.61424; // g
+	materialDiffuse[2] = 0.07568; // b
+	materialDiffuse[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.633;    // r
+	materialSpecular[1] = 0.727811; // g
+	materialSpecular[2] = 0.633;    // b
+	materialSpecular[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.6 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(8.5f, 14.0f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	
+	// *******************************************************
+
+	// ***** 2nd sphere on 1st column, jade *****
+	// ambient material
+	materialAmbient[0] = 0.135;  // r
+	materialAmbient[1] = 0.2225; // g
+	materialAmbient[2] = 0.1575; // b
+	materialAmbient[3] = 1.0f;   // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.54; // r
+	materialDiffuse[1] = 0.89; // g
+	materialDiffuse[2] = 0.63; // b
+	materialDiffuse[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.316228; // r
+	materialSpecular[1] = 0.316228; // g
+	materialSpecular[2] = 0.316228; // b
+	materialSpecular[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.1 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(8.5f, 11.5f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 3rd sphere on 1st column, obsidian *****
+	// ambient material
+	materialAmbient[0] = 0.05375; // r
+	materialAmbient[1] = 0.05;    // g
+	materialAmbient[2] = 0.06625; // b
+	materialAmbient[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.18275; // r
+	materialDiffuse[1] = 0.17;    // g
+	materialDiffuse[2] = 0.22525; // b
+	materialDiffuse[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.332741; // r
+	materialSpecular[1] = 0.328634; // g
+	materialSpecular[2] = 0.346435; // b
+	materialSpecular[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.3 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(8.5f, 9.0f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 4th sphere on 1st column, pearl *****
+	// ambient material
+	materialAmbient[0] = 0.25;    // r
+	materialAmbient[1] = 0.20725; // g
+	materialAmbient[2] = 0.20725; // b
+	materialAmbient[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 1.0;   // r
+	materialDiffuse[1] = 0.829; // g
+	materialDiffuse[2] = 0.829; // b
+	materialDiffuse[3] = 1.0f;  // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.296648; // r
+	materialSpecular[1] = 0.296648; // g
+	materialSpecular[2] = 0.296648; // b
+	materialSpecular[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.088 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(8.5f, 6.5f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 5th sphere on 1st column, ruby *****
+	// ambient material
+	materialAmbient[0] = 0.1745;  // r
+	materialAmbient[1] = 0.01175; // g
+	materialAmbient[2] = 0.01175; // b
+	materialAmbient[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.61424; // r
+	materialDiffuse[1] = 0.04136; // g
+	materialDiffuse[2] = 0.04136; // b
+	materialDiffuse[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.727811; // r
+	materialSpecular[1] = 0.626959; // g
+	materialSpecular[2] = 0.626959; // b
+	materialSpecular[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.6 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(8.5f, 4.0f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 6th sphere on 1st column, turquoise *****
+	// ambient material
+	materialAmbient[0] = 0.1;     // r
+	materialAmbient[1] = 0.18725; // g
+	materialAmbient[2] = 0.1745;  // b
+	materialAmbient[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.396;   // r
+	materialDiffuse[1] = 0.74151; // g
+	materialDiffuse[2] = 0.69102; // b
+	materialDiffuse[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.297254; // r
+	materialSpecular[1] = 0.30829;  // g
+	materialSpecular[2] = 0.306678; // b
+	materialSpecular[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.1 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(8.5f, 1.5f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+	// *******************************************************
+	// *******************************************************
+
+	// ***** 1st sphere on 2nd column, brass *****
+	// ambient material
+	materialAmbient[0] = 0.329412; // r
+	materialAmbient[1] = 0.223529; // g
+	materialAmbient[2] = 0.027451; // b
+	materialAmbient[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.780392; // r
+	materialDiffuse[1] = 0.568627; // g
+	materialDiffuse[2] = 0.113725; // b
+	materialDiffuse[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.992157; // r
+	materialSpecular[1] = 0.941176; // g
+	materialSpecular[2] = 0.807843; // b
+	materialSpecular[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.21794872 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(2.5f, 14.0f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 2nd sphere on 2nd column, bronze *****
+	// ambient material
+	materialAmbient[0] = 0.2125; // r
+	materialAmbient[1] = 0.1275; // g
+	materialAmbient[2] = 0.054;  // b
+	materialAmbient[3] = 1.0f;   // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.714;   // r
+	materialDiffuse[1] = 0.4284;  // g
+	materialDiffuse[2] = 0.18144; // b
+	materialDiffuse[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.393548; // r
+	materialSpecular[1] = 0.271906; // g
+	materialSpecular[2] = 0.166721; // b
+	materialSpecular[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.2 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(2.5f, 11.5f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 3rd sphere on 2nd column, chrome *****
+	// ambient material
+	materialAmbient[0] = 0.25; // r
+	materialAmbient[1] = 0.25; // g
+	materialAmbient[2] = 0.25; // b
+	materialAmbient[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.4;  // r
+	materialDiffuse[1] = 0.4;  // g
+	materialDiffuse[2] = 0.4;  // b
+	materialDiffuse[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.774597; // r
+	materialSpecular[1] = 0.774597; // g
+	materialSpecular[2] = 0.774597; // b
+	materialSpecular[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.6 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(2.5f, 9.0f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 4th sphere on 2nd column, copper *****
+	// ambient material
+	materialAmbient[0] = 0.19125; // r
+	materialAmbient[1] = 0.0735;  // g
+	materialAmbient[2] = 0.0225;  // b
+	materialAmbient[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.7038;  // r
+	materialDiffuse[1] = 0.27048; // g
+	materialDiffuse[2] = 0.0828;  // b
+	materialDiffuse[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.256777; // r
+	materialSpecular[1] = 0.137622; // g
+	materialSpecular[2] = 0.086014; // b
+	materialSpecular[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.1 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(2.5f, 6.5f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 5th sphere on 2nd column, gold *****
+	// ambient material
+	materialAmbient[0] = 0.24725; // r
+	materialAmbient[1] = 0.1995;  // g
+	materialAmbient[2] = 0.0745;  // b
+	materialAmbient[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.75164; // r
+	materialDiffuse[1] = 0.60648; // g
+	materialDiffuse[2] = 0.22648; // b
+	materialDiffuse[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.628281; // r
+	materialSpecular[1] = 0.555802; // g
+	materialSpecular[2] = 0.366065; // b
+	materialSpecular[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.4 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(2.5f, 4.0f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 6th sphere on 2nd column, silver *****
+	// ambient material
+	materialAmbient[0] = 0.19225; // r
+	materialAmbient[1] = 0.19225; // g
+	materialAmbient[2] = 0.19225; // b
+	materialAmbient[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.50754; // r
+	materialDiffuse[1] = 0.50754; // g
+	materialDiffuse[2] = 0.50754; // b
+	materialDiffuse[3] = 1.0f;    // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.508273; // r
+	materialSpecular[1] = 0.508273; // g
+	materialSpecular[2] = 0.508273; // b
+	materialSpecular[3] = 1.0f;     // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.4 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(2.5f, 1.5f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+	// *******************************************************
+	// *******************************************************
+
+	// ***** 1st sphere on 3rd column, black *****
+	// ambient material
+	materialAmbient[0] = 0.0;  // r
+	materialAmbient[1] = 0.0;  // g
+	materialAmbient[2] = 0.0;  // b
+	materialAmbient[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.01; // r
+	materialDiffuse[1] = 0.01; // g
+	materialDiffuse[2] = 0.01; // b
+	materialDiffuse[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.50; // r
+	materialSpecular[1] = 0.50; // g
+	materialSpecular[2] = 0.50; // b
+	materialSpecular[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.25 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(-3.5f, 14.0f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 2nd sphere on 3rd column, cyan *****
+	// ambient material
+	materialAmbient[0] = 0.0;  // r
+	materialAmbient[1] = 0.1;  // g
+	materialAmbient[2] = 0.06; // b
+	materialAmbient[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.0;        // r
+	materialDiffuse[1] = 0.50980392; // g
+	materialDiffuse[2] = 0.50980392; // b
+	materialDiffuse[3] = 1.0f;       // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.50196078; // r
+	materialSpecular[1] = 0.50196078; // g
+	materialSpecular[2] = 0.50196078; // b
+	materialSpecular[3] = 1.0f;       // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.25 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(-3.5f, 11.5f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 3rd sphere on 2nd column, green *****
+	// ambient material
+	materialAmbient[0] = 0.0;  // r
+	materialAmbient[1] = 0.0;  // g
+	materialAmbient[2] = 0.0;  // b
+	materialAmbient[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.1;  // r
+	materialDiffuse[1] = 0.35; // g
+	materialDiffuse[2] = 0.1;  // b
+	materialDiffuse[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.45; // r
+	materialSpecular[1] = 0.55; // g
+	materialSpecular[2] = 0.45; // b
+	materialSpecular[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.25 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(-3.5f, 9.0f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 4th sphere on 3rd column, red *****
+	// ambient material
+	materialAmbient[0] = 0.0;  // r
+	materialAmbient[1] = 0.0;  // g
+	materialAmbient[2] = 0.0;  // b
+	materialAmbient[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.5;  // r
+	materialDiffuse[1] = 0.0;  // g
+	materialDiffuse[2] = 0.0;  // b
+	materialDiffuse[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.7;  // r
+	materialSpecular[1] = 0.6;  // g
+	materialSpecular[2] = 0.6;  // b
+	materialSpecular[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.25 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(-3.5f, 6.5f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 5th sphere on 3rd column, white *****
+	// ambient material
+	materialAmbient[0] = 0.0;  // r
+	materialAmbient[1] = 0.0;  // g
+	materialAmbient[2] = 0.0;  // b
+	materialAmbient[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.55; // r
+	materialDiffuse[1] = 0.55; // g
+	materialDiffuse[2] = 0.55; // b
+	materialDiffuse[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.70; // r
+	materialSpecular[1] = 0.70; // g
+	materialSpecular[2] = 0.70; // b
+	materialSpecular[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.25 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(-3.5f, 4.0f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 6th sphere on 3rd column, yellow plastic *****
+	// ambient material
+	materialAmbient[0] = 0.0;  // r
+	materialAmbient[1] = 0.0;  // g
+	materialAmbient[2] = 0.0;  // b
+	materialAmbient[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.5;  // r
+	materialDiffuse[1] = 0.5;  // g
+	materialDiffuse[2] = 0.0;  // b
+	materialDiffuse[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.60; // r
+	materialSpecular[1] = 0.60; // g
+	materialSpecular[2] = 0.50; // b
+	materialSpecular[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.25 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(-3.5f, 1.5f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+	// *******************************************************
+	// *******************************************************
+
+	// ***** 1st sphere on 4th column, black *****
+	// ambient material
+	materialAmbient[0] = 0.02; // r
+	materialAmbient[1] = 0.02; // g
+	materialAmbient[2] = 0.02; // b
+	materialAmbient[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.01; // r
+	materialDiffuse[1] = 0.01; // g
+	materialDiffuse[2] = 0.01; // b
+	materialDiffuse[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.4;  // r
+	materialSpecular[1] = 0.4;  // g
+	materialSpecular[2] = 0.4;  // b
+	materialSpecular[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.078125 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(-9.5f, 14.0f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 2nd sphere on 4th column, cyan *****
+	// ambient material
+	materialAmbient[0] = 0.0;  // r
+	materialAmbient[1] = 0.05; // g
+	materialAmbient[2] = 0.05; // b
+	materialAmbient[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.4;  // r
+	materialDiffuse[1] = 0.5;  // g
+	materialDiffuse[2] = 0.5;  // b
+	materialDiffuse[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.04; // r
+	materialSpecular[1] = 0.7;  // g
+	materialSpecular[2] = 0.7;  // b
+	materialSpecular[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.078125 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(-9.5f, 11.5f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 3rd sphere on 4th column, green *****
+	// ambient material
+	materialAmbient[0] = 0.0;  // r
+	materialAmbient[1] = 0.05; // g
+	materialAmbient[2] = 0.0;  // b
+	materialAmbient[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.4;  // r
+	materialDiffuse[1] = 0.5;  // g
+	materialDiffuse[2] = 0.4;  // b
+	materialDiffuse[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.04; // r
+	materialSpecular[1] = 0.7;  // g
+	materialSpecular[2] = 0.04; // b
+	materialSpecular[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.078125 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(-9.5f, 9.0f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 4th sphere on 4th column, red *****
+	// ambient material
+	materialAmbient[0] = 0.05; // r
+	materialAmbient[1] = 0.0;  // g
+	materialAmbient[2] = 0.0;  // b
+	materialAmbient[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.5;  // r
+	materialDiffuse[1] = 0.4;  // g
+	materialDiffuse[2] = 0.4;  // b
+	materialDiffuse[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.7;  // r
+	materialSpecular[1] = 0.04; // g
+	materialSpecular[2] = 0.04; // b
+	materialSpecular[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.078125 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(-9.5f, 6.5f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 5th sphere on 4th column, white *****
+	// ambient material
+	materialAmbient[0] = 0.05; // r
+	materialAmbient[1] = 0.05; // g
+	materialAmbient[2] = 0.05; // b
+	materialAmbient[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.5;  // r
+	materialDiffuse[1] = 0.5;  // g
+	materialDiffuse[2] = 0.5;  // b
+	materialDiffuse[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.7;  // r
+	materialSpecular[1] = 0.7;  // g
+	materialSpecular[2] = 0.7;  // b
+	materialSpecular[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.078125 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(-9.5f, 4.0f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+
+	// ***** 6th sphere on 4th column, yellow rubber *****
+	// ambient material
+	materialAmbient[0] = 0.05; // r
+	materialAmbient[1] = 0.05; // g
+	materialAmbient[2] = 0.0;  // b
+	materialAmbient[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_AMBIENT, materialAmbient);
+
+	// diffuse material
+	materialDiffuse[0] = 0.5;  // r
+	materialDiffuse[1] = 0.5;  // g
+	materialDiffuse[2] = 0.4;  // b
+	materialDiffuse[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, materialDiffuse);
+
+	// specular material
+	materialSpecular[0] = 0.7;  // r
+	materialSpecular[1] = 0.7;  // g
+	materialSpecular[2] = 0.04; // b
+	materialSpecular[3] = 1.0f; // a
+	glMaterialfv(GL_FRONT, GL_SPECULAR, materialSpecular);
+
+	// shininess
+	shininess = 0.078125 * 128;
+	glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+	// geometry
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glTranslatef(-9.5f, 1.5f, -20.0f);
+	glTranslatef(0.0f, -8.0f, 0.0f);
+	gluSphere(quadric, 1.0f, 30, 30);
+	// *******************************************************
+	// *******************************************************
+	// *******************************************************
+
 }
 
 void uninitialize(void)

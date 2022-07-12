@@ -15,6 +15,11 @@
 #include<GL/glx.h> // Bridging APIs
 #include<GL/glu.h> // GL utilities
 
+// OpenAL Headers
+#include<AL/al.h>
+#include<AL/alc.h>
+#include<AL/alut.h>
+
 // Macros
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
@@ -41,6 +46,16 @@ float translatorI1x = -2.0f, translatorNy = 1.5f, translatorI2y = -2.0f, transla
 float colorMaxOrRe = 0.0f, colorMaxOrGr = 0.0f, colorMaxOrBl = 0.0f,
       colorMaxGrRe = 0.0f, colorMaxGrGr = 0.0f, colorMaxGrBl = 0.0f,
       colorMaxWh = 0.0f;
+// OpenAL Related Variables
+ALCdevice *device = NULL;
+ALCcontext *context = NULL;
+ALuint source;
+ALuint buffer;
+ALsizei size, freq;
+ALenum format;
+ALvoid *data;
+ALboolean loop = AL_FALSE;
+ALint source_state = 0;
 
 // Entry-point function
 int main(void)
@@ -249,6 +264,44 @@ void initialize(void)
 
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
+
+    // OpenAL Audio Initialization
+    device = alcOpenDevice(NULL);
+    if(!device)
+    {
+        fprintf(gpFile, "alcOpenDevice Failed.\n");
+    }
+    context = alcCreateContext(device, NULL);
+    if (!alcMakeContextCurrent(context))
+    {
+        fprintf(gpFile, "alcCreateContext Failed.\n");
+    }
+
+    alListener3f(AL_POSITION, 0, 0, 1.0f);
+
+    alGenSources((ALuint)1, &source);
+
+    alSourcef(source, AL_PITCH, 1);
+    alSourcef(source, AL_GAIN, 1);
+    alSourcei(source, AL_LOOPING, AL_FALSE);
+
+    alGenBuffers((ALuint)1, &buffer);
+
+    alutLoadWAVFile("SainikHoTumchyasathi.wav", &format, &data, &size, &freq, &loop);
+
+    alBufferData(buffer, format, data, size, freq);
+
+    alSourcei(source, AL_BUFFER, buffer);
+
+    alSourcePlay(source);
+
+    // Uncomment this code to make audio playing synchronous
+    // alGetSourcei(source, AL_SOURCE_STATE, &source_state);
+
+    // while (source_state == AL_PLAYING) 
+    // {
+    //     alGetSourcei(source, AL_SOURCE_STATE, &source_state);
+    // }
 
 	// Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
@@ -684,11 +737,11 @@ void update(void)
     // Code
     // Alphabets Translations
     if(translatorI1x<=-1.3f)
-        translatorI1x = translatorI1x + 0.005f;
+        translatorI1x = translatorI1x + 0.001f;
     else
     {
         if(translatorNy>=-0.1f)
-            translatorNy = translatorNy - 0.005f;
+            translatorNy = translatorNy - 0.001f;
         else
         {
             if(colorMaxWh <= 1.0f)
@@ -720,11 +773,11 @@ void update(void)
             else
             {
                 if(translatorI2y<=-0.1f)
-                    translatorI2y = translatorI2y + 0.005f;
+                    translatorI2y = translatorI2y + 0.001f;
                 else
                 {
                     if(translatorAx>=1.25f)
-                        translatorAx = translatorAx - 0.009f;
+                        translatorAx = translatorAx - 0.005f;
                 }
             }
         }
@@ -823,4 +876,10 @@ void uninitialize(void)
         fclose(gpFile);
         gpFile=NULL;
     }
+    alDeleteSources(1, &source);
+    alDeleteBuffers(1, &buffer);
+    device = alcGetContextsDevice(context);
+    alcMakeContextCurrent(NULL);
+    alcDestroyContext(context);
+    alcCloseDevice(device);
 }

@@ -1,37 +1,47 @@
-// Header files
+// Standard Header files
 #include<windows.h> //SDK path madhli header file declare karaichi padhhat
-#include"OGL.h"  //Aplya path (local) madhli header file declare karaichi padhhat
+#include"OGL.h"  // Aplya path (local) madhli header file declare karaichi padhhat
 #include<stdio.h> // For FileIO()
 #include<stdlib.h> // For Exit()
-#define _USE_MATH_DEFINES
-#include<math.h> //For M_PI and trigonometric functions
-
+ 
 // OpenGL header files
+#include<GL/glew.h> // This must be above gl.h inclusion. 
 #include<GL/gl.h>
-#include<GL/glu.h>
+#include"vmath.h" // Maths (RedBook)
+using namespace vmath;
+
 
 // OpenGL Libraries
+#pragma comment(lib,"glew32.lib")
 #pragma comment(lib,"OpenGL32.lib") 
-#pragma comment(lib,"GLU32.lib") 
 
 // Defines
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
 
 // Global Variable Declarations
-HWND ghwnd=NULL;
-HDC ghdc=NULL;
-HGLRC ghrc=NULL;
-BOOL gbFullScreen=FALSE;
-FILE *gpFile=NULL;
-BOOL gbActiveWindow=FALSE;
-float angleCube=0.0f;
-GLfloat identityMatrix[16];
-GLfloat translationMatrix[16];
-GLfloat scaleMatrix[16];
-GLfloat rotationMatrix_X[16];
-GLfloat rotationMatrix_Y[16];
-GLfloat rotationMatrix_Z[16];
+HWND ghwnd = NULL;
+HDC ghdc = NULL;
+HGLRC ghrc = NULL;
+BOOL gbFullScreen = FALSE;
+FILE *gpFile = NULL;
+BOOL gbActiveWindow = FALSE;
+// Programmable Pipeline Related Variables
+GLuint shaderProgramObject;
+
+enum
+{
+    SAB_ATTRIBUTE_POSITION = 0,
+    SAB_ATTRIBUTE_COLOR,
+    SAB_ATTRIBUTE_NORMAL,
+    SAB_ATTRIBUTE_TEXURE0
+};
+
+GLuint vao;
+GLuint vbo;
+GLuint mvpMatrixUniform;
+
+mat4 perspectiveProjectionMatrix;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -84,7 +94,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
     // Create The Window
     hwnd = CreateWindowEx ( WS_EX_APPWINDOW,
                             szAppName,
-                            TEXT("Sahil Ajit Buwa - OGL window"),
+                            TEXT("Sahil Ajit Buwa - OGL Window"),
                             WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE,
                             (GetSystemMetrics(SM_CXSCREEN)-WIN_WIDTH)/2, 
                             (GetSystemMetrics(SM_CYSCREEN)-WIN_HEIGHT)/2,
@@ -121,6 +131,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
         fprintf(gpFile,"Making OpenGL context as current context failed.\n");
         uninitialize();
     }
+    else if(iRetval==-5)
+    {
+        fprintf(gpFile,"glewInit() failed.\n");
+        uninitialize();
+    }
     else
     {
         fprintf(gpFile,"OpenGL context setting successfull.\n");
@@ -147,6 +162,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
             }
+
         }
         else
         {
@@ -187,7 +203,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
             break;
         case WM_ERASEBKGND:
             return 0;
-        // As this is retained mode graphics, there is no WM_PAINT to paint.    
+        // As this is not retained mode graphics, there is no WM_PAINT to paint.    
         case WM_CHAR:
             switch(wParam)
             {
@@ -266,7 +282,9 @@ void ToggleFullScreen(void)
 int initialize(void)
 {
     // Function Declarations
-    void resize(int,int);
+    void resize(int, int);
+	void printGLInfo(void);
+    void uninitialize(void);
     // Variable Declarations
     PIXELFORMATDESCRIPTOR pfd;
     int iPixelFormatIndex=0;
@@ -283,7 +301,7 @@ int initialize(void)
     pfd.cBlueBits = 8;
     pfd.cAlphaBits = 8;
     pfd.cDepthBits = 32; // 24 pan chaltai
-    
+
     // GetDC
     ghdc = GetDC(ghwnd);
 
@@ -297,7 +315,7 @@ int initialize(void)
         return -2;
     
     // Create OpenGL rendereing context
-    ghrc = wglCreateContext(ghdc);
+    ghrc = wglCreateContext(ghdc); // Windows System Integration - Attache naav , June naav - Windows Graphics Library
     if(ghrc==NULL)
         return -3;
 
@@ -306,76 +324,167 @@ int initialize(void)
         return -4;
 
     // Here Starts OpenGL code
-    // Clear the screen using black color
-    glClearColor(0.0f,0.0f,0.0f,0.0f);
+    // GLEW initialization
+    if(glewInit() != GLEW_OK)
+        return -5;
+    // Print OpenGL Info
+	printGLInfo();
+
+    // Vertex Shader
+    // Shader Source Code
+    const GLchar *vertexShaderSourceCode = "#version 460 core" \
+    "\n" \
+    "in vec4 a_position;" \
+    "uniform mat4 u_mvpMatrix;" \
+    "void main(void)" \
+    "{" \
+    "gl_Position = u_mvpMatrix * a_position;" \
+    "}";
+    // Vertex Shader cha Object tayar kela
+    GLuint vertexShaderObject = glCreateShader(GL_VERTEX_SHADER);
+    // Object la Source code dila
+    glShaderSource(vertexShaderObject, 1, (const GLchar**)&vertexShaderSourceCode, NULL);
+    // GPU chya inline compiler la code compile karaila dila
+    glCompileShader(vertexShaderObject);
+    // Error checking
+    GLint status;
+    GLint infoLogLength;
+    char *log = NULL;
+
+    glGetShaderiv(vertexShaderObject, GL_COMPILE_STATUS, &status);
+    if(status == GL_FALSE)
+    {
+        glGetShaderiv(vertexShaderObject, GL_INFO_LOG_LENGTH, &infoLogLength);
+        if(infoLogLength > 0)
+        {
+            log = (char *)malloc(infoLogLength);
+            if(log != NULL)
+            {
+                GLsizei written;
+                glGetShaderInfoLog(vertexShaderObject, infoLogLength, &written, log);
+                fprintf(gpFile, "Vertex Shader Compilation Log : %s\n", log);
+                free(log);
+                uninitialize();
+            }
+        }
+    }
+
+    // Fragment Shader
+    const GLchar *fragmentShaderSourceCode = "#version 460 core" \
+    "\n" \
+    "out vec4 FragColor;" \
+    "void main(void)" \
+    "{" \
+    "FragColor = vec4(1.0, 1.0, 1.0, 1.0);" \
+    "}";
+
+    GLuint fragmentShaderObject = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShaderObject, 1, (const GLchar **)&fragmentShaderSourceCode, NULL);
+    glCompileShader(fragmentShaderObject);
+    // Error Checking
+    status = 0;
+    infoLogLength = 0;
+    log = NULL;
+
+    glGetShaderiv(fragmentShaderObject, GL_COMPILE_STATUS, &status);
+    if(status == GL_FALSE)
+    {
+        glGetShaderiv(fragmentShaderObject, GL_INFO_LOG_LENGTH, &infoLogLength);
+        if(infoLogLength > 0)
+        {
+            log = (char *)malloc(infoLogLength);
+            if(log != NULL)
+            {
+                GLsizei written;
+                glGetShaderInfoLog(fragmentShaderObject, infoLogLength, &written, log);
+                fprintf(gpFile, "Fragment Shader Compilation Log : %s\n", log);
+                free(log);
+                uninitialize();
+            }
+        }
+    }
+
+    // Shader Program Object
+    shaderProgramObject = glCreateProgram();
+    glAttachShader(shaderProgramObject, vertexShaderObject);
+    glAttachShader(shaderProgramObject, fragmentShaderObject);
+    glBindAttribLocation(shaderProgramObject, SAB_ATTRIBUTE_POSITION, "a_position"); // Andhaar
+    glLinkProgram(shaderProgramObject);
+    // Error Checking
+    status = 0;
+    infoLogLength = 0;
+    log = NULL;
+    glGetProgramiv(shaderProgramObject, GL_LINK_STATUS, &status);
+    if(status == GL_FALSE)
+    {
+        glGetProgramiv(shaderProgramObject, GL_INFO_LOG_LENGTH, &infoLogLength);
+        if(infoLogLength > 0)
+        {
+            log = (char *)malloc(infoLogLength);
+            if(log != NULL)
+            {
+                GLsizei written;
+                glGetProgramInfoLog(shaderProgramObject, infoLogLength, &written, log);
+                fprintf(gpFile, "Shader Program Link Log : %s\n", log);
+                free(log);
+                uninitialize();
+            }
+        }
+    }
+    mvpMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_mvpMatrix");
+    // Declaration of vertex data arrays
+    const GLfloat triangleVertices[] = 
+    {
+        0.0f, 1.0f, 0.0f,
+        -1.0f, -1.0f, 0.0f,
+        1.0f, -1.0f, 0.0f
+    };
+
+    // Vao and Vbo related code
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(triangleVertices), triangleVertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+
+    // Clear the screen using blue color
+    glClearColor(0.0f,0.0f,1.0f,1.0f);
 
     // Depth Related Changes
     glClearDepth(1.0f);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
 
-    glShadeModel(GL_SMOOTH);
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
-    
-    // Initialization of Matrix Arrays
-    // Initialize Identity Matrix
-    identityMatrix[0] =1.0f;
-    identityMatrix[1] =0.0f;
-    identityMatrix[2] =0.0f;
-    identityMatrix[3] =0.0f;
-    identityMatrix[4] =0.0f;
-    identityMatrix[5] =1.0f;
-    identityMatrix[6] =0.0f;
-    identityMatrix[7] =0.0f;
-    identityMatrix[8] =0.0f;
-    identityMatrix[9] =0.0f;
-    identityMatrix[10]=1.0f;
-    identityMatrix[11]=0.0f;
-    identityMatrix[12]=0.0f;
-    identityMatrix[13]=0.0f;
-    identityMatrix[14]=0.0f;
-    identityMatrix[15]=1.0f;
-
-    // Initialize Translation Matrix
-    translationMatrix[0] = 1.0f;
-    translationMatrix[1] = 0.0f;
-    translationMatrix[2] = 0.0f;
-    translationMatrix[3] = 0.0f;
-    translationMatrix[4] = 0.0f;
-    translationMatrix[5] = 1.0f;
-    translationMatrix[6] = 0.0f;
-    translationMatrix[7] = 0.0f;
-    translationMatrix[8] = 0.0f;
-    translationMatrix[9] = 0.0f;
-    translationMatrix[10] = 1.0f;
-    translationMatrix[11] = 0.0f;
-    translationMatrix[12] = 0.0f;
-    translationMatrix[13] = 0.0f;
-    translationMatrix[14] = -5.0f;
-    translationMatrix[15] = 1.0f;
-
-    // Initialize Scale Matrix
-    scaleMatrix[0] = 0.75f;
-    scaleMatrix[1] = 0.0f;
-    scaleMatrix[2] = 0.0f;
-    scaleMatrix[3] = 0.0f;
-    scaleMatrix[4] = 0.0f;
-    scaleMatrix[5] = 0.75f;
-    scaleMatrix[6] = 0.0f;
-    scaleMatrix[7] = 0.0f;
-    scaleMatrix[8] = 0.0f;
-    scaleMatrix[9] = 0.0f;
-    scaleMatrix[10] = 0.75f;
-    scaleMatrix[11] = 0.0f;
-    scaleMatrix[12] = 0.0f;
-    scaleMatrix[13] = 0.0f;
-    scaleMatrix[14] = 0.0f;
-    scaleMatrix[15] = 0.75f;
-    
-
+    perspectiveProjectionMatrix = mat4::identity();
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
+}
+
+void printGLInfo(void)
+{
+	// Local Variable Declarations
+	GLint numExtensions = 0;
+
+	// Code
+	fprintf(gpFile, "OpenGL Vendor : %s\n",glGetString(GL_VENDOR));
+	fprintf(gpFile, "OpenGL Renderer : %s\n",glGetString(GL_RENDERER));
+	fprintf(gpFile, "OpenGL Version : %s\n",glGetString(GL_VERSION));
+	fprintf(gpFile, "GLSL Version : %s\n",glGetString(GL_SHADING_LANGUAGE_VERSION)); // Graphic Library Shading Language
+
+	glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
+	
+	fprintf(gpFile, "Number of supported extensions : %d\n", numExtensions);
+	for(int i = 0; i < numExtensions; i++)
+	{
+		fprintf(gpFile, "%s\n", glGetStringi(GL_EXTENSIONS, i));
+	}
 }
 
 void resize(int width, int height)
@@ -385,131 +494,36 @@ void resize(int width, int height)
         height=1; // To avoid divided by 0 error(illegal statement) in future calls..
 
     glViewport(0,0,(GLsizei)width,(GLsizei)height);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-
-    gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
-
+    
+    perspectiveProjectionMatrix = vmath::perspective(45.0f, (GLfloat)width / (GLfloat)height, 0.1f, 100.0f);
 }
 
 void display(void)
 {
-    // Variable Declarations
-    
     // Code
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glMatrixMode(GL_MODELVIEW);
-    //glLoadIdentity();
-    glLoadMatrixf(identityMatrix);
+    // Use the Shader Program Object
+    glUseProgram(shaderProgramObject);
+    
+    // Transformations
+    mat4 translationMatrix = mat4::identity();
+    mat4 modelViewMatrix = mat4::identity();
+    mat4 modelViewProjectionMatrix = mat4::identity();
+    translationMatrix = translate(0.0f, 0.0f, -4.0f); 
+    modelViewMatrix = translationMatrix;  
+    
+    modelViewProjectionMatrix = perspectiveProjectionMatrix * modelViewMatrix;
 
-    //glTranslatef(0.0f,0.0f,-5.0f);
-    glMultMatrixf(translationMatrix);
-    //glScalef(0.75f,0.75f,0.75f);
-    glMultMatrixf(scaleMatrix);
-    //glRotatef(angleCube,1.0f,1.0f,1.0f);
-    float angle=angleCube*(M_PI/180.0f);
-    // X-Rotation Matrix
-    rotationMatrix_X[0] = 1.0f;
-    rotationMatrix_X[1] = 0.0f;
-    rotationMatrix_X[2] = 0.0f;
-    rotationMatrix_X[3] = 0.0f;
-    rotationMatrix_X[4] = 0.0f;
-    rotationMatrix_X[5] = cos(angle);
-    rotationMatrix_X[6] = sin(angle);
-    rotationMatrix_X[7] = 0.0f;
-    rotationMatrix_X[8] = 0.0f;
-    rotationMatrix_X[9] = -sin(angle);
-    rotationMatrix_X[10] = cos(angle);
-    rotationMatrix_X[11] = 0.0f;
-    rotationMatrix_X[12] = 0.0f;
-    rotationMatrix_X[13] = 0.0f;
-    rotationMatrix_X[14] = 0.0f;
-    rotationMatrix_X[15] = 1.0f;
+    glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, modelViewProjectionMatrix);
+    
+    glBindVertexArray(vao);
 
-    // Y-Rotation Matrix
-    rotationMatrix_Y[0] = cos(angle);
-    rotationMatrix_Y[1] = 0.0f;
-    rotationMatrix_Y[2] = sin(angle);
-    rotationMatrix_Y[3] = 0.0f;
-    rotationMatrix_Y[4] = 0.0f;
-    rotationMatrix_Y[5] = 1.0f;
-    rotationMatrix_Y[6] = 0.0f;
-    rotationMatrix_Y[7] = 0.0f;
-    rotationMatrix_Y[8] = -sin(angle);
-    rotationMatrix_Y[9] = 0.0f;
-    rotationMatrix_Y[10] = cos(angle);
-    rotationMatrix_Y[11] = 0.0f;
-    rotationMatrix_Y[12] = 0.0f;
-    rotationMatrix_Y[13] = 0.0f;
-    rotationMatrix_Y[14] = 0.0f;
-    rotationMatrix_Y[15] = 1.0f;
+    // Here there should be draw code (12 lakh)
+    glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    // Z-Rotation Matrix
-    rotationMatrix_Z[0] = cos(angle);
-    rotationMatrix_Z[1] = sin(angle);
-    rotationMatrix_Z[2] = 0.0f;
-    rotationMatrix_Z[3] = 0.0f;
-    rotationMatrix_Z[4] = -sin(angle);
-    rotationMatrix_Z[5] = cos(angle);
-    rotationMatrix_Z[6] = 0.0f;
-    rotationMatrix_Z[7] = 0.0f;
-    rotationMatrix_Z[8] = 0.0f;
-    rotationMatrix_Z[9] = 0.0f;
-    rotationMatrix_Z[10] = 1.0f;
-    rotationMatrix_Z[11] = 0.0f;
-    rotationMatrix_Z[12] = 0.0f;
-    rotationMatrix_Z[13] = 0.0f;
-    rotationMatrix_Z[14] = 0.0f;
-    rotationMatrix_Z[15] = 1.0f;
-
-    glMultMatrixf(rotationMatrix_X);
-    glMultMatrixf(rotationMatrix_Y);
-    glMultMatrixf(rotationMatrix_Z);
-
-    glBegin(GL_QUADS);
-    // Front Face
-	glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(1.0f, 1.0f, 1.0f);
-	glVertex3f(-1.0f, 1.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-
-    // Right Face
-    glColor3f(0.0f, 1.0f, 0.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-
-    // Back Face
-    glColor3f(0.0f, 0.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-
-    // Left Face
-    glColor3f(0.0f, 1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-
-    // Top Face
-    glColor3f(1.0f, 0.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-
-    // Bottom Face
-    glColor3f(1.0f, 1.0f, 0.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-
-	glEnd();
+    glBindVertexArray(0);
+    // Unuse the shader program object
+    glUseProgram(0);
 
     SwapBuffers(ghdc);
 }
@@ -517,9 +531,6 @@ void display(void)
 void update(void)
 {
     // Code
-    angleCube=angleCube+0.1f;
-    if(angleCube>=360.0f)
-        angleCube=angleCube-360.0f;
 
 }
 
@@ -531,6 +542,40 @@ void uninitialize(void)
     if(gbFullScreen)
     {
         ToggleFullScreen();
+    }
+    // Deletion and uninitialization of vbo
+    if(vbo)
+    {
+        glDeleteBuffers(1, &vbo);
+        vbo = 0;
+    }
+
+    // Deletion and uninitialization of vao
+    if(vao)
+    {
+        glDeleteVertexArrays(1, &vao);
+        vao = 0;
+    }
+    // Shader Uninitialization
+    if(shaderProgramObject)
+    {
+        glUseProgram(shaderProgramObject);
+        GLsizei numAttachedShaders;
+        glGetProgramiv(shaderProgramObject, GL_ATTACHED_SHADERS, &numAttachedShaders);
+        GLuint *shaderObjects;
+        shaderObjects = (GLuint *)malloc(numAttachedShaders*sizeof(GLuint));
+        glGetAttachedShaders(shaderProgramObject, numAttachedShaders, &numAttachedShaders, shaderObjects);
+        for(GLsizei i = 0; i < numAttachedShaders; i++)
+        {
+            glDetachShader(shaderProgramObject, shaderObjects[i]);
+            glDeleteShader(shaderObjects[i]);
+            shaderObjects[i] = 0;
+        }
+        free(shaderObjects);
+        shaderObjects = NULL;
+        glUseProgram(0);
+        glDeleteProgram(shaderProgramObject);
+        shaderProgramObject = 0;
     }
     if(wglGetCurrentContext()==ghrc)
     {

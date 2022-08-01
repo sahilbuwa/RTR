@@ -10,7 +10,6 @@
 #include"vmath.h" // Maths (RedBook)
 using namespace vmath;
 
-
 // OpenGL Libraries
 #pragma comment(lib,"glew32.lib")
 #pragma comment(lib,"OpenGL32.lib") 
@@ -31,17 +30,20 @@ GLuint shaderProgramObject;
 
 enum
 {
-    AMC_ATTRIBUTE_POSITION = 0,
-    AMC_ATTRIBUTE_COLOR,
-    AMC_ATTRIBUTE_NORMAL,
-    AMC_ATTRIBUTE_TEXURE0
+    SAB_ATTRIBUTE_POSITION = 0,
+    SAB_ATTRIBUTE_COLOR,
+    SAB_ATTRIBUTE_NORMAL,
+    SAB_ATTRIBUTE_TEXURE0
 };
 
-GLuint vao;
-GLuint vbo;
+GLuint vao_triangle;
+GLuint vbo_triangle_position;
+GLuint vbo_triangle_color;
+GLuint vao_square;
+GLuint vbo_square_position;
 GLuint mvpMatrixUniform;
 
-mat4 orthographicProjectionMatrix;
+mat4 perspectiveProjectionMatrix;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -335,10 +337,13 @@ int initialize(void)
     const GLchar *vertexShaderSourceCode = "#version 460 core" \
     "\n" \
     "in vec4 a_position;" \
+    "in vec4 a_color;" \
     "uniform mat4 u_mvpMatrix;" \
+    "out vec4 a_color_out;" \
     "void main(void)" \
     "{" \
     "gl_Position = u_mvpMatrix * a_position;" \
+    "a_color_out = a_color;" \
     "}";
     // Vertex Shader cha Object tayar kela
     GLuint vertexShaderObject = glCreateShader(GL_VERTEX_SHADER);
@@ -372,10 +377,11 @@ int initialize(void)
     // Fragment Shader
     const GLchar *fragmentShaderSourceCode = "#version 460 core" \
     "\n" \
+    "in vec4 a_color_out;" \
     "out vec4 FragColor;" \
     "void main(void)" \
     "{" \
-    "FragColor = vec4(1.0, 1.0, 1.0, 1.0);" \
+    "FragColor = a_color_out;" \
     "}";
 
     GLuint fragmentShaderObject = glCreateShader(GL_FRAGMENT_SHADER);
@@ -408,11 +414,12 @@ int initialize(void)
     shaderProgramObject = glCreateProgram();
     glAttachShader(shaderProgramObject, vertexShaderObject);
     glAttachShader(shaderProgramObject, fragmentShaderObject);
-    glBindAttribLocation(shaderProgramObject, AMC_ATTRIBUTE_POSITION, "a_position"); // Andhaar
+    glBindAttribLocation(shaderProgramObject, SAB_ATTRIBUTE_POSITION, "a_position"); // Andhaar
+    glBindAttribLocation(shaderProgramObject, SAB_ATTRIBUTE_COLOR, "a_color");       // Andhaar
     glLinkProgram(shaderProgramObject);
     // Error Checking
     status = 0;
-    infoLogLength = 0;
+    infoLogLength = 0; 
     log = NULL;
     glGetProgramiv(shaderProgramObject, GL_LINK_STATUS, &status);
     if(status == GL_FALSE)
@@ -433,35 +440,76 @@ int initialize(void)
     }
     mvpMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_mvpMatrix");
     // Declaration of vertex data arrays
-    const GLfloat triangleVertices[] = 
+    const GLfloat trianglePosition[] = 
     {
-        0.0f, 50.0f, 0.0f,
-        -50.0f, -50.0f, 0.0f,
-        50.0f, -50.0f, 0.0f
+        0.0f, 1.0f, 0.0f,
+        -1.0f, -1.0f, 0.0f,
+        1.0f, -1.0f, 0.0f
     };
 
-    // Vao and Vbo related code
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(triangleVertices), triangleVertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(AMC_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-    glEnableVertexAttribArray(AMC_ATTRIBUTE_POSITION);
+    const GLfloat triangleColor[] = 
+    {
+        1.0f, 0.0f, 0.0f,   // Red
+        0.0f, 1.0f, 0.0f,   // Green
+        0.0f, 0.0f, 1.0f    // Blue
+    };
+
+    const GLfloat squarePosition[] = 
+    {
+        1.0f, 1.0f, 0.0f,
+        -1.0f, 1.0f, 0.0f,
+        -1.0f, -1.0f, 0.0f,
+        1.0f, -1.0f, 0.0f
+    };
+    // Triangle
+    // Vao related code
+    glGenVertexArrays(1, &vao_triangle);
+    glBindVertexArray(vao_triangle);
+    // Vbo for position
+    glGenBuffers(1, &vbo_triangle_position);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle_position);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(trianglePosition), trianglePosition, GL_STATIC_DRAW);
+    glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // Vbo for color
+    glGenBuffers(1, &vbo_triangle_color);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle_color);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(triangleColor), triangleColor, GL_STATIC_DRAW);
+    glVertexAttribPointer(SAB_ATTRIBUTE_COLOR, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glEnableVertexAttribArray(SAB_ATTRIBUTE_COLOR);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // Vao unbind
     glBindVertexArray(0);
 
+    // Square
+    // Vao related code
+    glGenVertexArrays(1, &vao_square);
+    glBindVertexArray(vao_square);
+    // Vbo for position
+    glGenBuffers(1, &vbo_square_position);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_square_position);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(squarePosition), squarePosition, GL_STATIC_DRAW);
+    glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
 
-    // Clear the screen using blue color
-    glClearColor(0.0f,0.0f,1.0f,1.0f);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // Vbo for color
+    glVertexAttrib3f(SAB_ATTRIBUTE_COLOR, 0.0f, 0.0f, 1.0f);
+    // Vao unbind
+    glBindVertexArray(0);
+
+    // Clear the screen using black color
+    glClearColor(0.0f,0.0f,0.0f,1.0f);
 
     // Depth Related Changes
     glClearDepth(1.0f);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
 
-    orthographicProjectionMatrix = mat4::identity();
+    perspectiveProjectionMatrix = mat4::identity();
     // Warmup Resize Call
     resize(WIN_WIDTH,WIN_HEIGHT);
     return 0;
@@ -494,27 +542,8 @@ void resize(int width, int height)
         height=1; // To avoid divided by 0 error(illegal statement) in future calls..
 
     glViewport(0,0,(GLsizei)width,(GLsizei)height);
-    if(width <= height)
-    {
-        orthographicProjectionMatrix = 
-            vmath::ortho(-100.0f, 
-                         100.0f,
-                         -100.0f * (GLfloat)height / (GLfloat)width,
-                         100.0f * (GLfloat)height / (GLfloat)width,
-                         -100.0f,
-                         100.0f 
-                        );
-    }
-    else
-    {
-        orthographicProjectionMatrix = 
-        vmath::ortho((-100.0f)*(GLfloat)width/(GLfloat)height,
-                     ((100.0f)*(((GLfloat)width)/((GLfloat)height))),
-                     -100.0f,
-                     100.0f,
-                     -100.0f,
-                     100.0f);
-    }
+    
+    perspectiveProjectionMatrix = vmath::perspective(45.0f, (GLfloat)width / (GLfloat)height, 0.1f, 100.0f);
 }
 
 void display(void)
@@ -523,18 +552,41 @@ void display(void)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     // Use the Shader Program Object
     glUseProgram(shaderProgramObject);
-    
+    // Triangle
     // Transformations
+    mat4 translationMatrix = mat4::identity();
     mat4 modelViewMatrix = mat4::identity();
     mat4 modelViewProjectionMatrix = mat4::identity();
-    modelViewProjectionMatrix = orthographicProjectionMatrix * modelViewMatrix;
+    translationMatrix = translate(-1.5f, 0.0f, -6.0f); 
+    modelViewMatrix = translationMatrix;
+
+    modelViewProjectionMatrix = perspectiveProjectionMatrix * modelViewMatrix;
 
     glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, modelViewProjectionMatrix);
     
-    glBindVertexArray(vao);
+    glBindVertexArray(vao_triangle);
 
     // Here there should be draw code (12 lakh)
-    glDrawArrays(GL_TRIANGLES, 0, 3);    
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    glBindVertexArray(0);
+
+    // Square
+    // Transformations
+    translationMatrix = mat4::identity();
+    modelViewMatrix = mat4::identity();
+    modelViewProjectionMatrix = mat4::identity();
+    translationMatrix = translate(1.5f, 0.0f, -6.0f); 
+    modelViewMatrix = translationMatrix;
+
+    modelViewProjectionMatrix = perspectiveProjectionMatrix * modelViewMatrix;
+
+    glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, modelViewProjectionMatrix);
+    
+    glBindVertexArray(vao_square);
+
+    // Here there should be draw code (12 lakh)
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
     glBindVertexArray(0);
     // Unuse the shader program object
@@ -558,18 +610,35 @@ void uninitialize(void)
     {
         ToggleFullScreen();
     }
-    // Deletion and uninitialization of vbo
-    if(vbo)
+    // Deletion and uninitialization of vbo_square_position
+    if(vbo_square_position)
     {
-        glDeleteBuffers(1, &vbo);
-        vbo = 0;
+        glDeleteBuffers(1, &vbo_square_position);
+        vbo_triangle_position = 0;
     }
-
-    // Deletion and uninitialization of vao
-    if(vao)
+    // Deletion and uninitialization of vbo_color
+    if(vbo_triangle_color)
     {
-        glDeleteVertexArrays(1, &vao);
-        vao = 0;
+        glDeleteBuffers(1, &vbo_triangle_color);
+        vbo_triangle_color = 0;
+    }
+    // Deletion and uninitialization of vbo_position
+    if(vbo_triangle_position)
+    {
+        glDeleteBuffers(1, &vbo_triangle_position);
+        vbo_triangle_position = 0;
+    }
+    // Deletion and uninitialization of vao_square
+    if(vao_square)
+    {
+        glDeleteVertexArrays(1, &vao_square);
+        vao_square = 0;
+    }
+    // Deletion and uninitialization of vao_triangle
+    if(vao_triangle)
+    {
+        glDeleteVertexArrays(1, &vao_triangle);
+        vao_triangle = 0;
     }
     // Shader Uninitialization
     if(shaderProgramObject)

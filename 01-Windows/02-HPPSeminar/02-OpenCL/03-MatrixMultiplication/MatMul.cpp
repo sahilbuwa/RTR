@@ -54,5 +54,60 @@ const char *oclSourceCode =
 
 int main(int argc, char *argv[])
 {
+    // Function Declarations
+    void InitA(int *data, int, int);
+    void InitB(int *data, int, int);
+    void matMulCPU(int*, int*, int, int, int, int);
+    void cleanup(void);
+
+    // Variable Declarations
+    int numARows = BLOCK_WIDTH;
+    int numAColumns = BLOCK_WIDTH;
+    int numBRows = BLOCK_WIDTH;
+    int numBColumns = BLOCK_WIDTH;
+
+    int numCRows = numARows;
+    int numCColumns = numBColumns;
+
+    int numGoldRows = numARows;
+    int numGoldColumns = numBColumns;
+
+    int sizeA = numARows * numAColumns * sizeof(int);
+    int sizeB = numBRows * numBColumns * sizeof(int);
+    int sizeC = numCRows * numCColumns * sizeof(int);
+    int sizeGold = numGoldRows * numGoldColumns * sizeof(int);
+
+    cl_int result;
+
+    // Code
+    // Host Memory Allocation
+    hostA = (int *)malloc(sizeA);
+    if(hostA == NULL)
+    {
+        printf("Host Memory allocation is failed for hostA.\n");
+        cleanup();
+        exit(EXIT_FAILURE);
+    }
+    hostB = (int *)malloc(sizeB);
+    if(hostB == NULL)
+    {
+        printf("Host Memory allocation is failed for hostB.\n");
+        cleanup();
+        exit(EXIT_FAILURE);
+    }
+    hostC = (int *)malloc(sizeC);
+    if(hostC == NULL)
+    {
+        printf("Host Memory allocation is failed for hostC.\n");
+        cleanup();
+        exit(EXIT_FAILURE);
+    }
+    gold = (int *)malloc(sizeGold);
+    if(gold == NULL)
+    {
+        printf("Host Memory allocation is failed for gold.\n");
+        cleanup();
+        exit(EXIT_FAILURE);
+    }
     
 }

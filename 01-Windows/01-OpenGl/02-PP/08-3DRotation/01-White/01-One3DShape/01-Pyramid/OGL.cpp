@@ -38,14 +38,9 @@ enum
 
 GLuint vao_pyramid;
 GLuint vbo_pyramid_position;
-GLuint vbo_pyramid_color;
-GLuint vao_cube;
-GLuint vbo_cube_position;
-GLuint vbo_cube_color;
 GLuint mvpMatrixUniform;
 
 GLfloat anglepyramid = 0.0f;
-GLfloat anglecube = 0.0f;
 mat4 perspectiveProjectionMatrix;
 
 // Global Function Declarations
@@ -340,13 +335,10 @@ int initialize(void)
     const GLchar *vertexShaderSourceCode = "#version 460 core" \
     "\n" \
     "in vec4 a_position;" \
-    "in vec4 a_color;" \
     "uniform mat4 u_mvpMatrix;" \
-    "out vec4 a_color_out;" \
     "void main(void)" \
     "{" \
     "gl_Position = u_mvpMatrix * a_position;" \
-    "a_color_out = a_color;" \
     "}";
     // Vertex Shader cha Object tayar kela
     GLuint vertexShaderObject = glCreateShader(GL_VERTEX_SHADER);
@@ -380,11 +372,10 @@ int initialize(void)
     // Fragment Shader
     const GLchar *fragmentShaderSourceCode = "#version 460 core" \
     "\n" \
-    "in vec4 a_color_out;" \
     "out vec4 FragColor;" \
     "void main(void)" \
     "{" \
-    "FragColor = a_color_out;" \
+    "FragColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);" \
     "}";
 
     GLuint fragmentShaderObject = glCreateShader(GL_FRAGMENT_SHADER);
@@ -418,7 +409,6 @@ int initialize(void)
     glAttachShader(shaderProgramObject, vertexShaderObject);
     glAttachShader(shaderProgramObject, fragmentShaderObject);
     glBindAttribLocation(shaderProgramObject, SAB_ATTRIBUTE_POSITION, "a_position"); // Andhaar
-    glBindAttribLocation(shaderProgramObject, SAB_ATTRIBUTE_COLOR, "a_color");       // Andhaar
     glLinkProgram(shaderProgramObject);
     // Error Checking
     status = 0;
@@ -466,99 +456,6 @@ int initialize(void)
         -1.0f, -1.0f, 1.0f
 
     };
-
-    const GLfloat pyramidColor[] = 
-    {
-        1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 1.0f,
-
-        1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 1.0f, 0.0f,
-
-        1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 1.0f,
-
-        1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 1.0f, 0.0f
-
-    };
-
-    const GLfloat cubePosition[] = 
-    {
-        // top
-        1.0f, 1.0f, -1.0f,
-        -1.0f, 1.0f, -1.0f, 
-        -1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,  
-
-        // bottom
-        1.0f, -1.0f, -1.0f,
-       -1.0f, -1.0f, -1.0f,
-       -1.0f, -1.0f,  1.0f,
-        1.0f, -1.0f,  1.0f,
-
-        // front
-        1.0f, 1.0f, 1.0f,
-       -1.0f, 1.0f, 1.0f,
-       -1.0f, -1.0f, 1.0f,
-        1.0f, -1.0f, 1.0f,
-
-        // back
-        1.0f, 1.0f, -1.0f,
-       -1.0f, 1.0f, -1.0f,
-       -1.0f, -1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-
-        // right
-        1.0f, 1.0f, -1.0f,
-        1.0f, 1.0f, 1.0f,
-        1.0f, -1.0f, 1.0f,
-        1.0f, -1.0f, -1.0f,
-
-        // left
-        -1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f, -1.0f, 
-        -1.0f, -1.0f, -1.0f, 
-        -1.0f, -1.0f, 1.0f,
-
-    };
-
-    const GLfloat cubeColor[] =
-    {
-        0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-
-        1.0f, 0.5f, 0.0f,
-        1.0f, 0.5f, 0.0f,
-        1.0f, 0.5f, 0.0f,
-        1.0f, 0.5f, 0.0f,
-
-        1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
-
-        1.0f, 1.0f, 0.0f,
-        1.0f, 1.0f, 0.0f,
-        1.0f, 1.0f, 0.0f,
-        1.0f, 1.0f, 0.0f,
-
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-
-        1.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 1.0f
-    };
     // pyramid
     // Vao related code
     glGenVertexArrays(1, &vao_pyramid);
@@ -569,38 +466,6 @@ int initialize(void)
     glBufferData(GL_ARRAY_BUFFER, sizeof(pyramidPosition), pyramidPosition, GL_STATIC_DRAW);
     glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
     glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    // Vbo for color
-    glGenBuffers(1, &vbo_pyramid_color);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_pyramid_color);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(pyramidColor), pyramidColor, GL_STATIC_DRAW);
-    glVertexAttribPointer(SAB_ATTRIBUTE_COLOR, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-    glEnableVertexAttribArray(SAB_ATTRIBUTE_COLOR);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    // Vao unbind
-    glBindVertexArray(0);
-
-    // Cube
-    // Vao related code
-    glGenVertexArrays(1, &vao_cube);
-    glBindVertexArray(vao_cube);
-    // Vbo for position
-    glGenBuffers(1, &vbo_cube_position);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_position);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubePosition), cubePosition, GL_STATIC_DRAW);
-    glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-    glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    // Vbo for color
-
-    glGenBuffers(1, &vbo_cube_color);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_cube_color);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeColor), cubeColor, GL_STATIC_DRAW);
-    glVertexAttribPointer(SAB_ATTRIBUTE_COLOR, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-    glEnableVertexAttribArray(SAB_ATTRIBUTE_COLOR);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     // Vao unbind
@@ -663,8 +528,8 @@ void display(void)
     mat4 rotationMatrix = mat4::identity();
     mat4 modelViewMatrix = mat4::identity();
     mat4 modelViewProjectionMatrix = mat4::identity();
-    translationMatrix = translate(-1.5f, 0.0f, -6.0f);
-    rotationMatrix = rotate(anglepyramid, 0.0f, 1.0f, 0.0f);
+    translationMatrix = translate(0.0f, 0.0f, -4.0f);
+    rotationMatrix = rotate(anglepyramid, 0.0f, 1.0f, 0.0f); 
     modelViewMatrix = translationMatrix * rotationMatrix;   // Order is very important. (Matrix multiplication is not commutative.)
 
     modelViewProjectionMatrix = perspectiveProjectionMatrix * modelViewMatrix;
@@ -675,40 +540,6 @@ void display(void)
 
     // Here there should be draw code (12 lakh)
     glDrawArrays(GL_TRIANGLES, 0, 12);
-
-    glBindVertexArray(0);
-
-    // cube
-    // Transformations
-    translationMatrix = mat4::identity();
-    rotationMatrix = mat4::identity();
-    mat4 rotationMatrix_x = mat4::identity();
-    mat4 rotationMatrix_y = mat4::identity();
-    mat4 rotationMatrix_z = mat4::identity();
-    mat4 scaleMatrix = mat4::identity();
-    modelViewMatrix = mat4::identity();
-    modelViewProjectionMatrix = mat4::identity();
-    translationMatrix = translate(1.5f, 0.0f, -6.0f);
-    rotationMatrix_x = rotate(anglepyramid, 1.0f, 0.0f, 0.0f);
-    rotationMatrix_y = rotate(anglepyramid, 0.0f, 1.0f, 0.0f); 
-    rotationMatrix_z = rotate(anglepyramid, 0.0f, 0.0f, 1.0f); 
-    rotationMatrix = rotationMatrix_x * rotationMatrix_y * rotationMatrix_z;
-    scaleMatrix = scale(0.75f, 0.75f, 0.75f);
-    modelViewMatrix = translationMatrix * rotationMatrix * scaleMatrix;
-
-    modelViewProjectionMatrix = perspectiveProjectionMatrix * modelViewMatrix;
-
-    glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, modelViewProjectionMatrix);
-    
-    glBindVertexArray(vao_cube);
-
-    // Here there should be draw code (12 lakh)
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-    glDrawArrays(GL_TRIANGLE_FAN, 4, 4);
-    glDrawArrays(GL_TRIANGLE_FAN, 8, 4);
-    glDrawArrays(GL_TRIANGLE_FAN, 12, 4);
-    glDrawArrays(GL_TRIANGLE_FAN, 16, 4);
-    glDrawArrays(GL_TRIANGLE_FAN, 20, 4);
 
     glBindVertexArray(0);
     // Unuse the shader program object
@@ -723,10 +554,6 @@ void update(void)
     anglepyramid = anglepyramid + 0.1f;
     if(anglepyramid >= 360.0f)
         anglepyramid -= 360.0f;
-        
-    anglecube = anglecube + 0.1f;
-    if(anglecube >= 360.0f)
-        anglecube -= 360.0f;
 }
 
 void uninitialize(void)
@@ -738,29 +565,11 @@ void uninitialize(void)
     {
         ToggleFullScreen();
     }
-    // Deletion and uninitialization of vbo_cube_position
-    if(vbo_cube_position)
-    {
-        glDeleteBuffers(1, &vbo_cube_position);
-        vbo_pyramid_position = 0;
-    }
-    // Deletion and uninitialization of vbo_color
-    if(vbo_pyramid_color)
-    {
-        glDeleteBuffers(1, &vbo_pyramid_color);
-        vbo_pyramid_color = 0;
-    }
     // Deletion and uninitialization of vbo_position
     if(vbo_pyramid_position)
     {
         glDeleteBuffers(1, &vbo_pyramid_position);
         vbo_pyramid_position = 0;
-    }
-    // Deletion and uninitialization of vao_cube
-    if(vao_cube)
-    {
-        glDeleteVertexArrays(1, &vao_cube);
-        vao_cube = 0;
     }
     // Deletion and uninitialization of vao_pyramid
     if(vao_pyramid)

@@ -1,0 +1,453 @@
+// Standard Headers
+#include<stdio.h> // For standard IO
+#include<stdlib.h> // exit() sathi
+#include<memory.h> // For memset()
+
+// X11 Headers
+#include<X11/Xlib.h> // windows.h saarkhi 
+#include<X11/Xutil.h> // XVisualInfo() 
+#include<X11/XKBlib.h>
+
+//OpenGL Headers
+#include<GL/glew.h> // PP Functionality
+#include<GL/gl.h>  // For OpenGL functionality
+#include<GL/glx.h> // Bridging APIs
+
+// Macros
+#define WIN_WIDTH 800
+#define WIN_HEIGHT 600
+
+// Global Variables
+// Visual info is not uninitialized as we have not created it but matched its params....
+Display *display = NULL; // 77 member struct
+XVisualInfo *visualInfo = NULL; // 10 member struct - 1 member 'visual' which has 8 members. Haa ata apan pointer kelai mhanun . la -> madhe badalne
+Colormap colormap;
+Window window;
+Bool fullscreen = False;
+FILE *gpFile = NULL;
+int retVal;
+
+// OpenGL related variables
+typedef GLXContext (*glXCreateContextAttribsARBProc)(Display*, GLXFBConfig, GLXContext, Bool, const int*);
+glXCreateContextAttribsARBProc glXCreateContextAttribsARB = NULL;
+GLXFBConfig glxFBConfig;
+GLXContext glxContext;
+Bool bActiveWindow = False;
+GLuint shaderProgramObject;
+
+// Entry-point function
+int main(void)
+{
+	// Function Declarations
+	void uninitialize(void);
+	void toggleFullscreen(void);
+	int initialize(void);
+    void resize(int, int);
+    void draw(void);
+	
+	// Local Variables
+	int defaultScreen;
+	int defaultDepth;
+	GLXFBConfig *glxFBConfigs = NULL;
+	GLXFBConfig bestGLXFBConfig;
+	XVisualInfo *tempXVisualInfo = NULL;
+	int numFBConfigs = 0;
+	XSetWindowAttributes windowAttributes;
+	int styleMask;
+	Atom wm_delete_window_atom;
+	XEvent event; // Among 33 member structures 31 are structs and 2 unions
+	KeySym keysym;
+	int screenWidth;
+	int screenHeight;
+	char keys[26];
+	static int frameBufferAttributes[] = 
+	{
+		GLX_DOUBLEBUFFER,True,
+		GLX_X_RENDERABLE, True,
+		GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
+		GLX_RENDER_TYPE, GLX_RGBA_BIT,
+		GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
+		GLX_RED_SIZE, 8,
+		GLX_GREEN_SIZE, 8,
+		GLX_BLUE_SIZE, 8,
+		GLX_ALPHA_SIZE, 8,
+		GLX_STENCIL_SIZE, 8,
+		GLX_DEPTH_SIZE, 24,
+		None
+	};
+	Bool bDone;
+	static int winWidth, winHeight;
+	
+
+	// Code
+	gpFile = fopen("Log.txt","w");
+    if(gpFile == 0)
+    {
+        printf("Creation of log file failed. Exiting...\n");
+        exit(0);
+    }
+    else
+    {
+        fprintf(gpFile,"Log File Is Successfully Created. \n");
+    }	
+	display = XOpenDisplay(NULL); // Availables the display , NULL can also be command line argument from int main() for networking
+	if(display == NULL)
+	{
+		fprintf(gpFile,"ERROR:XOpenDisplay() failed.\n");
+		uninitialize();
+		exit(1);
+	}
+	defaultScreen = XDefaultScreen(display); // Primary monitor - VGA adapter available -> graphic card also available -> VRAM -> Frame buffer -> depth
+	defaultDepth = XDefaultDepth(display, defaultScreen);
+	glxFBConfigs = glXChooseFBConfig(display, defaultScreen, frameBufferAttributes, &numFBConfigs);
+	if(glxFBConfigs == NULL)
+	{
+		fprintf(gpFile, "ERROR: glXChooseFBConfig() failed.\n");
+		uninitialize();
+		exit(1);
+	}
+	else
+	{
+		fprintf(gpFile, "Found FrameBuffer Configs are %d.\n", numFBConfigs);
+	}
+	// Find Best FrameBufferConfig from the array
+	int bestFrameBufferConfig = -1;
+	int worstFrameBufferConfig = -1;
+	int bestNumberOfSamples = -1;
+	int worseNumberOfSamples = 999;
+	for(int i = 0; i < numFBConfigs; i++)
+	{
+		tempXVisualInfo = glXGetVisualFromFBConfig(display, glxFBConfigs[i]);
+		if(tempXVisualInfo != NULL)
+		{
+			int samples, sampleBuffers;
+			glXGetFBConfigAttrib(display, glxFBConfigs[i], GLX_SAMPLE_BUFFERS, &sampleBuffers);
+			glXGetFBConfigAttrib(display, glxFBConfigs[i], GLX_SAMPLES, &samples);
+			fprintf(gpFile, "visualInfo = 0x%lu found sample buffers = %d and samples = %d.\n", tempXVisualInfo->visualid, sampleBuffers, samples);
+			if(bestFrameBufferConfig < 0 || sampleBuffers && samples > bestNumberOfSamples)
+			{
+				bestFrameBufferConfig = i;
+				bestNumberOfSamples = samples;
+			}
+			if(worstFrameBufferConfig < 0 || !sampleBuffers || samples < worseNumberOfSamples)
+			{
+				worstFrameBufferConfig = i;
+				worseNumberOfSamples = samples;
+			}
+		}
+		XFree(tempXVisualInfo);
+		tempXVisualInfo = NULL;
+	}
+	
+	bestGLXFBConfig = glxFBConfigs[bestFrameBufferConfig];
+	glxFBConfig = bestGLXFBConfig;
+	XFree(glxFBConfigs);
+	glxFBConfigs = NULL;
+	visualInfo = glXGetVisualFromFBConfig(display, bestGLXFBConfig);
+	fprintf(gpFile, "Visual ID of bestVisualInfo is 0x%lu \n", visualInfo->visualid);
+
+	memset(&windowAttributes, 0, sizeof(XSetWindowAttributes));
+	windowAttributes.border_pixel = 0;
+	windowAttributes.background_pixel = XBlackPixel(display, defaultScreen); // BLACK_BRUSH similar
+	windowAttributes.background_pixmap = 0;
+	windowAttributes.colormap = XCreateColormap(display, 
+												RootWindow(display, visualInfo->screen), // DefaultColorScreen pn Chalel ,MoolPurush Window
+												visualInfo->visual,
+												AllocNone); // 2^32 colors astat color map madhe , smallest part is one color->colorcell->contains RGB
+	windowAttributes.event_mask = ExposureMask | KeyPressMask | StructureNotifyMask | FocusChangeMask;
+	colormap = windowAttributes.colormap;
+	styleMask = CWBorderPixel | CWBackPixel | CWColormap | CWEventMask;
+	window = XCreateWindow(display, RootWindow(display, visualInfo->screen), 0, 0, WIN_WIDTH, WIN_HEIGHT, 0, visualInfo->depth, InputOutput, visualInfo->visual, styleMask, &windowAttributes);
+	if(!window)
+	{
+		fprintf(gpFile, "ERROR:XCreateWindow() failed.\n");
+		uninitialize();
+		exit(1);
+	}
+	XStoreName(display, window, "SAB:OpenGL"); // Name the created window
+	wm_delete_window_atom = XInternAtom(display, "WM_DELETE_WINDOW", True); // WM - window manager
+	XSetWMProtocols(display, window, &wm_delete_window_atom, 1);
+	XMapWindow(display, window); //Similar to ShowWindow() 
+	
+	// Centering of window
+	screenWidth = XWidthOfScreen(XScreenOfDisplay(display, defaultScreen));
+	screenHeight = XHeightOfScreen(XScreenOfDisplay(display, defaultScreen));
+	XMoveWindow(display, window, (screenWidth-WIN_WIDTH)/2, (screenHeight-WIN_HEIGHT)/2);
+
+	// Initialize Call
+	retVal = initialize();
+	if(retVal == -1)
+	{
+		uninitialize();
+		exit(1);
+	}
+	else if(retVal == -2)
+	{
+		fprintf(gpFile, "glewInit gandle.\n");
+	}
+	else
+	{
+		fprintf(gpFile, "OpenGL Context Created Successfully.\n");
+	}
+
+	// Message Loop
+	
+	while(bDone == False)
+	{
+		while(XPending(display)) // Same PeekMessage()
+		{
+			XNextEvent(display, &event); // GetMessage() similar 
+			switch(event.type)
+			{
+				case MapNotify: // WM_CREATE
+					break;
+				case FocusIn: // WM_SETFOCUS
+					bActiveWindow = True;
+					break;
+				case FocusOut:
+					bActiveWindow = False;
+					break;
+				case KeyPress:
+					keysym = XkbKeycodeToKeysym(display, event.xkey.keycode, 0, 0);			
+					switch(keysym)
+					{
+						case XK_Escape:
+							bDone = True;
+							break;
+					}
+					XLookupString(&event.xkey, keys, sizeof(keys), NULL, NULL); // struct XComposeStatus (struct) , if keys are pressed repetatively then this struct is used... , WM_CHAR similar
+					switch(keys[0])
+					{
+						case 'f':
+						case 'F':
+							if(fullscreen == False)
+							{	
+								toggleFullscreen();
+								fullscreen = True;
+							}	
+							else
+							{
+								toggleFullscreen();
+								fullscreen = False;
+							}
+							break;
+					}
+					break;
+				case ConfigureNotify:
+					winWidth = event.xconfigure.width;
+					winHeight = event.xconfigure.height;
+					resize(winWidth, winHeight);
+					break;
+				case 33:
+					bDone = True;
+					break;
+			}
+		}
+		if(bActiveWindow == True)
+		{
+			//update();
+			draw();
+		}
+	}
+	
+	uninitialize();
+	return 0;
+}
+
+void toggleFullscreen(void)
+{
+	// Local Variables Declarations
+	Atom wm_current_state_atom;
+	Atom wm_fullscreen_state_atom;
+	XEvent event;
+
+	// Code
+	wm_current_state_atom = XInternAtom(display, "_NET_WM_STATE", False);
+	wm_fullscreen_state_atom = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", False);
+
+    memset(&event, 0, sizeof(XEvent));
+    event.type = ClientMessage;
+    event.xclient.window = window;
+    event.xclient.message_type = wm_current_state_atom;
+    event.xclient.format = 32;
+    event.xclient.data.l[0] = fullscreen ? 0 : 1;
+    event.xclient.data.l[1] = wm_fullscreen_state_atom;
+
+    XSendEvent(display,
+                RootWindow(display, visualInfo->screen),
+                False,
+                SubstructureNotifyMask,
+                &event
+                 );
+}
+
+int initialize(void)
+{
+	// Function Declarations
+	void resize(int, int);
+	void uninitialize(void);
+	void printGLInfo(void);
+
+	// Code
+	glXCreateContextAttribsARB = (glXCreateContextAttribsARBProc)glXGetProcAddressARB((GLubyte*)"glXCreateContextAttribsARB");
+	if(glXCreateContextAttribsARB == NULL)
+	{
+		fprintf(gpFile, "glXGetProcAddressARB() failed.\n");
+		uninitialize();
+		exit(1);
+	}
+	GLint contextAttributes[] = 
+	{
+		GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
+		GLX_CONTEXT_MINOR_VERSION_ARB, 6,
+		GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+		None
+	};
+	glxContext = glXCreateContextAttribsARB(display, glxFBConfig, NULL, True, contextAttributes);
+	if(!glxContext)
+	{
+		GLint contextAttributes[] = 
+		{
+			GLX_CONTEXT_MAJOR_VERSION_ARB, 1,
+			GLX_CONTEXT_MINOR_VERSION_ARB, 0,
+			None
+		};
+		// Fallback madhle topmost de , 1.0 ch milel asa nai.
+		glxContext = glXCreateContextAttribsARB(display, glxFBConfig, NULL, True, contextAttributes);
+		fprintf(gpFile, "Cannot support 4.6, hence falling back to default version.\n");
+
+	}
+	else
+	{
+		fprintf(gpFile, "Found the support to 4.6 version.\n");
+	}
+	// Checking whether direct rendering or software rendering we are getting
+	if(!glXIsDirect(display, glxContext))
+	{
+		fprintf(gpFile, "Direct Rendering i.e. hardware rendering not supported.\n");
+	}
+	else
+	{
+		fprintf(gpFile, "Direct Rendering i.e. hardware rendering is supported.\n");
+	}
+	glXMakeCurrent(display, window, glxContext);
+	// Here starts OpenGL Functionality
+	// GLEW initialization
+    if(glewInit() != GLEW_OK)
+        return -2;
+    // Print OpenGL Info
+	printGLInfo();
+
+	// Clearing the screen by Black Color
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+	// Depth Related Changes
+    glClearDepth(1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+
+    glShadeModel(GL_SMOOTH);
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT,GL_NICEST);
+    
+
+    // Warmup Resize Call
+    resize(WIN_WIDTH,WIN_HEIGHT);
+	return 0;
+}
+
+void printGLInfo(void)
+{
+	// Local Variable Declarations
+	GLint numExtensions = 0;
+
+	// Code
+	fprintf(gpFile, "OpenGL Vendor : %s\n",glGetString(GL_VENDOR));
+	fprintf(gpFile, "OpenGL Renderer : %s\n",glGetString(GL_RENDERER));
+	fprintf(gpFile, "OpenGL Version : %s\n",glGetString(GL_VERSION));
+	fprintf(gpFile, "GLSL Version : %s\n",glGetString(GL_SHADING_LANGUAGE_VERSION)); // Graphic Library Shading Language
+
+	glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
+	
+	fprintf(gpFile, "Number of supported extensions : %d\n", numExtensions);
+	for(int i = 0; i < numExtensions; i++)
+	{
+		fprintf(gpFile, "%s\n", glGetStringi(GL_EXTENSIONS, i));
+	}
+}
+
+void resize(int width, int height)
+{
+    // Code
+    if(height==0)
+        height=1; // To avoid divided by 0 error(illegal statement) in future calls..
+
+    glViewport(0,0,(GLsizei)width,(GLsizei)height);
+}
+
+void draw(void)
+{
+	// Code
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glXSwapBuffers(display, window);
+}
+
+void uninitialize(void)
+{
+	// Code
+	GLXContext currentContext;
+	currentContext = glXGetCurrentContext();
+	if(currentContext && currentContext == glxContext)
+	{
+		glXMakeCurrent(display, 0, 0);
+	}
+	if(glxContext)
+	{
+		glXDestroyContext(display, glxContext);
+		glxContext = NULL;
+	}
+	if(visualInfo)
+	{
+		free(visualInfo);
+		visualInfo = NULL;
+	}
+	// Shader Uninitialization
+    if(shaderProgramObject)
+    {
+        glUseProgram(shaderProgramObject);
+        GLsizei numAttachedShaders;
+        glGetProgramiv(shaderProgramObject, GL_ATTACHED_SHADERS, &numAttachedShaders);
+        GLuint *shaderObjects;
+        shaderObjects = (GLuint *)malloc(numAttachedShaders*sizeof(GLuint));
+        glGetAttachedShaders(shaderProgramObject, numAttachedShaders, &numAttachedShaders, shaderObjects);
+        for(GLsizei i = 0; i < numAttachedShaders; i++)
+        {
+            glDetachShader(shaderProgramObject, shaderObjects[i]);
+            glDeleteShader(shaderObjects[i]);
+            shaderObjects[i] = 0;
+        }
+        free(shaderObjects);
+        shaderObjects = NULL;
+        glUseProgram(0);
+        glDeleteProgram(shaderProgramObject);
+        shaderProgramObject = 0;
+    }
+	if(window)
+	{
+		XDestroyWindow(display, window);
+	}
+	if(colormap)
+	{
+		XFreeColormap(display, colormap);
+	}
+	if(display)
+	{
+		XCloseDisplay(display);
+		display = NULL;
+	}
+	if(gpFile)
+    {
+        fprintf(gpFile,"Log File Is Successfully Closed.\n");
+        fclose(gpFile);
+        gpFile=NULL;
+    }
+}

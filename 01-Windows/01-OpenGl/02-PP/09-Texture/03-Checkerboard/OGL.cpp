@@ -17,6 +17,8 @@ using namespace vmath;
 // Defines
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
+#define Checkerboard_Width 64
+#define Checkerboard_Height 64
 
 // Global Variable Declarations
 HWND ghwnd = NULL;
@@ -39,13 +41,12 @@ enum
 GLuint vao;
 GLuint vbo_position;
 GLuint vbo_texcoord;
-
 GLuint mvpMatrixUniform;
-GLuint textureSamplerUniform;
-GLuint keypressUniform;
 
-GLuint texture_smiley;
-int keyPressed = -1;
+GLuint textureSamplerUniform;
+
+GLuint texture_checkerboard;
+GLubyte checkerboard[Checkerboard_Width][Checkerboard_Height][4];
 
 mat4 perspectiveProjectionMatrix;
 
@@ -229,24 +230,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 		case WM_KEYDOWN:
 			switch(wParam)
 			{
-				
 				case 27:
 					DestroyWindow(hwnd);
 					break;
-				case 49:
-					keyPressed = 1;
-					break;
-				case 50:
-					keyPressed = 2;
-					break;
-				case 51:
-					keyPressed = 3;
-					break;
-				case 52:
-					keyPressed = 4;
-					break;
 				default:
-					keyPressed = 0;
 					break;
 			}
 			break;
@@ -310,7 +297,7 @@ int initialize(void)
 	void resize(int, int);
 	void printGLInfo(void);
 	void uninitialize(void);
-	BOOL LoadGLTexture(GLuint* ,TCHAR[]);
+	void LoadGLTexture(void);
 	// Variable Declarations
 	PIXELFORMATDESCRIPTOR pfd;
 	int iPixelFormatIndex=0;
@@ -353,13 +340,6 @@ int initialize(void)
 	// GLEW initialization
 	if(glewInit() != GLEW_OK)
 		return -5;
-	
-	if(LoadGLTexture(&texture_smiley, MAKEINTRESOURCE(IDBITMAP_SMILEY))==FALSE)
-	{
-		fprintf(gpFile,"LoadGLTexture for stone Failed.\n");
-		uninitialize();
-		return -6;
-	}
 	// Print OpenGL Info
 	printGLInfo();
 
@@ -412,18 +392,10 @@ int initialize(void)
 	"\n" \
 	"in vec2 a_texcoord_out;" \
 	"uniform sampler2D u_textureSampler;" \
-	"uniform int u_keyPressed;" \
 	"out vec4 FragColor;" \
 	"void main(void)" \
 	"{" \
-	"if(u_keyPressed == 1)" \
-	"{" \
 	"FragColor = texture(u_textureSampler, a_texcoord_out);" \
-	"}" \
-	"else" \
-	"{" \
-	"FragColor = vec4(1.0, 1.0, 1.0, 1.0);" \
-	"}" \
 	"}";
 
 	GLuint fragmentShaderObject = glCreateShader(GL_FRAGMENT_SHADER);
@@ -482,15 +454,14 @@ int initialize(void)
 	}
 	mvpMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_mvpMatrix");
 	textureSamplerUniform = glGetUniformLocation(shaderProgramObject, "u_textureSampler");
-	keypressUniform = glGetUniformLocation(shaderProgramObject, "u_keyPressed");
-	
+
 	// Declaration of vertex data arrays
-	const GLfloat position[] =
+	const GLfloat texcoord[] =
 	{
-		1.0f, 1.0f, 0.0f,
-		-1.0f, 1.0f, 0.0f,
-		-1.0f, -1.0f, 0.0f,
-		1.0f, -1.0f, 0.0f
+		1.0f, 1.0f,
+		0.0f, 1.0f,
+		0.0f, 0.0f,
+		1.0f, 0.0f
 	};
 
 	// pyramid
@@ -501,7 +472,7 @@ int initialize(void)
 	// vbo for position
 	glGenBuffers(1, &vbo_position);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_position);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(position), position, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 3 * 4 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 	glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
 
@@ -510,7 +481,7 @@ int initialize(void)
 	// vbo for texture
 	glGenBuffers(1, &vbo_texcoord);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_texcoord);
-	glBufferData(GL_ARRAY_BUFFER, 4 * 2 * sizeof(GLfloat), NULL, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(texcoord), texcoord, GL_STATIC_DRAW);
 	glVertexAttribPointer(SAB_ATTRIBUTE_TEXTURE0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 	glEnableVertexAttribArray(SAB_ATTRIBUTE_TEXTURE0);
 
@@ -518,8 +489,8 @@ int initialize(void)
 
 	glBindVertexArray(0);
 
-	// Clear the screen using black color
-	glClearColor(0.0f,0.0f,0.0f,1.0f);
+	// Clear the screen using gray color
+	glClearColor(0.5f,0.5f,0.5f,1.0f);
 
 	// Depth Related Changes
 	glClearDepth(1.0f);
@@ -528,6 +499,8 @@ int initialize(void)
 
 	// Enabling the texture
 	glEnable(GL_TEXTURE_2D);
+	// CheckerBoard Call
+	LoadGLTexture();
 
 	perspectiveProjectionMatrix = mat4::identity();
 	// Warmup Resize Call
@@ -535,33 +508,48 @@ int initialize(void)
 	return 0;
 }
 
-BOOL LoadGLTexture(GLuint *texture, TCHAR imageResourceID[])
+void LoadGLTexture(void)
 {
-	// Variable Declarations
-	HBITMAP hBitmap = NULL;
-	BITMAP bmp;
-	BOOL bResult = FALSE;
-	// Code
-	hBitmap = (HBITMAP)LoadImage(GetModuleHandle(NULL), imageResourceID, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
-	if(hBitmap)
-	{
-		bResult = TRUE;
-		GetObject(hBitmap, sizeof(bmp), &bmp);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glGenTextures(1, texture);
-		glBindTexture(GL_TEXTURE_2D, *texture);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    // Function Declarations
+    void MakeCheckerBoard(void);
 
-		// Create The Texture
-		// gluBuild2DMipmaps(GL_TEXTURE_2D, 3, bmp.bmWidth, bmp.bmHeight, GL_BGR_EXT, GL_UNSIGNED_BYTE, bmp.bmBits);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, bmp.bmWidth, bmp.bmHeight, 0, GL_BGR, GL_UNSIGNED_BYTE, bmp.bmBits);
-		glGenerateMipmap(GL_TEXTURE_2D);
+    // Code
+    MakeCheckerBoard();
 
-		glBindTexture(GL_TEXTURE_2D, 0);
-		DeleteObject(hBitmap);
-	}
-	return bResult;
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    glGenTextures(1, &texture_checkerboard);
+    glBindTexture(GL_TEXTURE_2D, texture_checkerboard);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Checkerboard_Width, Checkerboard_Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, checkerboard);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void MakeCheckerBoard(void)
+{
+    // Variable Declarations
+    int c;
+
+    // Code
+    for(int i=0; i < Checkerboard_Width; i++)
+    {
+        for(int j=0; j < Checkerboard_Height; j++)
+        {
+            c = (((i & 0x8) == 0) ^ ((j & 0x8) == 0))*255;
+
+            checkerboard[i][j][0] = (GLubyte)c;
+            checkerboard[i][j][1] = (GLubyte)c;
+            checkerboard[i][j][2] = (GLubyte)c;
+            checkerboard[i][j][3] = (GLubyte)255;
+        }
+    }
 }
 
 void printGLInfo(void)
@@ -605,82 +593,56 @@ void display(void)
 	mat4 translationMatrix = mat4::identity();
 	mat4 modelViewMatrix = mat4::identity();
 	mat4 modelViewProjectionMatrix = mat4::identity();
-	translationMatrix = translate(0.0f, 0.0f, -6.0f);
+	translationMatrix = translate(0.0f, 0.0f, -4.0f);
 	modelViewMatrix = translationMatrix;   // Order is very important. (Matrix multiplication is not commutative.)
 
 	modelViewProjectionMatrix = perspectiveProjectionMatrix * modelViewMatrix;
 
 	glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, modelViewProjectionMatrix);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture_smiley);
-	glUniform1i(textureSamplerUniform, 0);
-
-	glBindVertexArray(vao);
-
-	GLfloat texcoord[8];
-	if(keyPressed == 1)
-	{
-		texcoord[0] = 0.5f;
-		texcoord[1] = 0.5f;
-		texcoord[2] = 0.0f;
-		texcoord[3] = 0.5f;
-		texcoord[4] = 0.0f;
-		texcoord[5] = 0.0f;
-		texcoord[6] = 0.5f;
-		texcoord[7] = 0.0f;
-		glUniform1i(keypressUniform, 1);
-	}
-	else if(keyPressed == 2)
-	{
-		texcoord[0] = 1.0f;
-		texcoord[1] = 1.0f;
-		texcoord[2] = 0.0f;
-		texcoord[3] = 1.0f;
-		texcoord[4] = 0.0f;
-		texcoord[5] = 0.0f;
-		texcoord[6] = 1.0f;
-		texcoord[7] = 0.0f;
-		glUniform1i(keypressUniform, 1);
-	}
-	else if(keyPressed == 3)
-	{
-		texcoord[0] = 2.0f;
-		texcoord[1] = 2.0f;
-		texcoord[2] = 0.0f;
-		texcoord[3] = 2.0f;
-		texcoord[4] = 0.0f;
-		texcoord[5] = 0.0f;
-		texcoord[6] = 2.0f;
-		texcoord[7] = 0.0f;
-		glUniform1i(keypressUniform, 1);
-	}
-	else if(keyPressed == 4)
-	{
-		texcoord[0] = 0.5f;
-		texcoord[1] = 0.5f;
-		texcoord[2] = 0.5f;
-		texcoord[3] = 0.5f;
-		texcoord[4] = 0.5f;
-		texcoord[5] = 0.5f;
-		texcoord[6] = 0.5f;
-		texcoord[7] = 0.5f;
-		glUniform1i(keypressUniform, 1);
-	}
-	else
-	{
-		glUniform1i(keypressUniform, 0);
-	}
-
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_texcoord);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(texcoord), texcoord, GL_DYNAMIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	
-	// Here there should be draw code (12 lakh)
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture_checkerboard);
+	glUniform1i(textureSamplerUniform, 0);
+	glBindVertexArray(vao);
+	
+	GLfloat position[12];
+	position[0] = 0.0f;
+	position[1] = 1.0f;
+	position[2] = 0.0f;
+	position[3] = -2.0f;
+	position[4] = 1.0f;
+	position[5] = 0.0f;
+	position[6] = -2.0f;
+	position[7] = -1.0f;
+	position[8] = 0.0f;
+	position[9] = 0.0f;
+	position[10] = -1.0f;
+	position[11] = 0.0f;
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_position);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(position), position, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
-	glBindVertexArray(0);
+	position[0] = 2.41421f;
+	position[1] = 1.0f;
+	position[2] = -1.41421f;
+	position[3] = 1.0f;
+	position[4] = 1.0f;
+	position[5] = 0.0f;
+	position[6] = 1.0f;
+	position[7] = -1.0f;
+	position[8] = 0.0f;
+	position[9] = 2.41421f;
+	position[10] = -1.0f;
+	position[11] = -1.41421f;
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_position);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(position), position, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 	
+	glBindVertexArray(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	
 	// Unuse the shader program object
@@ -703,10 +665,10 @@ void uninitialize(void)
 	{
 		ToggleFullScreen();
 	}
-	if(texture_smiley)
+	if(texture_checkerboard)
 	{
-		glDeleteTextures(1, &texture_smiley);
-		texture_smiley = 0;
+		glDeleteTextures(1, &texture_checkerboard);
+		texture_checkerboard = 0;
 	}
 	// Deletion and uninitialization of vbo_texcoords
 	if(vbo_texcoord)

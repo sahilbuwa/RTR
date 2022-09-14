@@ -391,7 +391,6 @@ void display(void)
     glTranslatef(0.0f,0.0f,-4.0f);
     glBindTexture(GL_TEXTURE_2D, texture_checkerboard);
 
-    // Checkerboard che ujwikadche 2 points XY plane varun 45 degrees -Z axis kade rotate kele mhanun he x ani z chya navya values 2.41421f and -1.41421f alyat....
     glBegin(GL_QUADS);
     glTexCoord2f(1.0f, 1.0f);
 	glVertex3f(0.0f, 1.0f, 0.0f);
@@ -403,6 +402,7 @@ void display(void)
 	glVertex3f(0.0f, -1.0f, 0.0f);
 	glEnd();
 
+    // Checkerboard che ujwikadche 2 points XY plane varun 45 degrees -Z axis kade rotate kele mhanun he x ani z chya navya values 2.41421f and -1.41421f alyat....
     glBegin(GL_QUADS);
     glTexCoord2f(1.0f, 1.0f);
 	glVertex3f(2.41421f, 1.0f, -1.41421f);

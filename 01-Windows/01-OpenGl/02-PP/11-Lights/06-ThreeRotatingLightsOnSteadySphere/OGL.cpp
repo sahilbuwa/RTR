@@ -800,17 +800,17 @@ int initialize(void)
     lights[0].lightAmbient = vec4(0.0f, 0.0f, 0.0f, 1.0f);
     lights[0].lightDiffuse = vec4(1.0f, 0.0f, 0.0f, 1.0f);
     lights[0].lightSpecular = vec4(1.0f, 0.0f, 0.0f, 1.0f);
-    lights[0].lightPosition = vec4(-2.0f, 0.0f, 0.0f, 1.0f);
+    lights[0].lightPosition = vec4(0.0f, 0.0f, 0.0f, 1.0f);
     
     lights[1].lightAmbient = vec4(0.0f, 0.0f, 0.0f, 1.0f);
     lights[1].lightDiffuse = vec4(0.0f, 1.0f, 0.0f, 1.0f);
     lights[1].lightSpecular = vec4(0.0f, 1.0f, 0.0f, 1.0f);
-    lights[1].lightPosition = vec4(2.0f, 0.0f, 0.0f, 1.0f);
+    lights[1].lightPosition = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
     lights[2].lightAmbient = vec4(0.0f, 0.0f, 0.0f, 1.0f);
     lights[2].lightDiffuse = vec4(0.0f, 0.0f, 1.0f, 1.0f);
     lights[2].lightSpecular = vec4(0.0f, 0.0f, 1.0f, 1.0f);
-    lights[2].lightPosition = vec4(-2.0f, 0.0f, 0.0f, 1.0f);
+    lights[2].lightPosition = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
     perspectiveProjectionMatrix = mat4::identity();
     // Warmup Resize Call
@@ -859,7 +859,7 @@ void display(void)
     // Transformations
     mat4 modelMatrix = mat4::identity();
     mat4 viewMatrix = mat4::identity();
-    mat4 translationMatrix = translate(0.0f, 0.0f, -2.0f); 
+    mat4 translationMatrix = translate(0.0f, 0.0f, -1.5f); 
     modelMatrix = translationMatrix;
 
     glUniformMatrix4fv(modelMatrixUniform, 1, GL_FALSE, modelMatrix);
@@ -918,7 +918,7 @@ void update(void)
     blueLightAngle += 0.1f;
     if(blueLightAngle >= 360.0f)
         blueLightAngle -= 360.0f;
-    lights[2].lightPosition = vec4(10.0f * cosf(blueLightAngle * M_PI / 180.0f), 10.0f * sinf(blueLightAngle * M_PI / 180.0f), 1.0f, 1.0f);
+    lights[2].lightPosition = vec4(10.0f * cosf(blueLightAngle * M_PI / 180.0f), 10.0f * sinf(blueLightAngle * M_PI / 180.0f), 0.0f, 1.0f);
 
 }
 

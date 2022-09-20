@@ -4,6 +4,7 @@
 *.obj
 *.res
 *.bat
+*.lib
 .vs/
 .vscode/
 

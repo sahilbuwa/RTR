@@ -64,10 +64,9 @@ mat4 perspectiveProjectionMatrix;
 mat4 matrixStack[MAX_STACK_SIZE];
 int top = -1;
 
-int day = 0;
-int year = 0;
-int moonRotation = 0;
-int moonSelfRotation = 0;
+int shoulder = 0;
+int elbow = 0;
+int wrist = 0;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -237,29 +236,23 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 				case 'f':
 					ToggleFullScreen();
 					break;
-				case 'D':
-					day = (day + 6) % 360;
+				case 's':
+					shoulder = (shoulder + 6) % 360;
 					break;
-				case 'd':
-					day = (day - 6) % 360;
+				case 'S':
+					shoulder = (shoulder - 6) % 360;
 					break;
-				case 'Y':
-					year = (year + 3) % 360;
+				case 'e':
+					elbow = (elbow + 3) % 360;
 					break;
-				case 'y':
-					year = (year - 3) % 360;
+				case 'E':
+					elbow = (elbow - 3) % 360;
 					break;
-				case 'm':
-					moonRotation = (moonRotation + 3) % 360;
+				case 'w':
+					wrist = (wrist + 3) % 360;
 					break;
-				case 'M':
-					moonRotation = (moonRotation - 3) % 360;
-					break;
-				case 'n':
-					moonSelfRotation = (moonSelfRotation + 3) % 360;
-					break;
-				case 'N':
-					moonSelfRotation = (moonSelfRotation - 3) % 360;
+				case 'W':
+					wrist = (wrist - 3) % 360;
 					break;
 				default:
 					break;
@@ -593,18 +586,16 @@ void display(void)
 	
 	mat4 modelMatrix = mat4::identity();
 	mat4 viewMatrix = mat4::identity();
-	mat4 translationMatrix = translate(0.0f, 0.0f, -2.0f); 
-	mat4 rotationMatrixX = mat4::identity();
-	mat4 rotationMatrixY1 = mat4::identity();
-	mat4 rotationMatrixY2 = mat4::identity(); 
-	mat4 rotationMatrixM1 = mat4::identity();
-	mat4 rotationMatrixM2 = mat4::identity();
+	mat4 translationMatrix = mat4::identity(); 
+	mat4 rotationMatrixZ1 = mat4::identity();
+	mat4 rotationMatrixZ2 = mat4::identity();
+	mat4 rotationMatrixZ3 = mat4::identity();
 	mat4 scaleMatrix = mat4::identity();
 
 	glUniformMatrix4fv(projectionMatrixUniform, 1, GL_FALSE, perspectiveProjectionMatrix);
 
 	// View Transformation
-	viewMatrix = lookat(vec3(0.0f, 0.0f, 5.0f), 
+	viewMatrix = lookat(vec3(0.0f, 0.0f, 10.0f), 
 		   				vec3(0.0f, 0.0f, 0.0f), 
 		   				vec3(0.0f, 1.0f, 0.0f));
 	
@@ -613,55 +604,56 @@ void display(void)
 	// Save the camera/view Matrix (Push)
 	PushMatrix(viewMatrix);
 	
-	glUniformMatrix4fv(modelMatrixUniform, 1, GL_FALSE, modelMatrix);
+	rotationMatrixZ1 = rotate((GLfloat)shoulder, 0.0f, 0.0f, 1.0f);
+
+	translationMatrix = translate(1.0f, 0.0f, 0.0f);
+
+	scaleMatrix = scale(2.0f, 0.5f, 1.0f);
+	modelMatrix =  rotationMatrixZ1 * translationMatrix;
+
+	PushMatrix(modelMatrix);
+
+	modelMatrix *= scaleMatrix;
 	
+	glUniformMatrix4fv(modelMatrixUniform, 1, GL_FALSE, modelMatrix);
+
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glUniform3f(sphereColorUniform, 1.0f, 1.0f, 0.0f);
-	// Draw Sphere (SUN)
+	glUniform3f(sphereColorUniform, 0.5f, 0.35f, 0.05f);
+	// Draw Sphere Shoulder
 	glBindVertexArray(vao_sphere);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_sphere_element);
 	glDrawElements(GL_TRIANGLES, numElements, GL_UNSIGNED_SHORT, 0);
 	glBindVertexArray(0);
 
-	// Restore the saved camera matrix (Pop)
-	viewMatrix = PopMatrix();
-
-	// Save the current view / camera matrix (Push)
-	PushMatrix(viewMatrix);
-
+	modelMatrix = PopMatrix();
+	modelMatrix *= translationMatrix;
 	// Rotate around sun
-	rotationMatrixY1 = rotate((GLfloat)year, 0.0f, 1.0f, 0.0f);
-	// Translation from Earth
-	translationMatrix = translate(1.5f, 0.0f, 0.0f);
+	rotationMatrixZ2 = rotate((GLfloat)elbow, 0.0f, 0.0f, 1.0f);
 
-	// Self-rotation / Spinning of Earth
-	rotationMatrixY2 = rotate((GLfloat)day, 0.0f, 1.0f, 0.0f);
-
-	// Scale the earth down
-	scaleMatrix = scale(0.5f, 0.5f, 0.5f);
+	modelMatrix *= rotationMatrixZ2 * translationMatrix;
 	
-	modelMatrix = rotationMatrixY1 * translationMatrix * rotationMatrixY2 * scaleMatrix;
+	PushMatrix(modelMatrix);
+
+	modelMatrix *= scaleMatrix;
+
 	glUniformMatrix4fv(modelMatrixUniform, 1, GL_FALSE, modelMatrix);
-	
-	// Draw Earth
-	// Beautification
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glUniform3f(sphereColorUniform, 0.4f, 0.9f, 1.0f);
 
 	glBindVertexArray(vao_sphere);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_sphere_element);
 	glDrawElements(GL_TRIANGLES, numElements, GL_UNSIGNED_SHORT, 0);
 	glBindVertexArray(0);
 
-	rotationMatrixM1 = rotate((GLfloat)moonRotation, 0.0f, 1.0f, 0.0f);
+	modelMatrix = PopMatrix();
+	translationMatrix = translate(1.0f, 0.0f, 0.0f);
+	modelMatrix *= translationMatrix;
+	rotationMatrixZ3 = rotate((GLfloat)wrist, 0.0f, 0.0f, 1.0f);
 
-	rotationMatrixM2 = rotate((GLfloat)moonSelfRotation, 0.0f, 1.0f, 0.0f);
+	scaleMatrix = scale(1.0f, 0.5f, 1.0f);
+	translationMatrix = translate(0.5f, 0.0f, 0.0f);
 
-	modelMatrix *= rotationMatrixM1 * translationMatrix * rotationMatrixM2 * scaleMatrix;
+	modelMatrix *= rotationMatrixZ3 * translationMatrix * scaleMatrix;
+
 	glUniformMatrix4fv(modelMatrixUniform, 1, GL_FALSE, modelMatrix);
-
-	glUniform3f(sphereColorUniform, 1.0f, 1.0f, 1.0f);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	
 	glBindVertexArray(vao_sphere);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_sphere_element);

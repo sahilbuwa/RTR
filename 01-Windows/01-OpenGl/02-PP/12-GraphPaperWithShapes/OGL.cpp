@@ -712,7 +712,31 @@ void uninitialize(void)
         glDeleteBuffers(1, &vbo_quad);
         vbo_quad = 0;
     }
-
+    if(vbo_axes_lines)
+    {
+        glDeleteBuffers(1, &vbo_axes_lines);
+        vbo_axes_lines = 0;
+    }
+    if(vbo_circle_position)
+    {
+        glDeleteBuffers(1, &vbo_circle_position);
+        vbo_circle_position = 0;
+    }
+    if(vbo_point_position)
+    {
+        glDeleteBuffers(1, &vbo_point_position);
+        vbo_point_position = 0;
+    }
+    if(vbo_triangle_position)
+    {
+        glDeleteBuffers(1, &vbo_triangle_position);
+        vbo_triangle_position = 0;
+    }
+    if(vbo_quad)
+    {
+        glDeleteBuffers(1, &vbo_quad);
+        vbo_quad = 0;
+    }
     // Deletion and uninitialization of vao
     if(vao_square)
     {
@@ -723,6 +747,26 @@ void uninitialize(void)
     {
         glDeleteVertexArrays(1, &vao_graphs);
         vao_graphs = 0;
+    }
+    if(vao_axes)
+    {
+        glDeleteVertexArrays(1, &vao_axes);
+        vao_axes = 0;
+    }
+    if(vao_triangle)
+    {
+        glDeleteVertexArrays(1, &vao_triangle);
+        vao_triangle = 0;
+    }
+    if(vao_point)
+    {
+        glDeleteVertexArrays(1, &vao_point);
+        vao_point = 0;
+    }
+    if(vao_triangle)
+    {
+        glDeleteVertexArrays(1, &vao_triangle);
+        vao_triangle = 0;
     }
     // Shader Uninitialization
     if(shaderProgramObject)

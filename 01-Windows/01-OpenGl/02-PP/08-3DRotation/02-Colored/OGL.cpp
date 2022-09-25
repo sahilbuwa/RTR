@@ -664,7 +664,7 @@ void display(void)
     mat4 modelViewMatrix = mat4::identity();
     mat4 modelViewProjectionMatrix = mat4::identity();
     translationMatrix = translate(-1.5f, 0.0f, -6.0f);
-    rotationMatrix = rotate(anglepyramid, 0.0f, 1.0f, 0.0f); 
+    rotationMatrix = rotate(anglepyramid, 0.0f, 1.0f, 0.0f);
     modelViewMatrix = translationMatrix * rotationMatrix;   // Order is very important. (Matrix multiplication is not commutative.)
 
     modelViewProjectionMatrix = perspectiveProjectionMatrix * modelViewMatrix;
@@ -682,11 +682,17 @@ void display(void)
     // Transformations
     translationMatrix = mat4::identity();
     rotationMatrix = mat4::identity();
+    mat4 rotationMatrix_x = mat4::identity();
+    mat4 rotationMatrix_y = mat4::identity();
+    mat4 rotationMatrix_z = mat4::identity();
     mat4 scaleMatrix = mat4::identity();
     modelViewMatrix = mat4::identity();
     modelViewProjectionMatrix = mat4::identity();
     translationMatrix = translate(1.5f, 0.0f, -6.0f);
-    rotationMatrix = rotate(anglecube, 1.0f, 0.0f, 0.0f); 
+    rotationMatrix_x = rotate(anglepyramid, 1.0f, 0.0f, 0.0f);
+    rotationMatrix_y = rotate(anglepyramid, 0.0f, 1.0f, 0.0f); 
+    rotationMatrix_z = rotate(anglepyramid, 0.0f, 0.0f, 1.0f); 
+    rotationMatrix = rotationMatrix_x * rotationMatrix_y * rotationMatrix_z;
     scaleMatrix = scale(0.75f, 0.75f, 0.75f);
     modelViewMatrix = translationMatrix * rotationMatrix * scaleMatrix;
 

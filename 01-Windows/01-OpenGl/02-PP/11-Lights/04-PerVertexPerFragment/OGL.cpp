@@ -31,7 +31,7 @@ BOOL gbActiveWindow = FALSE;
 // Programmable Pipeline Related Variables
 GLuint shaderProgramObject1;
 GLuint shaderProgramObject2;
-GLuint choosenProgramObject;
+GLchar choosenProgramObject;
 enum
 {
     SAB_ATTRIBUTE_POSITION = 0,
@@ -44,9 +44,13 @@ GLuint vao_sphere;
 GLuint vbo_sphere_position;
 GLuint vbo_sphere_normal;
 GLuint vbo_sphere_element;
-GLuint modelMatrixUniform;
-GLuint viewMatrixUniform;
-GLuint projectionMatrixUniform;
+GLuint modelMatrixUniformV;
+GLuint viewMatrixUniformV;
+GLuint projectionMatrixUniformV;
+
+GLuint modelMatrixUniformF;
+GLuint viewMatrixUniformF;
+GLuint projectionMatrixUniformF;
 
 // Sphere arrays
 float sphere_vertices[1146];
@@ -60,17 +64,29 @@ mat4 perspectiveProjectionMatrix;
 
 // Lights Variables
 BOOL bLight = FALSE;
-GLuint ldUniform;
-GLuint laUniform;
-GLuint lsUniform;
-GLuint lightPositionUniform;
+GLuint ldUniformV;
+GLuint laUniformV;
+GLuint lsUniformV;
+GLuint lightPositionUniformV;
 
-GLuint kaUniform;
-GLuint kdUniform;
-GLuint ksUniform;
-GLuint materialShininessUniform;
+GLuint kaUniformV;
+GLuint kdUniformV;
+GLuint ksUniformV;
+GLuint materialShininessUniformV;
 
-GLuint lightingEnabledUniform;
+GLuint lightingEnabledUniformV;
+
+GLuint ldUniformF;
+GLuint laUniformF;
+GLuint lsUniformF;
+GLuint lightPositionUniformF;
+
+GLuint kaUniformF;
+GLuint kdUniformF;
+GLuint ksUniformF;
+GLuint materialShininessUniformF;
+
+GLuint lightingEnabledUniformF;
 
 GLfloat lightAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
 GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -260,11 +276,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
                     break;
                 case 'v':
                 case 'V':
-                    choosenProgramObject = shaderProgramObject1;
+                    choosenProgramObject = 'v';
                     break;
                 case 'F':
                 case 'f':
-                    choosenProgramObject = shaderProgramObject2;
+                    choosenProgramObject = 'f';
                     break;
                 case 'q':
                 case 'Q':
@@ -691,40 +707,40 @@ int initialize(void)
     // lightingEnabledUniform = glGetUniformLocation(choosenProgramObject, "u_lightingEnabled");
 
     // Shader 1 uniforms
-    modelMatrixUniform = glGetUniformLocation(shaderProgramObject1, "u_modelMatrix");
-    viewMatrixUniform = glGetUniformLocation(shaderProgramObject1, "u_viewMatrix");
-    projectionMatrixUniform = glGetUniformLocation(shaderProgramObject1, "u_projectionMatrix");
+    modelMatrixUniformV = glGetUniformLocation(shaderProgramObject1, "u_modelMatrix");
+    viewMatrixUniformV = glGetUniformLocation(shaderProgramObject1, "u_viewMatrix");
+    projectionMatrixUniformV = glGetUniformLocation(shaderProgramObject1, "u_projectionMatrix");
     
-    laUniform = glGetUniformLocation(shaderProgramObject1, "u_la");
-    ldUniform = glGetUniformLocation(shaderProgramObject1, "u_ld");
-    lsUniform = glGetUniformLocation(shaderProgramObject1, "u_ls");
-    lightPositionUniform = glGetUniformLocation(shaderProgramObject1, "u_lightPosition");
+    laUniformV = glGetUniformLocation(shaderProgramObject1, "u_la");
+    ldUniformV = glGetUniformLocation(shaderProgramObject1, "u_ld");
+    lsUniformV = glGetUniformLocation(shaderProgramObject1, "u_ls");
+    lightPositionUniformV = glGetUniformLocation(shaderProgramObject1, "u_lightPosition");
 
-    kaUniform = glGetUniformLocation(shaderProgramObject1, "u_ka");
-    kdUniform = glGetUniformLocation(shaderProgramObject1, "u_kd");
-    ksUniform = glGetUniformLocation(shaderProgramObject1, "u_ks");
-    materialShininessUniform = glGetUniformLocation(shaderProgramObject1, "u_materialShininess");
+    kaUniformV = glGetUniformLocation(shaderProgramObject1, "u_ka");
+    kdUniformV = glGetUniformLocation(shaderProgramObject1, "u_kd");
+    ksUniformV = glGetUniformLocation(shaderProgramObject1, "u_ks");
+    materialShininessUniformV = glGetUniformLocation(shaderProgramObject1, "u_materialShininess");
 
-    lightingEnabledUniform = glGetUniformLocation(shaderProgramObject1, "u_lightingEnabled");
+    lightingEnabledUniformV = glGetUniformLocation(shaderProgramObject1, "u_lightingEnabled");
 
     // Shader 2 uniforms
-    modelMatrixUniform = glGetUniformLocation(shaderProgramObject2, "u_modelMatrix");
-    viewMatrixUniform = glGetUniformLocation(shaderProgramObject2, "u_viewMatrix");
-    projectionMatrixUniform = glGetUniformLocation(shaderProgramObject2, "u_projectionMatrix");
+    modelMatrixUniformF = glGetUniformLocation(shaderProgramObject2, "u_modelMatrix");
+    viewMatrixUniformF = glGetUniformLocation(shaderProgramObject2, "u_viewMatrix");
+    projectionMatrixUniformF = glGetUniformLocation(shaderProgramObject2, "u_projectionMatrix");
     
-    laUniform = glGetUniformLocation(shaderProgramObject2, "u_la");
-    ldUniform = glGetUniformLocation(shaderProgramObject2, "u_ld");
-    lsUniform = glGetUniformLocation(shaderProgramObject2, "u_ls");
-    lightPositionUniform = glGetUniformLocation(shaderProgramObject2, "u_lightPosition");
+    laUniformF = glGetUniformLocation(shaderProgramObject2, "u_la");
+    ldUniformF = glGetUniformLocation(shaderProgramObject2, "u_ld");
+    lsUniformF = glGetUniformLocation(shaderProgramObject2, "u_ls");
+    lightPositionUniformF = glGetUniformLocation(shaderProgramObject2, "u_lightPosition");
 
-    kaUniform = glGetUniformLocation(shaderProgramObject2, "u_ka");
-    kdUniform = glGetUniformLocation(shaderProgramObject2, "u_kd");
-    ksUniform = glGetUniformLocation(shaderProgramObject2, "u_ks");
-    materialShininessUniform = glGetUniformLocation(shaderProgramObject2, "u_materialShininess");
+    kaUniformF = glGetUniformLocation(shaderProgramObject2, "u_ka");
+    kdUniformF = glGetUniformLocation(shaderProgramObject2, "u_kd");
+    ksUniformF = glGetUniformLocation(shaderProgramObject2, "u_ks");
+    materialShininessUniformF = glGetUniformLocation(shaderProgramObject2, "u_materialShininess");
 
-    lightingEnabledUniform = glGetUniformLocation(shaderProgramObject2, "u_lightingEnabled");
+    lightingEnabledUniformF = glGetUniformLocation(shaderProgramObject2, "u_lightingEnabled");
     // Default Initialization of Toggled state
-    choosenProgramObject = shaderProgramObject1;
+    choosenProgramObject = 'v';
     // Declaration of vertex data arrays
     getSphereVertexData(sphere_vertices, sphere_normals, sphere_textures, sphere_elements);
     numVertices = getNumberOfSphereVertices();
@@ -814,39 +830,70 @@ void display(void)
 {
     // Code
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // Use the Shader Program Object
-    glUseProgram(choosenProgramObject);
     
     // Transformations
     mat4 modelMatrix = mat4::identity();
     mat4 viewMatrix = mat4::identity();
     mat4 translationMatrix = translate(0.0f, 0.0f, -2.0f); 
-    modelMatrix = translationMatrix;  
+    modelMatrix = translationMatrix;
 
-    glUniformMatrix4fv(modelMatrixUniform, 1, GL_FALSE, modelMatrix);
-    glUniformMatrix4fv(viewMatrixUniform, 1, GL_FALSE, viewMatrix);
-    glUniformMatrix4fv(projectionMatrixUniform, 1, GL_FALSE, perspectiveProjectionMatrix);
-    
-    if(bLight == TRUE)
+    // Use the Shader Program Object
+    if(choosenProgramObject == 'v')
     {
-        glUniform1i(lightingEnabledUniform, 1);
+        glUseProgram(shaderProgramObject1);  
 
-        glUniform3fv(laUniform, 1, lightAmbient);
-        glUniform3fv(ldUniform, 1, lightDiffuse);
-        glUniform3fv(lsUniform, 1, lightSpecular);
-        glUniform4fv(lightPositionUniform, 1, lightPosition);
+        glUniformMatrix4fv(modelMatrixUniformV, 1, GL_FALSE, modelMatrix);
+        glUniformMatrix4fv(viewMatrixUniformV, 1, GL_FALSE, viewMatrix);
+        glUniformMatrix4fv(projectionMatrixUniformV, 1, GL_FALSE, perspectiveProjectionMatrix);
+        
+        if(bLight == TRUE)
+        {
+            glUniform1i(lightingEnabledUniformV, 1);
 
-        glUniform3fv(kaUniform, 1, materialAmbient);
-        glUniform3fv(kdUniform, 1, materialDiffuse);
-        glUniform3fv(ksUniform, 1, materialSpecular);
-        glUniform1f(materialShininessUniform, materialShininess);
+            glUniform3fv(laUniformV, 1, lightAmbient);
+            glUniform3fv(ldUniformV, 1, lightDiffuse);
+            glUniform3fv(lsUniformV, 1, lightSpecular);
+            glUniform4fv(lightPositionUniformV, 1, lightPosition);
 
+            glUniform3fv(kaUniformV, 1, materialAmbient);
+            glUniform3fv(kdUniformV, 1, materialDiffuse);
+            glUniform3fv(ksUniformV, 1, materialSpecular);
+            glUniform1f(materialShininessUniformV, materialShininess);
+
+        }
+        else
+        {
+            glUniform1i(lightingEnabledUniformV, 0);
+        }
     }
     else
     {
-        glUniform1i(lightingEnabledUniform, 0);
-    }
+        glUseProgram(shaderProgramObject2);  
 
+        glUniformMatrix4fv(modelMatrixUniformF, 1, GL_FALSE, modelMatrix);
+        glUniformMatrix4fv(viewMatrixUniformF, 1, GL_FALSE, viewMatrix);
+        glUniformMatrix4fv(projectionMatrixUniformF, 1, GL_FALSE, perspectiveProjectionMatrix);
+        
+        if(bLight == TRUE)
+        {
+            glUniform1i(lightingEnabledUniformF, 1);
+
+            glUniform3fv(laUniformF, 1, lightAmbient);
+            glUniform3fv(ldUniformF, 1, lightDiffuse);
+            glUniform3fv(lsUniformF, 1, lightSpecular);
+            glUniform4fv(lightPositionUniformF, 1, lightPosition);
+
+            glUniform3fv(kaUniformF, 1, materialAmbient);
+            glUniform3fv(kdUniformF, 1, materialDiffuse);
+            glUniform3fv(ksUniformF, 1, materialSpecular);
+            glUniform1f(materialShininessUniformF, materialShininess);
+
+        }
+        else
+        {
+            glUniform1i(lightingEnabledUniformF, 0);
+        }
+    }
      // *** bind vao ***
     glBindVertexArray(vao_sphere);
 

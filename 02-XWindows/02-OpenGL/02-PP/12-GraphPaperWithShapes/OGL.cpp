@@ -15,9 +15,6 @@
 #include"vmath.h" // Maths (RedBook)
 using namespace vmath;
 
-// Aple headers
-#include"Sphere.h" // Sphere include
-
 // Macros
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
@@ -48,22 +45,23 @@ enum
     SAB_ATTRIBUTE_TEXURE0
 };
 
-GLuint vao_sphere;
-GLuint vbo_sphere_position;
-GLuint vbo_sphere_normal;
-GLuint vbo_sphere_element;
-GLuint modelMatrixUniform;
-GLuint viewMatrixUniform;
-GLuint projectionMatrixUniform;
+GLuint vao_square;
+GLuint vbo_quad;
+GLuint vao_circle;
+GLuint vbo_circle_position;
+GLuint vao_triangle;
+GLuint vbo_triangle_position;
+GLuint vao_point;
+GLuint vbo_point_position;
+GLuint vao_graphs;
+GLuint vao_axes;
+GLuint vbo_graph_lines;
+GLuint vbo_axes_lines;
 
-// Sphere arrays
-float sphere_vertices[1146];
-float sphere_normals[1146];
-float sphere_textures[764];
-unsigned short sphere_elements[2280];
-GLuint numElements;
-GLuint numVertices;
-
+GLuint mvpMatrixUniform;
+GLuint colorUniform;
+GLfloat circleVertices[1080];
+GLfloat graphLineVertices[480];
 mat4 perspectiveProjectionMatrix;
 
 // Entry-point function
@@ -75,6 +73,7 @@ int main(void)
 	int initialize(void);
     void resize(int, int);
     void draw(void);
+	void update(void);
 	
 	// Local Variables
 	int defaultScreen;
@@ -276,7 +275,7 @@ int main(void)
 		}
 		if(bActiveWindow == True)
 		{
-			//update();
+			update();
 			draw();
 		}
 	}
@@ -371,16 +370,13 @@ int initialize(void)
 
     // Vertex Shader
     // Shader Source Code
-    const GLchar *vertexShaderSourceCode = "#version 460 core" \
+   const GLchar *vertexShaderSourceCode = "#version 460 core" \
     "\n" \
     "in vec4 a_position;" \
-    "in vec4 a_normal;" \
-    "uniform mat4 u_modelMatrix;" \
-    "uniform mat4 u_viewMatrix;" \
-    "uniform mat4 u_projectionMatrix;" \
+    "uniform mat4 u_mvpMatrix;" \
     "void main(void)" \
     "{" \
-    "gl_Position = u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;" \
+    "gl_Position = u_mvpMatrix * a_position;" \
     "}";
     // Vertex Shader cha Object tayar kela
     GLuint vertexShaderObject = glCreateShader(GL_VERTEX_SHADER);
@@ -415,10 +411,11 @@ int initialize(void)
     // Fragment Shader
     const GLchar *fragmentShaderSourceCode = "#version 460 core" \
     "\n" \
+    "uniform vec3 u_color;" \
     "out vec4 FragColor;" \
     "void main(void)" \
     "{" \
-    "FragColor = vec4(1.0, 1.0, 1.0, 1.0);" \
+    "FragColor = vec4(u_color, 1.0);" \
     "}";
 
     GLuint fragmentShaderObject = glCreateShader(GL_FRAGMENT_SHADER);
@@ -453,8 +450,7 @@ int initialize(void)
     glAttachShader(shaderProgramObject, vertexShaderObject);
     glAttachShader(shaderProgramObject, fragmentShaderObject);
     glBindAttribLocation(shaderProgramObject, SAB_ATTRIBUTE_POSITION, "a_position"); // Andhaar
-    glBindAttribLocation(shaderProgramObject, SAB_ATTRIBUTE_NORMAL, "a_normal");
-	glLinkProgram(shaderProgramObject);
+    glLinkProgram(shaderProgramObject);
     // Error Checking
     status = 0;
     infoLogLength = 0;
@@ -478,52 +474,135 @@ int initialize(void)
         }
     }
 
-	 modelMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_modelMatrix");
-    viewMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_viewMatrix");
-    projectionMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_projectionMatrix");
-    
+	mvpMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_mvpMatrix");
+    colorUniform = glGetUniformLocation(shaderProgramObject, "u_color");
+
     // Declaration of vertex data arrays
-    getSphereVertexData(sphere_vertices, sphere_normals, sphere_textures, sphere_elements);
-    numVertices = getNumberOfSphereVertices();
-    numElements = getNumberOfSphereElements();
+    const GLfloat squareVertices[] = 
+    {
+        1.0f, 1.0f, 0.0f,
+        -1.0f, 1.0f, 0.0f, 
+        -1.0f, -1.0f, 0.0f, 
+        1.0f, -1.0f , 0.0f
+    };
+    const GLfloat triangleVertices[] =
+    {
+        cosf(M_PI_2), sinf(M_PI_2), 0.0f,
+        cosf(-(M_PI/6.0f)), sinf(-(M_PI/6.0f)) , 0.0f,
+        cosf((7.0f*M_PI)/6.0f), sinf((7.0f*M_PI)/6.0f), 0.0f
+    };
+    GLfloat angle;
+    for(int i = 0; i < 360; i++)
+    {
+        angle= i * M_PI / 180;
+        circleVertices[i * 3] = cosf(angle);
+        circleVertices[i * 3 + 1] = sinf(angle);
+        circleVertices[i * 3 + 2] = 0.0f;
+    }
+    int index = 0;
+    for(float i = -1.25f;i <= 1.25f; i += 0.0625f)
+    {
+        if(i == 0.0f)
+            continue;
+        graphLineVertices[index * 3] = 1.25f;
+        graphLineVertices[index * 3 + 1] = i; 
+        graphLineVertices[index * 3 + 2] = 0.0f;
+        index++;
+        graphLineVertices[index * 3] = -1.25f;
+        graphLineVertices[index * 3 + 1] = i;
+        graphLineVertices[index * 3 + 2] = 0.0f; 
+        index++;
+        graphLineVertices[index * 3] = i;
+        graphLineVertices[index * 3 + 1] = 1.25f; 
+        graphLineVertices[index * 3 + 2] = 0.0f; 
+        index++;
+        graphLineVertices[index * 3] = i;
+        graphLineVertices[index * 3 + 1] = -1.25f; 
+        graphLineVertices[index * 3 + 2] = 0.0f; 
+        index++;
+    }
+    const GLfloat axesVertices[] =
+    { 
+		0.0f, 1.25f, 0.0f,
+      	0.0f, -1.25f, 0.0f,
+      	1.25f, 0.0f, 0.0f,
+      	-1.25f, 0.0f, 0.0f
+    };
+    const GLfloat pointVertex[] =
+    {
+        0.0f, 0.0f, 0.0f
+    };
 
-    // vao
-    glGenVertexArrays(1, &vao_sphere);
-    glBindVertexArray(vao_sphere);
-
-    // position vbo
-    glGenBuffers(1, &vbo_sphere_position);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_sphere_position);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(sphere_vertices), sphere_vertices, GL_STATIC_DRAW);
-
+    // Vao and vbo_quad related code
+    glGenVertexArrays(1, &vao_square);
+    glBindVertexArray(vao_square);
+    glGenBuffers(1, &vbo_quad);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_quad);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(squareVertices), squareVertices, GL_STATIC_DRAW);
     glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
     glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    // normal vbo
-    glGenBuffers(1, &vbo_sphere_normal);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_sphere_normal);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(sphere_normals), sphere_normals, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(SAB_ATTRIBUTE_NORMAL, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-    glEnableVertexAttribArray(SAB_ATTRIBUTE_NORMAL);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    // element vbo
-    glGenBuffers(1, &vbo_sphere_element);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_sphere_element);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(sphere_elements), sphere_elements, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    // unbind vao
     glBindVertexArray(0);
 
-	// Clearing the screen by Black Color
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    // VBO for graph lines
+    glGenVertexArrays(1, &vao_graphs);
+    glBindVertexArray(vao_graphs);
+    glGenBuffers(1, &vbo_graph_lines);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_graph_lines);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(graphLineVertices), graphLineVertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    glGenVertexArrays(1, &vao_axes);
+    glBindVertexArray(vao_axes);
+    glGenBuffers(1, &vbo_axes_lines);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_axes_lines);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(axesVertices), axesVertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    glGenVertexArrays(1, &vao_circle);
+    glBindVertexArray(vao_circle);
+    glGenBuffers(1, &vbo_circle_position);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_circle_position);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(circleVertices), circleVertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    glGenVertexArrays(1, &vao_triangle);
+    glBindVertexArray(vao_triangle);
+    glGenBuffers(1, &vbo_triangle_position);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_triangle_position);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(triangleVertices), triangleVertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    glGenVertexArrays(1, &vao_point);
+    glBindVertexArray(vao_point);
+    glGenBuffers(1, &vbo_point_position);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_point_position);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(pointVertex), pointVertex, GL_STATIC_DRAW);
+    glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    // Clear the screen using black color
+    glClearColor(0.0f,0.0f,0.0f,1.0f);
 
 	// Depth Related Changes
     glClearDepth(1.0f);
@@ -575,28 +654,75 @@ void draw(void)
     glUseProgram(shaderProgramObject);
     
     // Transformations
-    mat4 modelMatrix = mat4::identity();
-    mat4 viewMatrix = mat4::identity();
-    mat4 translationMatrix = translate(0.0f, 0.0f, -2.0f); 
-    modelMatrix = translationMatrix;  
-
-    glUniformMatrix4fv(modelMatrixUniform, 1, GL_FALSE, modelMatrix);
-    glUniformMatrix4fv(viewMatrixUniform, 1, GL_FALSE, viewMatrix);
-    glUniformMatrix4fv(projectionMatrixUniform, 1, GL_FALSE, perspectiveProjectionMatrix);
+    mat4 translationMatrix = mat4::identity();
+    mat4 modelViewMatrix = mat4::identity();
+    mat4 modelViewProjectionMatrix = mat4::identity();
+    translationMatrix = translate(0.0f, 0.0f, -3.25f); 
+    modelViewMatrix = translationMatrix;  
     
-     // *** bind vao ***
-    glBindVertexArray(vao_sphere);
+    modelViewProjectionMatrix = perspectiveProjectionMatrix * modelViewMatrix;
 
-    // *** draw, either by glDrawTriangles() or glDrawArrays() or glDrawElements()
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_sphere_element);
-    glDrawElements(GL_TRIANGLES, numElements, GL_UNSIGNED_SHORT, 0);
+    glUniformMatrix4fv(mvpMatrixUniform, 1, GL_FALSE, modelViewProjectionMatrix);
+    
+    // Graph Lines
+    glLineWidth(1.0f);
+    glUniform3f(colorUniform, 0.0f, 0.0f, 1.0f);
+    glBindVertexArray(vao_graphs);
 
-    // *** unbind vao ***
+    glDrawArrays(GL_LINES, 0, 320);
+
     glBindVertexArray(0);
+    // Axes
+    glLineWidth(2.0f);
+    glUniform3f(colorUniform, 0.0f, 1.0f, 0.0f);
+    glBindVertexArray(vao_axes);
+
+    glDrawArrays(GL_LINES, 0, 2);
+
+    glUniform3f(colorUniform, 1.0f, 0.0f, 0.0f);
+    glDrawArrays(GL_LINES, 2, 2);
+
+    glBindVertexArray(0);
+
+    // Square
+    glUniform3f(colorUniform, 1.0f, 1.0f, 0.0f);
+    glBindVertexArray(vao_square);
+
+    glDrawArrays(GL_LINE_LOOP, 0, 4);
+
+    glBindVertexArray(0);
+
+    // Triangle
+    glBindVertexArray(vao_triangle);
+
+    glDrawArrays(GL_LINE_LOOP, 0, 3);
+
+    glBindVertexArray(0);
+
+    // Circle
+    glBindVertexArray(vao_circle);
+
+    glDrawArrays(GL_LINE_LOOP, 0, 360);
+
+    glBindVertexArray(0);
+
+    // Point
+    glPointSize(5.0f);
+    glBindVertexArray(vao_point);
+
+    glDrawArrays(GL_POINTS, 0, 1);
+
+    glBindVertexArray(0);
+    glPointSize(1.0f);
     // Unuse the shader program object
     glUseProgram(0);
 
 	glXSwapBuffers(display, window);
+}
+
+void update(void)
+{
+	// Code
 }
 
 void uninitialize(void)
@@ -618,28 +744,67 @@ void uninitialize(void)
 		free(visualInfo);
 		visualInfo = NULL;
 	}
-	// Deletion and uninitialization of vbo
-    if(vbo_sphere_element)
+	// Deletion and uninitialization of vbo_quad
+    if(vbo_quad)
     {
-        glDeleteBuffers(1, &vbo_sphere_element);
-        vbo_sphere_element = 0;
+        glDeleteBuffers(1, &vbo_quad);
+        vbo_quad = 0;
     }
-    if(vbo_sphere_normal)
+    if(vbo_axes_lines)
     {
-        glDeleteBuffers(1, &vbo_sphere_normal);
-        vbo_sphere_normal = 0;
+        glDeleteBuffers(1, &vbo_axes_lines);
+        vbo_axes_lines = 0;
     }
-    if(vbo_sphere_position)
+    if(vbo_circle_position)
     {
-        glDeleteBuffers(1, &vbo_sphere_position);
-        vbo_sphere_position = 0;
+        glDeleteBuffers(1, &vbo_circle_position);
+        vbo_circle_position = 0;
     }
-
+    if(vbo_point_position)
+    {
+        glDeleteBuffers(1, &vbo_point_position);
+        vbo_point_position = 0;
+    }
+    if(vbo_triangle_position)
+    {
+        glDeleteBuffers(1, &vbo_triangle_position);
+        vbo_triangle_position = 0;
+    }
+    if(vbo_quad)
+    {
+        glDeleteBuffers(1, &vbo_quad);
+        vbo_quad = 0;
+    }
     // Deletion and uninitialization of vao
-    if(vao_sphere)
+    if(vao_square)
     {
-        glDeleteVertexArrays(1, &vao_sphere);
-        vao_sphere = 0;
+        glDeleteVertexArrays(1, &vao_square);
+        vao_square = 0;
+    }
+    if(vao_graphs)
+    {
+        glDeleteVertexArrays(1, &vao_graphs);
+        vao_graphs = 0;
+    }
+    if(vao_axes)
+    {
+        glDeleteVertexArrays(1, &vao_axes);
+        vao_axes = 0;
+    }
+    if(vao_triangle)
+    {
+        glDeleteVertexArrays(1, &vao_triangle);
+        vao_triangle = 0;
+    }
+    if(vao_point)
+    {
+        glDeleteVertexArrays(1, &vao_point);
+        vao_point = 0;
+    }
+    if(vao_triangle)
+    {
+        glDeleteVertexArrays(1, &vao_triangle);
+        vao_triangle = 0;
     }
 	// Shader Uninitialization
     if(shaderProgramObject)

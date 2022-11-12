@@ -15,9 +15,6 @@
 #include"vmath.h" // Maths (RedBook)
 using namespace vmath;
 
-// Aple headers
-#include"Sphere.h" // Sphere include
-
 // Macros
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
@@ -45,25 +42,28 @@ enum
     SAB_ATTRIBUTE_POSITION = 0,
     SAB_ATTRIBUTE_COLOR,
     SAB_ATTRIBUTE_NORMAL,
-    SAB_ATTRIBUTE_TEXURE0
+    SAB_ATTRIBUTE_TEXTURE0
 };
 
-GLuint vao_sphere;
-GLuint vbo_sphere_position;
-GLuint vbo_sphere_normal;
-GLuint vbo_sphere_element;
+GLuint vao_pyramid;
+GLuint vbo_pyramid_position;
+GLuint vbo_pyramid_normal;
 GLuint modelMatrixUniform;
 GLuint viewMatrixUniform;
 GLuint projectionMatrixUniform;
 
-// Sphere arrays
-float sphere_vertices[1146];
-float sphere_normals[1146];
-float sphere_textures[764];
-unsigned short sphere_elements[2280];
-GLuint numElements;
-GLuint numVertices;
+GLuint ldUniform;
+GLuint kdUniform;
+GLuint lightPositionUniform;
 
+GLuint lightingEnableUniform;
+Bool bLight = False;
+
+GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialDiffuse[] = {0.5f, 0.5f, 0.5f, 1.0f};
+GLfloat lightPosition[] = {0.0f, 0.0f, 2.0f, 1.0f};
+
+GLfloat anglepyramid = 0.0f;
 mat4 perspectiveProjectionMatrix;
 
 // Entry-point function
@@ -75,6 +75,7 @@ int main(void)
 	int initialize(void);
     void resize(int, int);
     void draw(void);
+	void update(void);
 	
 	// Local Variables
 	int defaultScreen;
@@ -262,6 +263,17 @@ int main(void)
 								fullscreen = False;
 							}
 							break;
+						case 'L':
+						case 'l':
+							if (bLight == False)
+							{
+								bLight = True;
+							}
+							else
+							{
+								bLight = False;
+							}
+							break;
 					}
 					break;
 				case ConfigureNotify:
@@ -276,7 +288,7 @@ int main(void)
 		}
 		if(bActiveWindow == True)
 		{
-			//update();
+			update();
 			draw();
 		}
 	}
@@ -371,16 +383,30 @@ int initialize(void)
 
     // Vertex Shader
     // Shader Source Code
-    const GLchar *vertexShaderSourceCode = "#version 460 core" \
+    const GLchar *vertexShaderSourceCode = 
+    "#version 460 core" \
     "\n" \
     "in vec4 a_position;" \
-    "in vec4 a_normal;" \
+    "in vec3 a_normal;" \
     "uniform mat4 u_modelMatrix;" \
     "uniform mat4 u_viewMatrix;" \
     "uniform mat4 u_projectionMatrix;" \
+    "uniform vec3 u_ld;" \
+    "uniform vec3 u_kd;" \
+    "uniform vec4 u_lightPosition;" \
+    "uniform int u_lightingEnabled;" \
+    "out vec3 diffuse_light_color;" \
     "void main(void)" \
     "{" \
-    "gl_Position = u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;" \
+    "if(u_lightingEnabled == 1)" \
+    "{" \
+    "vec4 eyeCoordinates = u_viewMatrix * u_modelMatrix * a_position;" \
+    "mat3 normalMatrix = mat3(transpose(inverse(u_viewMatrix * u_modelMatrix)));" \
+    "vec3 transformedNormals = normalize(normalMatrix * a_normal);" \
+    "vec3 lightDirection = normalize(vec3(u_lightPosition - eyeCoordinates));" \
+    "diffuse_light_color = u_ld * u_kd * max(dot(lightDirection, transformedNormals), 0.0);" \
+    "}" \
+    "gl_Position =  u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;" \
     "}";
     // Vertex Shader cha Object tayar kela
     GLuint vertexShaderObject = glCreateShader(GL_VERTEX_SHADER);
@@ -413,12 +439,22 @@ int initialize(void)
     }
 
     // Fragment Shader
-    const GLchar *fragmentShaderSourceCode = "#version 460 core" \
+    const GLchar *fragmentShaderSourceCode = 
+    "#version 460 core" \
     "\n" \
+    "in vec3 diffuse_light_color;" \
+    "uniform int u_lightingEnabled;" \
     "out vec4 FragColor;" \
     "void main(void)" \
     "{" \
+    "if(u_lightingEnabled == 1)" \
+    "{" \
+    "FragColor = vec4(diffuse_light_color, 1.0);" \
+    "}" \
+    "else" \
+    "{" \
     "FragColor = vec4(1.0, 1.0, 1.0, 1.0);" \
+    "}" \
     "}";
 
     GLuint fragmentShaderObject = glCreateShader(GL_FRAGMENT_SHADER);
@@ -478,48 +514,79 @@ int initialize(void)
         }
     }
 
-	 modelMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_modelMatrix");
+	modelMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_modelMatrix");
     viewMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_viewMatrix");
     projectionMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_projectionMatrix");
-    
+
+    ldUniform = glGetUniformLocation(shaderProgramObject, "u_ld");
+    kdUniform = glGetUniformLocation(shaderProgramObject, "u_kd");
+    lightPositionUniform = glGetUniformLocation(shaderProgramObject, "u_lightPosition");
+    lightingEnableUniform = glGetUniformLocation(shaderProgramObject, "u_lightingEnabled");
+
     // Declaration of vertex data arrays
-    getSphereVertexData(sphere_vertices, sphere_normals, sphere_textures, sphere_elements);
-    numVertices = getNumberOfSphereVertices();
-    numElements = getNumberOfSphereElements();
+    const GLfloat pyramidPosition[] = 
+    {
+        // front
+        0.0f, 1.0f, 0.0f,
+        -1.0f, -1.0f, 1.0f,
+        1.0f, -1.0f, 1.0f,
 
-    // vao
-    glGenVertexArrays(1, &vao_sphere);
-    glBindVertexArray(vao_sphere);
+        // right
+        0.0f, 1.0f, 0.0f,
+        1.0f, -1.0f, 1.0f,
+        1.0f, -1.0f, -1.0f,
 
-    // position vbo
-    glGenBuffers(1, &vbo_sphere_position);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_sphere_position);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(sphere_vertices), sphere_vertices, GL_STATIC_DRAW);
+        // back
+        0.0f, 1.0f, 0.0f,
+        1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
 
+        // left
+        0.0f, 1.0f, 0.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, 1.0f
+
+    };
+
+    const GLfloat pyramidNormals[] = 
+    {
+        0.0f, 0.447214f, 0.894427f,// front-top
+        0.0f, 0.447214f, 0.894427f,// front-left
+        0.0f, 0.447214f, 0.894427f,// front-right
+
+        0.894427f, 0.447214f, 0.0f, // right-top
+        0.894427f, 0.447214f, 0.0f, // right-left
+        0.894427f, 0.447214f, 0.0f, // right-right
+
+        0.0f, 0.447214f, -0.894427f, // back-top
+        0.0f, 0.447214f, -0.894427f, // back-left
+        0.0f, 0.447214f, -0.894427f, // back-right
+
+        -0.894427f, 0.447214f, 0.0f, // left-top
+        -0.894427f, 0.447214f, 0.0f, // left-left
+        -0.894427f, 0.447214f, 0.0f // left-right
+    };
+    // pyramid
+    // Vao related code
+    glGenVertexArrays(1, &vao_pyramid);
+    glBindVertexArray(vao_pyramid);
+    // Vbo for position
+    glGenBuffers(1, &vbo_pyramid_position);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_pyramid_position);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(pyramidPosition), pyramidPosition, GL_STATIC_DRAW);
     glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
     glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    // normal vbo
-    glGenBuffers(1, &vbo_sphere_normal);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_sphere_normal);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(sphere_normals), sphere_normals, GL_STATIC_DRAW);
-
+    glGenBuffers(1, &vbo_pyramid_normal);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_pyramid_normal);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(pyramidNormals), pyramidNormals, GL_STATIC_DRAW);
     glVertexAttribPointer(SAB_ATTRIBUTE_NORMAL, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
     glEnableVertexAttribArray(SAB_ATTRIBUTE_NORMAL);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    // element vbo
-    glGenBuffers(1, &vbo_sphere_element);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_sphere_element);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(sphere_elements), sphere_elements, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    // unbind vao
+    // Vao unbind
     glBindVertexArray(0);
 
 	// Clearing the screen by Black Color
@@ -573,30 +640,56 @@ void draw(void)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	// Use the Shader Program Object
     glUseProgram(shaderProgramObject);
-    
+    // pyramid
     // Transformations
+    mat4 translationMatrix = mat4::identity();
+    mat4 rotationMatrix = mat4::identity();
+    mat4 rotationMatrix_x = mat4::identity();
+    mat4 rotationMatrix_y = mat4::identity();
+    mat4 rotationMatrix_z = mat4::identity();
     mat4 modelMatrix = mat4::identity();
     mat4 viewMatrix = mat4::identity();
-    mat4 translationMatrix = translate(0.0f, 0.0f, -2.0f); 
-    modelMatrix = translationMatrix;  
+
+    translationMatrix = translate(0.0f, 0.0f, -5.0f);
+    rotationMatrix_x = rotate(anglepyramid, 0.0f, 1.0f, 0.0f); 
+    rotationMatrix = rotationMatrix_x;
+    modelMatrix = translationMatrix * rotationMatrix;
 
     glUniformMatrix4fv(modelMatrixUniform, 1, GL_FALSE, modelMatrix);
     glUniformMatrix4fv(viewMatrixUniform, 1, GL_FALSE, viewMatrix);
     glUniformMatrix4fv(projectionMatrixUniform, 1, GL_FALSE, perspectiveProjectionMatrix);
-    
-     // *** bind vao ***
-    glBindVertexArray(vao_sphere);
 
-    // *** draw, either by glDrawTriangles() or glDrawArrays() or glDrawElements()
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_sphere_element);
-    glDrawElements(GL_TRIANGLES, numElements, GL_UNSIGNED_SHORT, 0);
+    // Sending Light Related Uniforms
+    if(bLight == True)
+    {
+        glUniform1i(lightingEnableUniform, 1);
 
-    // *** unbind vao ***
+        glUniform3fv(ldUniform, 1, lightDiffuse);
+        glUniform3fv(kdUniform, 1, materialDiffuse);
+        glUniform4fv(lightPositionUniform, 1, lightPosition);
+    }
+    else
+    {
+         glUniform1i(lightingEnableUniform, 0);
+    }
+    glBindVertexArray(vao_pyramid);
+
+    // Here there should be draw code (12 lakh)
+    glDrawArrays(GL_TRIANGLES, 0, 12);
+
     glBindVertexArray(0);
     // Unuse the shader program object
     glUseProgram(0);
 
 	glXSwapBuffers(display, window);
+}
+
+void update(void)
+{
+    // Code
+    anglepyramid = anglepyramid + 0.1f;
+    if(anglepyramid >= 360.0f)
+        anglepyramid -= 360.0f;
 }
 
 void uninitialize(void)
@@ -618,28 +711,22 @@ void uninitialize(void)
 		free(visualInfo);
 		visualInfo = NULL;
 	}
-	// Deletion and uninitialization of vbo
-    if(vbo_sphere_element)
+	if(vbo_pyramid_normal)
     {
-        glDeleteBuffers(1, &vbo_sphere_element);
-        vbo_sphere_element = 0;
+        glDeleteBuffers(1, &vbo_pyramid_normal);
+        vbo_pyramid_normal = 0;
     }
-    if(vbo_sphere_normal)
+    // Deletion and uninitialization of vbo_position
+    if(vbo_pyramid_position)
     {
-        glDeleteBuffers(1, &vbo_sphere_normal);
-        vbo_sphere_normal = 0;
+        glDeleteBuffers(1, &vbo_pyramid_position);
+        vbo_pyramid_position = 0;
     }
-    if(vbo_sphere_position)
+    // Deletion and uninitialization of vao_pyramid
+    if(vao_pyramid)
     {
-        glDeleteBuffers(1, &vbo_sphere_position);
-        vbo_sphere_position = 0;
-    }
-
-    // Deletion and uninitialization of vao
-    if(vao_sphere)
-    {
-        glDeleteVertexArrays(1, &vao_sphere);
-        vao_sphere = 0;
+        glDeleteVertexArrays(1, &vao_pyramid);
+        vao_pyramid = 0;
     }
 	// Shader Uninitialization
     if(shaderProgramObject)

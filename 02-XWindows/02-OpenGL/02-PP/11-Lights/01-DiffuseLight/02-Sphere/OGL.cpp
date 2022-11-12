@@ -45,7 +45,7 @@ enum
     SAB_ATTRIBUTE_POSITION = 0,
     SAB_ATTRIBUTE_COLOR,
     SAB_ATTRIBUTE_NORMAL,
-    SAB_ATTRIBUTE_TEXURE0
+    SAB_ATTRIBUTE_TEXTURE0
 };
 
 GLuint vao_sphere;
@@ -64,6 +64,20 @@ unsigned short sphere_elements[2280];
 GLuint numElements;
 GLuint numVertices;
 
+// Lights Variables
+GLuint ldUniform;
+GLuint kdUniform;
+GLuint lightPositionUniform;
+
+GLuint lightingEnableUniform;
+Bool bLight = False;
+
+GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialDiffuse[] = {0.5f, 0.5f, 0.5f, 1.0f};
+GLfloat lightPosition[] = {0.0f, 0.0f, 2.0f, 1.0f};
+
+GLfloat angleSphere = 0.0f;
+
 mat4 perspectiveProjectionMatrix;
 
 // Entry-point function
@@ -75,6 +89,7 @@ int main(void)
 	int initialize(void);
     void resize(int, int);
     void draw(void);
+	void update(void);
 	
 	// Local Variables
 	int defaultScreen;
@@ -262,6 +277,17 @@ int main(void)
 								fullscreen = False;
 							}
 							break;
+						case 'L':
+						case 'l':
+							if (bLight == False)
+							{
+								bLight = True;
+							}
+							else
+							{
+								bLight = False;
+							}
+							break;
 					}
 					break;
 				case ConfigureNotify:
@@ -276,7 +302,7 @@ int main(void)
 		}
 		if(bActiveWindow == True)
 		{
-			//update();
+			update();
 			draw();
 		}
 	}
@@ -371,16 +397,30 @@ int initialize(void)
 
     // Vertex Shader
     // Shader Source Code
-    const GLchar *vertexShaderSourceCode = "#version 460 core" \
+    const GLchar *vertexShaderSourceCode = 
+    "#version 460 core" \
     "\n" \
     "in vec4 a_position;" \
-    "in vec4 a_normal;" \
+    "in vec3 a_normal;" \
     "uniform mat4 u_modelMatrix;" \
     "uniform mat4 u_viewMatrix;" \
     "uniform mat4 u_projectionMatrix;" \
+    "uniform vec3 u_ld;" \
+    "uniform vec3 u_kd;" \
+    "uniform vec4 u_lightPosition;" \
+    "uniform int u_lightingEnabled;" \
+    "out vec3 diffuse_light_color;" \
     "void main(void)" \
     "{" \
-    "gl_Position = u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;" \
+    "if(u_lightingEnabled == 1)" \
+    "{" \
+    "vec4 eyeCoordinates = u_viewMatrix * u_modelMatrix * a_position;" \
+    "mat3 normalMatrix = mat3(transpose(inverse(u_viewMatrix * u_modelMatrix)));" \
+    "vec3 transformedNormals = normalize(normalMatrix * a_normal);" \
+    "vec3 lightDirection = normalize(vec3(u_lightPosition - eyeCoordinates));" \
+    "diffuse_light_color = u_ld * u_kd * max(dot(lightDirection, transformedNormals), 0.0);" \
+    "}" \
+    "gl_Position =  u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;" \
     "}";
     // Vertex Shader cha Object tayar kela
     GLuint vertexShaderObject = glCreateShader(GL_VERTEX_SHADER);
@@ -413,12 +453,22 @@ int initialize(void)
     }
 
     // Fragment Shader
-    const GLchar *fragmentShaderSourceCode = "#version 460 core" \
+    const GLchar *fragmentShaderSourceCode = 
+    "#version 460 core" \
     "\n" \
+    "in vec3 diffuse_light_color;" \
+    "uniform int u_lightingEnabled;" \
     "out vec4 FragColor;" \
     "void main(void)" \
     "{" \
+    "if(u_lightingEnabled == 1)" \
+    "{" \
+    "FragColor = vec4(diffuse_light_color, 1.0);" \
+    "}" \
+    "else" \
+    "{" \
     "FragColor = vec4(1.0, 1.0, 1.0, 1.0);" \
+    "}" \
     "}";
 
     GLuint fragmentShaderObject = glCreateShader(GL_FRAGMENT_SHADER);
@@ -478,10 +528,15 @@ int initialize(void)
         }
     }
 
-	 modelMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_modelMatrix");
+	modelMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_modelMatrix");
     viewMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_viewMatrix");
     projectionMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_projectionMatrix");
     
+    ldUniform = glGetUniformLocation(shaderProgramObject, "u_ld");
+    kdUniform = glGetUniformLocation(shaderProgramObject, "u_kd");
+    lightPositionUniform = glGetUniformLocation(shaderProgramObject, "u_lightPosition");
+    lightingEnableUniform = glGetUniformLocation(shaderProgramObject, "u_lightingEnabled");
+
     // Declaration of vertex data arrays
     getSphereVertexData(sphere_vertices, sphere_normals, sphere_textures, sphere_elements);
     numVertices = getNumberOfSphereVertices();
@@ -578,12 +633,32 @@ void draw(void)
     mat4 modelMatrix = mat4::identity();
     mat4 viewMatrix = mat4::identity();
     mat4 translationMatrix = translate(0.0f, 0.0f, -2.0f); 
-    modelMatrix = translationMatrix;  
+    mat4 rotationMatrix = mat4::identity();
+    mat4 rotationMatrix_x = mat4::identity();
+    mat4 rotationMatrix_y = mat4::identity();
+    mat4 rotationMatrix_z = mat4::identity();
+    rotationMatrix_x = rotate(angleSphere, 1.0f, 0.0f, 0.0f);
+    rotationMatrix_y = rotate(angleSphere, 0.0f, 1.0f, 0.0f);
+    rotationMatrix_z = rotate(angleSphere, 0.0f, 0.0f, 1.0f); 
+    rotationMatrix = rotationMatrix_x * rotationMatrix_y * rotationMatrix_z;
+    modelMatrix = translationMatrix * rotationMatrix;  
 
     glUniformMatrix4fv(modelMatrixUniform, 1, GL_FALSE, modelMatrix);
     glUniformMatrix4fv(viewMatrixUniform, 1, GL_FALSE, viewMatrix);
     glUniformMatrix4fv(projectionMatrixUniform, 1, GL_FALSE, perspectiveProjectionMatrix);
     
+    if(bLight == True)
+    {
+        glUniform1i(lightingEnableUniform, 1);
+
+        glUniform3fv(ldUniform, 1, lightDiffuse);
+        glUniform3fv(kdUniform, 1, materialDiffuse);
+        glUniform4fv(lightPositionUniform, 1, lightPosition);
+    }
+    else
+    {
+         glUniform1i(lightingEnableUniform, 0);
+    }
      // *** bind vao ***
     glBindVertexArray(vao_sphere);
 
@@ -597,6 +672,14 @@ void draw(void)
     glUseProgram(0);
 
 	glXSwapBuffers(display, window);
+}
+
+void update(void)
+{
+    // Code
+    angleSphere = angleSphere + 0.1f;
+    if(angleSphere >= 360.0f)
+        angleSphere -= 360.0f;
 }
 
 void uninitialize(void)

@@ -38,8 +38,10 @@ glXCreateContextAttribsARBProc glXCreateContextAttribsARB = NULL;
 GLXFBConfig glxFBConfig;
 GLXContext glxContext;
 Bool bActiveWindow = False;
-GLuint shaderProgramObject;
-
+// Programmable Pipeline Related Variables
+GLuint shaderProgramObject1;
+GLuint shaderProgramObject2;
+GLchar choosenProgramObject;
 enum
 {
     SAB_ATTRIBUTE_POSITION = 0,
@@ -52,9 +54,13 @@ GLuint vao_sphere;
 GLuint vbo_sphere_position;
 GLuint vbo_sphere_normal;
 GLuint vbo_sphere_element;
-GLuint modelMatrixUniform;
-GLuint viewMatrixUniform;
-GLuint projectionMatrixUniform;
+GLuint modelMatrixUniformV;
+GLuint viewMatrixUniformV;
+GLuint projectionMatrixUniformV;
+
+GLuint modelMatrixUniformF;
+GLuint viewMatrixUniformF;
+GLuint projectionMatrixUniformF;
 
 // Sphere arrays
 float sphere_vertices[1146];
@@ -66,6 +72,42 @@ GLuint numVertices;
 
 mat4 perspectiveProjectionMatrix;
 
+// Lights Variables
+Bool bLight = False;
+GLuint ldUniformV;
+GLuint laUniformV;
+GLuint lsUniformV;
+GLuint lightPositionUniformV;
+
+GLuint kaUniformV;
+GLuint kdUniformV;
+GLuint ksUniformV;
+GLuint materialShininessUniformV;
+
+GLuint lightingEnabledUniformV;
+
+GLuint ldUniformF;
+GLuint laUniformF;
+GLuint lsUniformF;
+GLuint lightPositionUniformF;
+
+GLuint kaUniformF;
+GLuint kdUniformF;
+GLuint ksUniformF;
+GLuint materialShininessUniformF;
+
+GLuint lightingEnabledUniformF;
+
+GLfloat lightAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightPosition[] = {100.0f, 100.0f, 100.0f, 1.0f};
+
+GLfloat materialAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat materialDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat materialShininess = 50.0f;
+
 // Entry-point function
 int main(void)
 {
@@ -75,6 +117,7 @@ int main(void)
 	int initialize(void);
     void resize(int, int);
     void draw(void);
+	void update(void);
 	
 	// Local Variables
 	int defaultScreen;
@@ -249,18 +292,28 @@ int main(void)
 					XLookupString(&event.xkey, keys, sizeof(keys), NULL, NULL); // struct XComposeStatus (struct) , if keys are pressed repetatively then this struct is used... , WM_CHAR similar
 					switch(keys[0])
 					{
-						case 'f':
+						case 'v':
+						case 'V':
+							choosenProgramObject = 'v';
+							break;
 						case 'F':
-							if(fullscreen == False)
-							{	
-								toggleFullscreen();
-								fullscreen = True;
-							}	
+						case 'f':
+							choosenProgramObject = 'f';
+							break;
+						case 'L':
+						case 'l':
+							if (bLight == False)
+							{
+								bLight = True;
+							}
 							else
 							{
-								toggleFullscreen();
-								fullscreen = False;
+								bLight = False;
 							}
+							break;
+						case 'q':
+						case 'Q':
+							bDone = True;
 							break;
 					}
 					break;
@@ -270,13 +323,22 @@ int main(void)
 					resize(winWidth, winHeight);
 					break;
 				case 33:
-					bDone = True;
+					if(fullscreen == False)
+					{	
+						toggleFullscreen();
+						fullscreen = True;
+					}	
+					else
+					{
+						toggleFullscreen();
+						fullscreen = False;
+					}
 					break;
 			}
 		}
 		if(bActiveWindow == True)
 		{
-			//update();
+			update();
 			draw();
 		}
 	}
@@ -371,117 +433,323 @@ int initialize(void)
 
     // Vertex Shader
     // Shader Source Code
-    const GLchar *vertexShaderSourceCode = "#version 460 core" \
+    const GLchar *vertexShaderSourceCode1 = 
+    "#version 460 core" \
     "\n" \
-    "in vec4 a_position;" \
-    "in vec4 a_normal;" \
-    "uniform mat4 u_modelMatrix;" \
-    "uniform mat4 u_viewMatrix;" \
-    "uniform mat4 u_projectionMatrix;" \
+    "in vec4 a_position;\n" \
+    "in vec3 a_normal;\n" \
+    "uniform mat4 u_modelMatrix;\n" \
+    "uniform mat4 u_viewMatrix;\n" \
+    "uniform mat4 u_projectionMatrix;\n" \
+    "uniform vec3 u_la;\n" \
+    "uniform vec3 u_ld;" \
+    "uniform vec3 u_ls;" \
+    "uniform vec4 u_lightPosition;" \
+    "uniform vec3 u_ka;" \
+    "uniform vec3 u_kd;" \
+    "uniform vec3 u_ks;" \
+    "uniform float u_materialShininess;" \
+    "uniform int u_lightingEnabled;" \
+    "out vec3 fong_ads_light;" \
     "void main(void)" \
     "{" \
+    "if(u_lightingEnabled == 1)" \
+    "{" \
+    "vec3 ambient = u_la * u_ka;" \
+    "vec4 eyeCoordinates = u_viewMatrix * u_modelMatrix * a_position;" \
+    "mat3 normalMatrix = mat3(u_viewMatrix * u_modelMatrix);" \
+    "vec3 transformedNormals = normalize(normalMatrix * a_normal);" \
+    "vec3 lightDirection = normalize(vec3(u_lightPosition) - eyeCoordinates.xyz);" \
+    "vec3 diffuse = u_ld * u_kd * max(dot(lightDirection, transformedNormals), 0.0);" \
+    "vec3 reflectionVector = reflect(-lightDirection, transformedNormals);" \
+    "vec3 viewerVector = normalize(-eyeCoordinates.xyz);" \
+    "vec3 specular = u_ls * u_ks * pow(max(dot(reflectionVector, viewerVector), 0.0), u_materialShininess);" \
+    "fong_ads_light = ambient + diffuse + specular;" \
+    "}" \
+    "else" \
+    "{" \
+    "fong_ads_light = vec3(1.0, 1.0, 1.0);" \
+    "}" \
     "gl_Position = u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;" \
     "}";
     // Vertex Shader cha Object tayar kela
-    GLuint vertexShaderObject = glCreateShader(GL_VERTEX_SHADER);
+    GLuint vertexShaderObject1 = glCreateShader(GL_VERTEX_SHADER);
     // Object la Source code dila
-    glShaderSource(vertexShaderObject, 1, (const GLchar**)&vertexShaderSourceCode, NULL);
+    glShaderSource(vertexShaderObject1, 1, (const GLchar**)&vertexShaderSourceCode1, NULL);
     // GPU chya inline compiler la code compile karaila dila
-    glCompileShader(vertexShaderObject);
+    glCompileShader(vertexShaderObject1);
     // Error checking
     GLint status;
     GLint infoLogLength;
     char *log = NULL;
 
-    glGetShaderiv(vertexShaderObject, GL_COMPILE_STATUS, &status);
+    glGetShaderiv(vertexShaderObject1, GL_COMPILE_STATUS, &status);
     if(status == GL_FALSE)
     {
-        glGetShaderiv(vertexShaderObject, GL_INFO_LOG_LENGTH, &infoLogLength);
+        glGetShaderiv(vertexShaderObject1, GL_INFO_LOG_LENGTH, &infoLogLength);
         if(infoLogLength > 0)
         {
             log = (char *)malloc(infoLogLength);
             if(log != NULL)
             {
                 GLsizei written;
-                glGetShaderInfoLog(vertexShaderObject, infoLogLength, &written, log);
+                glGetShaderInfoLog(vertexShaderObject1, infoLogLength, &written, log);
                 fprintf(gpFile, "Vertex Shader Compilation Log : %s\n", log);
                 free(log);
                 uninitialize();
-				exit(1);
             }
         }
     }
 
     // Fragment Shader
-    const GLchar *fragmentShaderSourceCode = "#version 460 core" \
+    const GLchar *fragmentShaderSourceCode1 = 
+    "#version 460 core" \
     "\n" \
+    "in vec3 fong_ads_light;" \
     "out vec4 FragColor;" \
     "void main(void)" \
     "{" \
-    "FragColor = vec4(1.0, 1.0, 1.0, 1.0);" \
+    "FragColor = vec4(fong_ads_light,1.0);" \
     "}";
 
-    GLuint fragmentShaderObject = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShaderObject, 1, (const GLchar **)&fragmentShaderSourceCode, NULL);
-    glCompileShader(fragmentShaderObject);
+    GLuint fragmentShaderObject1 = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShaderObject1, 1, (const GLchar **)&fragmentShaderSourceCode1, NULL);
+    glCompileShader(fragmentShaderObject1);
     // Error Checking
     status = 0;
     infoLogLength = 0;
     log = NULL;
 
-    glGetShaderiv(fragmentShaderObject, GL_COMPILE_STATUS, &status);
+    glGetShaderiv(fragmentShaderObject1, GL_COMPILE_STATUS, &status);
     if(status == GL_FALSE)
     {
-        glGetShaderiv(fragmentShaderObject, GL_INFO_LOG_LENGTH, &infoLogLength);
+        glGetShaderiv(fragmentShaderObject1, GL_INFO_LOG_LENGTH, &infoLogLength);
         if(infoLogLength > 0)
         {
             log = (char *)malloc(infoLogLength);
             if(log != NULL)
             {
                 GLsizei written;
-                glGetShaderInfoLog(fragmentShaderObject, infoLogLength, &written, log);
+                glGetShaderInfoLog(fragmentShaderObject1, infoLogLength, &written, log);
                 fprintf(gpFile, "Fragment Shader Compilation Log : %s\n", log);
                 free(log);
                 uninitialize();
-				exit(1);
             }
         }
     }
 
     // Shader Program Object
-    shaderProgramObject = glCreateProgram();
-    glAttachShader(shaderProgramObject, vertexShaderObject);
-    glAttachShader(shaderProgramObject, fragmentShaderObject);
-    glBindAttribLocation(shaderProgramObject, SAB_ATTRIBUTE_POSITION, "a_position"); // Andhaar
-    glBindAttribLocation(shaderProgramObject, SAB_ATTRIBUTE_NORMAL, "a_normal");
-	glLinkProgram(shaderProgramObject);
+    shaderProgramObject1 = glCreateProgram();
+    glAttachShader(shaderProgramObject1, vertexShaderObject1);
+    glAttachShader(shaderProgramObject1, fragmentShaderObject1);
+    glBindAttribLocation(shaderProgramObject1, SAB_ATTRIBUTE_POSITION, "a_position"); // Andhaar
+    glBindAttribLocation(shaderProgramObject1, SAB_ATTRIBUTE_NORMAL, "a_normal");
+    glLinkProgram(shaderProgramObject1);
     // Error Checking
     status = 0;
     infoLogLength = 0;
     log = NULL;
-    glGetProgramiv(shaderProgramObject, GL_LINK_STATUS, &status);
+    glGetProgramiv(shaderProgramObject1, GL_LINK_STATUS, &status);
     if(status == GL_FALSE)
     {
-        glGetProgramiv(shaderProgramObject, GL_INFO_LOG_LENGTH, &infoLogLength);
+        glGetProgramiv(shaderProgramObject1, GL_INFO_LOG_LENGTH, &infoLogLength);
         if(infoLogLength > 0)
         {
             log = (char *)malloc(infoLogLength);
             if(log != NULL)
             {
                 GLsizei written;
-                glGetProgramInfoLog(shaderProgramObject, infoLogLength, &written, log);
+                glGetProgramInfoLog(shaderProgramObject1, infoLogLength, &written, log);
                 fprintf(gpFile, "Shader Program Link Log : %s\n", log);
                 free(log);
                 uninitialize();
-				exit(1);
             }
         }
     }
 
-	 modelMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_modelMatrix");
-    viewMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_viewMatrix");
-    projectionMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_projectionMatrix");
+    // Shader 2 for per fragment
+    // Vertex Shader
+    // Shader Source Code
+    const GLchar *vertexShaderSourceCode2 = 
+    "#version 460 core" \
+    "\n" \
+    "in vec4 a_position;\n" \
+    "in vec3 a_normal;\n" \
+    "uniform mat4 u_modelMatrix;\n" \
+    "uniform mat4 u_viewMatrix;\n" \
+    "uniform mat4 u_projectionMatrix;\n" \
+    "uniform vec4 u_lightPosition;\n" \
+    "uniform int u_lightingEnabled;\n" \
+    "out vec3 transformedNormals;\n" \
+    "out vec3 lightDirection;\n" \
+    "out vec3 viewerVector;\n" \
+    "void main(void)\n" \
+    "{\n" \
+    "if(u_lightingEnabled == 1)\n" \
+    "{\n" \
+    "vec4 eyeCoordinates = u_viewMatrix * u_modelMatrix * a_position;\n" \
+    "mat3 normalMatrix = mat3(u_viewMatrix * u_modelMatrix);\n" \
+    "transformedNormals = normalMatrix * a_normal;\n" \
+    "lightDirection = vec3(u_lightPosition) - eyeCoordinates.xyz;\n" \
+    "viewerVector = -eyeCoordinates.xyz;\n" \
+    "}\n" \
+    "gl_Position = u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;\n" \
+    "}\n";
+    // Vertex Shader cha Object tayar kela
+    GLuint vertexShaderObject2 = glCreateShader(GL_VERTEX_SHADER);
+    // Object la Source code dila
+    glShaderSource(vertexShaderObject2, 1, (const GLchar**)&vertexShaderSourceCode2, NULL);
+    // GPU chya inline compiler la code compile karaila dila
+    glCompileShader(vertexShaderObject2);
+    // Error checking
+    status = 0;
+    infoLogLength = 0;
+    log = NULL;
+
+    glGetShaderiv(vertexShaderObject2, GL_COMPILE_STATUS, &status);
+    if(status == GL_FALSE)
+    {
+        glGetShaderiv(vertexShaderObject2, GL_INFO_LOG_LENGTH, &infoLogLength);
+        if(infoLogLength > 0)
+        {
+            log = (char *)malloc(infoLogLength);
+            if(log != NULL)
+            {
+                GLsizei written;
+                glGetShaderInfoLog(vertexShaderObject2, infoLogLength, &written, log);
+                fprintf(gpFile, "Vertex Shader Compilation Log : %s\n", log);
+                free(log);
+                uninitialize();
+            }
+        }
+    }
+
+    // Fragment Shader
+    const GLchar *fragmentShaderSourceCode2 = 
+    "#version 460 core" \
+    "\n" \
+    "in vec3 transformedNormals;\n" \
+    "in vec3 lightDirection;\n" \
+    "in vec3 viewerVector;\n" \
+    "uniform vec3 u_la;\n" \
+    "uniform vec3 u_ld;\n" \
+    "uniform vec3 u_ls;\n" \
+    "uniform vec3 u_ka;\n" \
+    "uniform vec3 u_kd;\n" \
+    "uniform vec3 u_ks;\n" \
+    "uniform float u_materialShininess;\n" \
+    "uniform int u_lightingEnabled;\n" \
+    "out vec4 FragColor;\n" \
+    "void main(void)\n" \
+    "{\n" \
+    "vec4 fong_ads_light;" \
+    "if(u_lightingEnabled == 1)\n" \
+    "{\n" \
+    "vec3 ambient = u_la * u_ka;\n" \
+    "vec3 normalized_transformedNormals = normalize(transformedNormals);\n" \
+    "vec3 normalized_lightDirection = normalize(lightDirection);\n"
+    "vec3 diffuse = u_ld * u_kd * max(dot(normalized_lightDirection, normalized_transformedNormals), 0.0);\n" \
+    "vec3 reflectionVector = reflect(-normalized_lightDirection, normalized_transformedNormals);\n" \
+    "vec3 normalized_viewerVector = normalize(viewerVector);\n"
+    "vec3 specular = u_ls * u_ks * pow(max(dot(reflectionVector, normalized_viewerVector), 0.0), u_materialShininess);\n" \
+    "fong_ads_light = vec4(ambient + diffuse + specular, 1.0);\n" \
+    "}\n" \
+    "else\n" \
+    "{\n" \
+    "fong_ads_light = vec4(1.0, 1.0, 1.0, 1.0);\n" \
+    "}\n" \
+    "FragColor = fong_ads_light;\n" \
+    "}\n";
+
+    GLuint fragmentShaderObject2 = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShaderObject2, 1, (const GLchar **)&fragmentShaderSourceCode2, NULL);
+    glCompileShader(fragmentShaderObject2);
+    // Error Checking
+    status = 0;
+    infoLogLength = 0;
+    log = NULL;
+
+    glGetShaderiv(fragmentShaderObject2, GL_COMPILE_STATUS, &status);
+    if(status == GL_FALSE)
+    {
+        glGetShaderiv(fragmentShaderObject2, GL_INFO_LOG_LENGTH, &infoLogLength);
+        if(infoLogLength > 0)
+        {
+            log = (char *)malloc(infoLogLength);
+            if(log != NULL)
+            {
+                GLsizei written;
+                glGetShaderInfoLog(fragmentShaderObject2, infoLogLength, &written, log);
+                fprintf(gpFile, "Fragment Shader Compilation Log : %s\n", log);
+                free(log);
+                uninitialize();
+            }
+        }
+    }
+
+    // Shader Program Object
+    shaderProgramObject2 = glCreateProgram();
+    glAttachShader(shaderProgramObject2, vertexShaderObject2);
+    glAttachShader(shaderProgramObject2, fragmentShaderObject2);
+    glBindAttribLocation(shaderProgramObject2, SAB_ATTRIBUTE_POSITION, "a_position"); // Andhaar
+    glBindAttribLocation(shaderProgramObject2, SAB_ATTRIBUTE_NORMAL, "a_normal");
+    glLinkProgram(shaderProgramObject2);
+    // Error Checking
+    status = 0;
+    infoLogLength = 0;
+    log = NULL;
+    glGetProgramiv(shaderProgramObject2, GL_LINK_STATUS, &status);
+    if(status == GL_FALSE)
+    {
+        glGetProgramiv(shaderProgramObject2, GL_INFO_LOG_LENGTH, &infoLogLength);
+        if(infoLogLength > 0)
+        {
+            log = (char *)malloc(infoLogLength);
+            if(log != NULL)
+            {
+                GLsizei written;
+                glGetProgramInfoLog(shaderProgramObject2, infoLogLength, &written, log);
+                fprintf(gpFile, "Shader Program Link Log : %s\n", log);
+                free(log);
+                uninitialize();
+            }
+        }
+    }
+    // Shader 1 uniforms
+    modelMatrixUniformV = glGetUniformLocation(shaderProgramObject1, "u_modelMatrix");
+    viewMatrixUniformV = glGetUniformLocation(shaderProgramObject1, "u_viewMatrix");
+    projectionMatrixUniformV = glGetUniformLocation(shaderProgramObject1, "u_projectionMatrix");
     
+    laUniformV = glGetUniformLocation(shaderProgramObject1, "u_la");
+    ldUniformV = glGetUniformLocation(shaderProgramObject1, "u_ld");
+    lsUniformV = glGetUniformLocation(shaderProgramObject1, "u_ls");
+    lightPositionUniformV = glGetUniformLocation(shaderProgramObject1, "u_lightPosition");
+
+    kaUniformV = glGetUniformLocation(shaderProgramObject1, "u_ka");
+    kdUniformV = glGetUniformLocation(shaderProgramObject1, "u_kd");
+    ksUniformV = glGetUniformLocation(shaderProgramObject1, "u_ks");
+    materialShininessUniformV = glGetUniformLocation(shaderProgramObject1, "u_materialShininess");
+
+    lightingEnabledUniformV = glGetUniformLocation(shaderProgramObject1, "u_lightingEnabled");
+
+    // Shader 2 uniforms
+    modelMatrixUniformF = glGetUniformLocation(shaderProgramObject2, "u_modelMatrix");
+    viewMatrixUniformF = glGetUniformLocation(shaderProgramObject2, "u_viewMatrix");
+    projectionMatrixUniformF = glGetUniformLocation(shaderProgramObject2, "u_projectionMatrix");
+    
+    laUniformF = glGetUniformLocation(shaderProgramObject2, "u_la");
+    ldUniformF = glGetUniformLocation(shaderProgramObject2, "u_ld");
+    lsUniformF = glGetUniformLocation(shaderProgramObject2, "u_ls");
+    lightPositionUniformF = glGetUniformLocation(shaderProgramObject2, "u_lightPosition");
+
+    kaUniformF = glGetUniformLocation(shaderProgramObject2, "u_ka");
+    kdUniformF = glGetUniformLocation(shaderProgramObject2, "u_kd");
+    ksUniformF = glGetUniformLocation(shaderProgramObject2, "u_ks");
+    materialShininessUniformF = glGetUniformLocation(shaderProgramObject2, "u_materialShininess");
+
+    lightingEnabledUniformF = glGetUniformLocation(shaderProgramObject2, "u_lightingEnabled");
+    // Default Initialization of Toggled state
+    choosenProgramObject = 'v';
     // Declaration of vertex data arrays
     getSphereVertexData(sphere_vertices, sphere_normals, sphere_textures, sphere_elements);
     numVertices = getNumberOfSphereVertices();
@@ -522,8 +790,8 @@ int initialize(void)
     // unbind vao
     glBindVertexArray(0);
 
-	// Clearing the screen by Black Color
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    // Clear the screen using black color
+    glClearColor(0.0f,0.0f,0.0f,1.0f);
 
 	// Depth Related Changes
     glClearDepth(1.0f);
@@ -571,19 +839,69 @@ void draw(void)
 {
 	// Code
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	// Use the Shader Program Object
-    glUseProgram(shaderProgramObject);
-    
-    // Transformations
+	// Transformations
     mat4 modelMatrix = mat4::identity();
     mat4 viewMatrix = mat4::identity();
     mat4 translationMatrix = translate(0.0f, 0.0f, -2.0f); 
-    modelMatrix = translationMatrix;  
+    modelMatrix = translationMatrix;
 
-    glUniformMatrix4fv(modelMatrixUniform, 1, GL_FALSE, modelMatrix);
-    glUniformMatrix4fv(viewMatrixUniform, 1, GL_FALSE, viewMatrix);
-    glUniformMatrix4fv(projectionMatrixUniform, 1, GL_FALSE, perspectiveProjectionMatrix);
-    
+    // Use the Shader Program Object
+    if(choosenProgramObject == 'v')
+    {
+        glUseProgram(shaderProgramObject1);  
+
+        glUniformMatrix4fv(modelMatrixUniformV, 1, GL_FALSE, modelMatrix);
+        glUniformMatrix4fv(viewMatrixUniformV, 1, GL_FALSE, viewMatrix);
+        glUniformMatrix4fv(projectionMatrixUniformV, 1, GL_FALSE, perspectiveProjectionMatrix);
+        
+        if(bLight == True)
+        {
+            glUniform1i(lightingEnabledUniformV, 1);
+
+            glUniform3fv(laUniformV, 1, lightAmbient);
+            glUniform3fv(ldUniformV, 1, lightDiffuse);
+            glUniform3fv(lsUniformV, 1, lightSpecular);
+            glUniform4fv(lightPositionUniformV, 1, lightPosition);
+
+            glUniform3fv(kaUniformV, 1, materialAmbient);
+            glUniform3fv(kdUniformV, 1, materialDiffuse);
+            glUniform3fv(ksUniformV, 1, materialSpecular);
+            glUniform1f(materialShininessUniformV, materialShininess);
+
+        }
+        else
+        {
+            glUniform1i(lightingEnabledUniformV, 0);
+        }
+    }
+    else
+    {
+        glUseProgram(shaderProgramObject2);  
+
+        glUniformMatrix4fv(modelMatrixUniformF, 1, GL_FALSE, modelMatrix);
+        glUniformMatrix4fv(viewMatrixUniformF, 1, GL_FALSE, viewMatrix);
+        glUniformMatrix4fv(projectionMatrixUniformF, 1, GL_FALSE, perspectiveProjectionMatrix);
+        
+        if(bLight == True)
+        {
+            glUniform1i(lightingEnabledUniformF, 1);
+
+            glUniform3fv(laUniformF, 1, lightAmbient);
+            glUniform3fv(ldUniformF, 1, lightDiffuse);
+            glUniform3fv(lsUniformF, 1, lightSpecular);
+            glUniform4fv(lightPositionUniformF, 1, lightPosition);
+
+            glUniform3fv(kaUniformF, 1, materialAmbient);
+            glUniform3fv(kdUniformF, 1, materialDiffuse);
+            glUniform3fv(ksUniformF, 1, materialSpecular);
+            glUniform1f(materialShininessUniformF, materialShininess);
+
+        }
+        else
+        {
+            glUniform1i(lightingEnabledUniformF, 0);
+        }
+    }
      // *** bind vao ***
     glBindVertexArray(vao_sphere);
 
@@ -597,6 +915,11 @@ void draw(void)
     glUseProgram(0);
 
 	glXSwapBuffers(display, window);
+}
+
+void update(void)
+{
+    // Code
 }
 
 void uninitialize(void)
@@ -634,7 +957,6 @@ void uninitialize(void)
         glDeleteBuffers(1, &vbo_sphere_position);
         vbo_sphere_position = 0;
     }
-
     // Deletion and uninitialization of vao
     if(vao_sphere)
     {
@@ -642,25 +964,49 @@ void uninitialize(void)
         vao_sphere = 0;
     }
 	// Shader Uninitialization
-    if(shaderProgramObject)
+    if(shaderProgramObject1)
     {
-        glUseProgram(shaderProgramObject);
+        glUseProgram(shaderProgramObject1);
         GLsizei numAttachedShaders;
-        glGetProgramiv(shaderProgramObject, GL_ATTACHED_SHADERS, &numAttachedShaders);
+        glGetProgramiv(shaderProgramObject1, GL_ATTACHED_SHADERS, &numAttachedShaders);
         GLuint *shaderObjects;
         shaderObjects = (GLuint *)malloc(numAttachedShaders*sizeof(GLuint));
-        glGetAttachedShaders(shaderProgramObject, numAttachedShaders, &numAttachedShaders, shaderObjects);
+        glGetAttachedShaders(shaderProgramObject1, numAttachedShaders, &numAttachedShaders, shaderObjects);
         for(GLsizei i = 0; i < numAttachedShaders; i++)
         {
-            glDetachShader(shaderProgramObject, shaderObjects[i]);
+            glDetachShader(shaderProgramObject1, shaderObjects[i]);
             glDeleteShader(shaderObjects[i]);
             shaderObjects[i] = 0;
         }
         free(shaderObjects);
         shaderObjects = NULL;
         glUseProgram(0);
-        glDeleteProgram(shaderProgramObject);
-        shaderProgramObject = 0;
+        glDeleteProgram(shaderProgramObject1);
+        shaderProgramObject1 = 0;
+    }
+    if(shaderProgramObject2)
+    {
+        glUseProgram(shaderProgramObject2);
+        GLsizei numAttachedShaders;
+        glGetProgramiv(shaderProgramObject2, GL_ATTACHED_SHADERS, &numAttachedShaders);
+        GLuint *shaderObjects;
+        shaderObjects = (GLuint *)malloc(numAttachedShaders*sizeof(GLuint));
+        glGetAttachedShaders(shaderProgramObject2, numAttachedShaders, &numAttachedShaders, shaderObjects);
+        for(GLsizei i = 0; i < numAttachedShaders; i++)
+        {
+            glDetachShader(shaderProgramObject2, shaderObjects[i]);
+            glDeleteShader(shaderObjects[i]);
+            shaderObjects[i] = 0;
+        }
+        free(shaderObjects);
+        shaderObjects = NULL;
+        glUseProgram(0);
+        glDeleteProgram(shaderProgramObject2);
+        shaderProgramObject2 = 0;
+    }
+    if(choosenProgramObject)
+    {
+        choosenProgramObject = 0;
     }
 	if(window)
 	{

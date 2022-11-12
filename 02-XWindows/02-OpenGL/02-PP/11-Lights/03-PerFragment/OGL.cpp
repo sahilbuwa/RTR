@@ -45,7 +45,7 @@ enum
     SAB_ATTRIBUTE_POSITION = 0,
     SAB_ATTRIBUTE_COLOR,
     SAB_ATTRIBUTE_NORMAL,
-    SAB_ATTRIBUTE_TEXURE0
+    SAB_ATTRIBUTE_TEXTURE0
 };
 
 GLuint vao_sphere;
@@ -66,6 +66,40 @@ GLuint numVertices;
 
 mat4 perspectiveProjectionMatrix;
 
+// Lights Variables
+Bool bLight = False;
+GLuint ldUniform;
+GLuint laUniform;
+GLuint lsUniform;
+GLuint lightPositionUniform;
+
+GLuint kaUniform;
+GLuint kdUniform;
+GLuint ksUniform;
+GLuint materialShininessUniform;
+
+GLuint lightingEnabledUniform;
+
+// GLfloat lightAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+// GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+// GLfloat lightSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+// GLfloat lightPosition[] = {100.0f, 100.0f, 100.0f, 1.0f};
+
+// GLfloat materialAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+// GLfloat materialDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+// GLfloat materialSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+// GLfloat materialShininess = 50.0f;
+
+GLfloat lightAmbient[] = {0.1f, 0.1f, 0.1f, 1.0f};
+GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
+GLfloat lightPosition[] = {100.0f, 100.0f, 100.0f, 1.0f};
+
+GLfloat materialAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat materialDiffuse[] = {0.5f, 0.2f, 0.7f, 1.0f};
+GLfloat materialSpecular[] = {0.7f, 0.7f, 0.7f, 1.0f};
+GLfloat materialShininess = 128.0f;
+
 // Entry-point function
 int main(void)
 {
@@ -75,6 +109,7 @@ int main(void)
 	int initialize(void);
     void resize(int, int);
     void draw(void);
+	void update(void);
 	
 	// Local Variables
 	int defaultScreen;
@@ -262,6 +297,17 @@ int main(void)
 								fullscreen = False;
 							}
 							break;
+						case 'L':
+						case 'l':
+							if (bLight == False)
+							{
+								bLight = True;
+							}
+							else
+							{
+								bLight = False;
+							}
+							break;
 					}
 					break;
 				case ConfigureNotify:
@@ -276,7 +322,7 @@ int main(void)
 		}
 		if(bActiveWindow == True)
 		{
-			//update();
+			update();
 			draw();
 		}
 	}
@@ -371,17 +417,31 @@ int initialize(void)
 
     // Vertex Shader
     // Shader Source Code
-    const GLchar *vertexShaderSourceCode = "#version 460 core" \
+    const GLchar *vertexShaderSourceCode = 
+    "#version 460 core" \
     "\n" \
-    "in vec4 a_position;" \
-    "in vec4 a_normal;" \
-    "uniform mat4 u_modelMatrix;" \
-    "uniform mat4 u_viewMatrix;" \
-    "uniform mat4 u_projectionMatrix;" \
-    "void main(void)" \
-    "{" \
-    "gl_Position = u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;" \
-    "}";
+    "in vec4 a_position;\n" \
+    "in vec3 a_normal;\n" \
+    "uniform mat4 u_modelMatrix;\n" \
+    "uniform mat4 u_viewMatrix;\n" \
+    "uniform mat4 u_projectionMatrix;\n" \
+    "uniform vec4 u_lightPosition;\n" \
+    "uniform int u_lightingEnabled;\n" \
+    "out vec3 transformedNormals;\n" \
+    "out vec3 lightDirection;\n" \
+    "out vec3 viewerVector;\n" \
+    "void main(void)\n" \
+    "{\n" \
+    "if(u_lightingEnabled == 1)\n" \
+    "{\n" \
+    "vec4 eyeCoordinates = u_viewMatrix * u_modelMatrix * a_position;\n" \
+    "mat3 normalMatrix = mat3(u_viewMatrix * u_modelMatrix);\n" \
+    "transformedNormals = normalMatrix * a_normal;\n" \
+    "lightDirection = vec3(u_lightPosition) - eyeCoordinates.xyz;\n" \
+    "viewerVector = -eyeCoordinates.xyz;\n" \
+    "}\n" \
+    "gl_Position = u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;\n" \
+    "}\n";
     // Vertex Shader cha Object tayar kela
     GLuint vertexShaderObject = glCreateShader(GL_VERTEX_SHADER);
     // Object la Source code dila
@@ -413,13 +473,41 @@ int initialize(void)
     }
 
     // Fragment Shader
-    const GLchar *fragmentShaderSourceCode = "#version 460 core" \
+    const GLchar *fragmentShaderSourceCode = 
+    "#version 460 core" \
     "\n" \
-    "out vec4 FragColor;" \
-    "void main(void)" \
-    "{" \
-    "FragColor = vec4(1.0, 1.0, 1.0, 1.0);" \
-    "}";
+    "in vec3 transformedNormals;\n" \
+    "in vec3 lightDirection;\n" \
+    "in vec3 viewerVector;\n" \
+    "uniform vec3 u_la;\n" \
+    "uniform vec3 u_ld;\n" \
+    "uniform vec3 u_ls;\n" \
+    "uniform vec3 u_ka;\n" \
+    "uniform vec3 u_kd;\n" \
+    "uniform vec3 u_ks;\n" \
+    "uniform float u_materialShininess;\n" \
+    "uniform int u_lightingEnabled;\n" \
+    "out vec4 FragColor;\n" \
+    "void main(void)\n" \
+    "{\n" \
+    "vec4 fong_ads_light;" \
+    "if(u_lightingEnabled == 1)\n" \
+    "{\n" \
+    "vec3 ambient = u_la * u_ka;\n" \
+    "vec3 normalized_transformedNormals = normalize(transformedNormals);\n" \
+    "vec3 normalized_lightDirection = normalize(lightDirection);\n"
+    "vec3 diffuse = u_ld * u_kd * max(dot(normalized_lightDirection, normalized_transformedNormals), 0.0);\n" \
+    "vec3 reflectionVector = reflect(-normalized_lightDirection, normalized_transformedNormals);\n" \
+    "vec3 normalized_viewerVector = normalize(viewerVector);\n"
+    "vec3 specular = u_ls * u_ks * pow(max(dot(reflectionVector, normalized_viewerVector), 0.0), u_materialShininess);\n" \
+    "fong_ads_light = vec4(ambient + diffuse + specular, 1.0);\n" \
+    "}\n" \
+    "else\n" \
+    "{\n" \
+    "fong_ads_light = vec4(1.0, 1.0, 1.0, 1.0);\n" \
+    "}\n" \
+    "FragColor = fong_ads_light;\n" \
+    "}\n";
 
     GLuint fragmentShaderObject = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShaderObject, 1, (const GLchar **)&fragmentShaderSourceCode, NULL);
@@ -478,10 +566,22 @@ int initialize(void)
         }
     }
 
-	 modelMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_modelMatrix");
+	modelMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_modelMatrix");
     viewMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_viewMatrix");
     projectionMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_projectionMatrix");
     
+    laUniform = glGetUniformLocation(shaderProgramObject, "u_la");
+    ldUniform = glGetUniformLocation(shaderProgramObject, "u_ld");
+    lsUniform = glGetUniformLocation(shaderProgramObject, "u_ls");
+    lightPositionUniform = glGetUniformLocation(shaderProgramObject, "u_lightPosition");
+
+    kaUniform = glGetUniformLocation(shaderProgramObject, "u_ka");
+    kdUniform = glGetUniformLocation(shaderProgramObject, "u_kd");
+    ksUniform = glGetUniformLocation(shaderProgramObject, "u_ks");
+    materialShininessUniform = glGetUniformLocation(shaderProgramObject, "u_materialShininess");
+
+    lightingEnabledUniform = glGetUniformLocation(shaderProgramObject, "u_lightingEnabled");
+
     // Declaration of vertex data arrays
     getSphereVertexData(sphere_vertices, sphere_normals, sphere_textures, sphere_elements);
     numVertices = getNumberOfSphereVertices();
@@ -522,8 +622,8 @@ int initialize(void)
     // unbind vao
     glBindVertexArray(0);
 
-	// Clearing the screen by Black Color
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    // Clear the screen using black color
+    glClearColor(0.0f,0.0f,0.0f,1.0f);
 
 	// Depth Related Changes
     glClearDepth(1.0f);
@@ -584,6 +684,26 @@ void draw(void)
     glUniformMatrix4fv(viewMatrixUniform, 1, GL_FALSE, viewMatrix);
     glUniformMatrix4fv(projectionMatrixUniform, 1, GL_FALSE, perspectiveProjectionMatrix);
     
+    if(bLight == True)
+    {
+        glUniform1i(lightingEnabledUniform, 1);
+
+        glUniform3fv(laUniform, 1, lightAmbient);
+        glUniform3fv(ldUniform, 1, lightDiffuse);
+        glUniform3fv(lsUniform, 1, lightSpecular);
+        glUniform4fv(lightPositionUniform, 1, lightPosition);
+
+        glUniform3fv(kaUniform, 1, materialAmbient);
+        glUniform3fv(kdUniform, 1, materialDiffuse);
+        glUniform3fv(ksUniform, 1, materialSpecular);
+        glUniform1f(materialShininessUniform, materialShininess);
+
+    }
+    else
+    {
+        glUniform1i(lightingEnabledUniform, 0);
+    }
+
      // *** bind vao ***
     glBindVertexArray(vao_sphere);
 
@@ -597,6 +717,11 @@ void draw(void)
     glUseProgram(0);
 
 	glXSwapBuffers(display, window);
+}
+
+void update(void)
+{
+    // Code
 }
 
 void uninitialize(void)
@@ -634,7 +759,6 @@ void uninitialize(void)
         glDeleteBuffers(1, &vbo_sphere_position);
         vbo_sphere_position = 0;
     }
-
     // Deletion and uninitialization of vao
     if(vao_sphere)
     {

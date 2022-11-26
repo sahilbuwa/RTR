@@ -627,7 +627,7 @@ void display(void)
 
 	modelMatrix = PopMatrix();
 	modelMatrix *= translationMatrix;
-	// Rotate around sun
+	
 	rotationMatrixZ2 = rotate((GLfloat)elbow, 0.0f, 0.0f, 1.0f);
 
 	modelMatrix *= rotationMatrixZ2 * translationMatrix;

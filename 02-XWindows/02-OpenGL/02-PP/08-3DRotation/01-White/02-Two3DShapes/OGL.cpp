@@ -639,8 +639,11 @@ void draw(void)
     modelViewMatrix = mat4::identity();
     modelViewProjectionMatrix = mat4::identity();
     translationMatrix = translate(1.5f, 0.0f, -6.0f);
-    rotationMatrix = rotate(anglecube, 1.0f, 0.0f, 0.0f); 
+    mat4 rotationMatrixX = rotate(anglecube, 1.0f, 0.0f, 0.0f); 
+    mat4 rotationMatrixY = rotate(anglecube, 0.0f, 1.0f, 0.0f); 
+    mat4 rotationMatrixZ = rotate(anglecube, 0.0f, 0.0f, 1.0f); 
     scaleMatrix = scale(0.75f, 0.75f, 0.75f);
+	rotationMatrix = rotationMatrixX * rotationMatrixY * rotationMatrixZ;
     modelViewMatrix = translationMatrix * rotationMatrix;
 
     modelViewProjectionMatrix = perspectiveProjectionMatrix * modelViewMatrix;

@@ -28,7 +28,7 @@ Visual ID of bestVisualInfo is 0x1257
 Found the support to 4.6 version.
 Direct Rendering i.e. hardware rendering is supported.
 OpenGL Vendor : AMD
-OpenGL Renderer : AMD RENOIR (DRM 3.42.0, 5.15.0-52-generic, LLVM 12.0.0)
+OpenGL Renderer : AMD RENOIR (DRM 3.42.0, 5.15.0-53-generic, LLVM 12.0.0)
 OpenGL Version : 4.6 (Core Profile) Mesa 21.2.6
 GLSL Version : 4.60
 Number of supported extensions : 229

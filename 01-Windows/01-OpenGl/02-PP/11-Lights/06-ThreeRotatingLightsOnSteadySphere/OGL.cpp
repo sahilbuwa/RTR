@@ -669,7 +669,7 @@ int initialize(void)
     "for(int i=0;i<3;i++)\n"
     "{\n" \
     "ambient[i] = u_la[i] * u_ka;\n" \
-    "normalized_lightDirection[i] = normalize(vec3(u_lightPosition[i])) + normalized_viewerVector;\n" \
+    "normalized_lightDirection[i] = normalize(vec3(u_lightPosition[i]));\n" \
     "diffuse[i] = u_ld[i] * u_kd * max(dot(normalized_lightDirection[i], normalized_transformedNormals), 0.0);\n" \
     "reflectionVector[i] = reflect(-normalized_lightDirection[i], normalized_transformedNormals);\n" \
     "specular[i] = u_ls[i] * u_ks * pow(max(dot(reflectionVector[i], normalized_viewerVector), 0.0), u_materialShininess);\n" \

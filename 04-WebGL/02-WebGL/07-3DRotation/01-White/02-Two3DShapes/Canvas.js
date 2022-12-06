@@ -18,6 +18,9 @@ var vao_pyramid;
 var vbo_pyramid_position;
 var mvpMatrixUniform;
 var anglePyramid = 0.0;
+var vao_cube;
+var vbo_cube_position;
+var angleCube = 0.0;
 
 var perspectiveProjectionMatrix;
 
@@ -200,7 +203,58 @@ function initialize(){
 			-1.0, -1.0, 1.0
 		]);
 
+		var cubeVertices = new Float32Array
+		([	
+			// top
+			1.0, 1.0, -1.0,
+			-1.0, 1.0, -1.0, 
+			-1.0, 1.0, 1.0,
+			1.0, 1.0, 1.0,  
+
+			// bottom
+			1.0, -1.0, -1.0,
+			-1.0, -1.0, -1.0,
+			-1.0, -1.0,  1.0,
+			1.0, -1.0,  1.0,
+
+			// front
+			1.0, 1.0, 1.0,
+			-1.0, 1.0, 1.0,
+			-1.0, -1.0, 1.0,
+			1.0, -1.0, 1.0,
+
+			// back
+			1.0, 1.0, -1.0,
+			-1.0, 1.0, -1.0,
+			-1.0, -1.0, -1.0,
+			1.0, -1.0, -1.0,
+
+			// right
+			1.0, 1.0, -1.0,
+			1.0, 1.0, 1.0,
+			1.0, -1.0, 1.0,
+			1.0, -1.0, -1.0,
+
+			// left
+			-1.0, 1.0, 1.0,
+			-1.0, 1.0, -1.0, 
+			-1.0, -1.0, -1.0, 
+			-1.0, -1.0, 1.0
+		]);
+
 	// Vao and vbo code
+	vao_cube = gl.createVertexArray();
+	gl.bindVertexArray(vao_cube);
+	// Position
+	vbo_cube_position = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, vbo_cube_position);
+	gl.bufferData(gl.ARRAY_BUFFER, cubeVertices, gl.STATIC_DRAW);
+	gl.vertexAttribPointer(webGLMacros.SAB_ATTRIBUTE_POSITION, 3, gl.FLOAT, false, 0, 0);
+	gl.enableVertexAttribArray(webGLMacros.SAB_ATTRIBUTE_POSITION);
+	gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+	gl.bindVertexArray(null);
+
 	vao_pyramid = gl.createVertexArray();
 	gl.bindVertexArray(vao_pyramid);
 	// Position
@@ -261,7 +315,7 @@ function display(){
 	var modelViewProjectionMatrix = mat4.create();
 	var translationMatrix = mat4.create();
 	var rotationMatrix = mat4.create();
-	mat4.translate(translationMatrix, translationMatrix, [0.0, 0.0, -4.0]);
+	mat4.translate(translationMatrix, translationMatrix, [-1.5, 0.0, -6.0]);
 	mat4.rotateY(rotationMatrix, rotationMatrix, anglePyramid);
 	mat4.multiply(modelMatrix, translationMatrix, rotationMatrix);
 	mat4.multiply(modelViewProjectionMatrix, perspectiveProjectionMatrix, modelMatrix);
@@ -271,6 +325,34 @@ function display(){
 	gl.bindVertexArray(vao_pyramid);
 
 	gl.drawArrays(gl.TRIANGLES, 0, 12);
+
+	gl.bindVertexArray(null);
+
+	// Transformations Triangle
+	modelMatrix = mat4.create();
+	modelViewProjectionMatrix = mat4.create();
+	translationMatrix = mat4.create();
+	rotationMatrix = mat4.create();
+	var rotationMatrixX = mat4.create();
+	var rotationMatrixY = mat4.create();
+	var rotationMatrixZ = mat4.create();
+	var scaleMatrix = mat4.create();
+	mat4.translate(translationMatrix, translationMatrix, [1.5, 0.0, -6.0]);
+	mat4.rotateX(rotationMatrixX, rotationMatrixX, angleCube);
+	mat4.rotateY(rotationMatrixY, rotationMatrixY, angleCube);
+	mat4.rotateZ(rotationMatrixZ, rotationMatrixZ, angleCube);
+	mat4.scale(scaleMatrix, scaleMatrix, [0.75,0.75,0.75]);
+	mat4.multiply(rotationMatrix, rotationMatrixX, rotationMatrixY);
+	mat4.multiply(rotationMatrix, rotationMatrix, rotationMatrixZ);
+	mat4.multiply(modelMatrix, translationMatrix, rotationMatrix);
+	mat4.multiply(modelMatrix, modelMatrix, scaleMatrix);
+	mat4.multiply(modelViewProjectionMatrix, perspectiveProjectionMatrix, modelMatrix);
+
+	gl.uniformMatrix4fv(mvpMatrixUniform, false, modelViewProjectionMatrix);
+
+	gl.bindVertexArray(vao_cube);
+
+	gl.drawArrays(gl.TRIANGLE_FAN, 0, 24);
 
 	gl.bindVertexArray(null);
 
@@ -287,6 +369,10 @@ function update(){
 	anglePyramid = anglePyramid + 0.01;
 	if(anglePyramid > 2 * Math.PI)
 		anglePyramid -= 2 * Math.PI;
+	
+	angleCube = angleCube + 0.01;
+	if(angleCube > 2 * Math.PI)
+		angleCube -= 2 * Math.PI;
 
 }
 
@@ -313,6 +399,14 @@ function mouseDown(){
 
 function uninitialize(){
 	// Code
+	if(vbo_cube_position){
+		gl.deleteBuffer(vbo_cube_position);
+		vbo_cube_position = null;
+	}
+	if(vao_cube){
+		gl.deleteVertexArray(vao_cube);
+		vao_cube = null;
+	}
 	if(vbo_pyramid_position){
 		gl.deleteBuffer(vbo_pyramid_position);
 		vbo_pyramid_position = null;

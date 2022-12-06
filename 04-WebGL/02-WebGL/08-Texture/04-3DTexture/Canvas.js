@@ -12,12 +12,20 @@ const webGLMacros =
     SAB_ATTRIBUTE_NORMAL : 2,
     SAB_ATTRIBUTE_TEXTURE0 : 3
 };
+var mvpMatrixUniform;
+var textureSamplerUniform;
 
 var shaderProgramObject;
 var vao_pyramid;
 var vbo_pyramid_position;
-var mvpMatrixUniform;
+var vbo_pyramid_texcoord;
 var anglePyramid = 0.0;
+var vao_cube;
+var vbo_cube_position;
+var vbo_cube_texcoord;
+var angleCube = 0.0;
+var texture_kundali = 0;
+var texture_stone = 0;
 
 var perspectiveProjectionMatrix;
 
@@ -102,15 +110,46 @@ function initialize(){
 	gl.viewportWidth = canvas.width;
 	gl.viewportHeight = canvas.height;
 
+	texture_stone = gl.createTexture();
+	texture_stone.image = new Image();
+	texture_stone.image.src = "Stone.png";
+	texture_stone.image.onload = function()
+	{
+		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		gl.bindTexture(gl.TEXTURE_2D, texture_stone);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); // Nearest is all browser compatible
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture_stone.image);
+		gl.generateMipmap(gl.TEXTURE_2D);
+		gl.bindTexture(gl.TEXTURE_2D, null);
+	};
+
+	texture_kundali = gl.createTexture();
+	texture_kundali.image = new Image();
+	texture_kundali.image.src = "Vijay_Kundali.png";
+	texture_kundali.image.onload = function()
+	{
+		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		gl.bindTexture(gl.TEXTURE_2D, texture_kundali);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); // Nearest is all browser compatible
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture_kundali.image);
+		gl.generateMipmap(gl.TEXTURE_2D);
+		gl.bindTexture(gl.TEXTURE_2D, null);
+	};
+
 	// Vertex Shader
 	var vertexShaderSourceCode = 
 		"#version 300 es" +
 		"\n" +
 		"in vec4 a_position;" +
+		"in vec2 a_texcoord;" +
 		"uniform mat4 u_mvpMatrix;" +
+		"out vec2 a_texcoord_out;" +
 		"void main(void)" +
 		"{" +
 		"gl_Position = u_mvpMatrix * a_position;" +
+		"a_texcoord_out = a_texcoord;" +
 		"}";
 
 	var vertexShaderObject = gl.createShader(gl.VERTEX_SHADER);
@@ -133,10 +172,12 @@ function initialize(){
 		"#version 300 es" +
 		"\n" +
 		"precision highp float;" +
+		"in vec2 a_texcoord_out;" +
+		"uniform sampler2D u_textureSampler;" +
 		"out vec4 FragColor;" +
 		"void main(void)" +
 		"{" +
-		"FragColor = vec4(1.0, 1.0, 1.0, 1.0);" +
+		"FragColor = texture(u_textureSampler, a_texcoord_out);" +
 		"}";
 
 	var fragmentShaderObject = gl.createShader(gl.FRAGMENT_SHADER);
@@ -160,6 +201,7 @@ function initialize(){
 	gl.attachShader(shaderProgramObject, fragmentShaderObject);
 	// Pre linking shader attribute binding
 	gl.bindAttribLocation(shaderProgramObject, webGLMacros.SAB_ATTRIBUTE_POSITION, "a_position");
+	gl.bindAttribLocation(shaderProgramObject, webGLMacros.SAB_ATTRIBUTE_TEXTURE0, "a_texcoord");
 	// Shader program linking
 	gl.linkProgram(shaderProgramObject);
 	if(gl.getProgramParameter(shaderProgramObject, gl.LINK_STATUS) == false)
@@ -175,6 +217,7 @@ function initialize(){
 
 	// Uniform locations
 	mvpMatrixUniform = gl.getUniformLocation(shaderProgramObject, "u_mvpMatrix");
+	textureSamplerUniform = gl.getUniformLocation(shaderProgramObject, "u_textureSampler");
 
 	// Declaration of vertex data arrays
 	var pyramidVertices = new Float32Array
@@ -200,7 +243,117 @@ function initialize(){
 			-1.0, -1.0, 1.0
 		]);
 
+	var pyramidTexcoords = new Float32Array
+		([	
+			0.5, 1.0, // front-top
+			0.0, 0.0, // front-left
+			1.0, 0.0, // front-right
+	
+			0.5, 1.0, // right-top
+			1.0, 0.0, // right-left
+			0.0, 0.0, // right-right
+	
+			0.5, 1.0, // back-top
+			1.0, 0.0, // back-left
+			0.0, 0.0, // back-right
+	
+			0.5, 1.0, // left-top
+			0.0, 0.0, // left-left
+			1.0, 0.0 // left-right
+		]);
+
+	var cubeVertices = new Float32Array
+		([	
+			// top
+			1.0, 1.0, -1.0,
+			-1.0, 1.0, -1.0, 
+			-1.0, 1.0, 1.0,
+			1.0, 1.0, 1.0,  
+
+			// bottom
+			1.0, -1.0, -1.0,
+			-1.0, -1.0, -1.0,
+			-1.0, -1.0,  1.0,
+			1.0, -1.0,  1.0,
+
+			// front
+			1.0, 1.0, 1.0,
+			-1.0, 1.0, 1.0,
+			-1.0, -1.0, 1.0,
+			1.0, -1.0, 1.0,
+
+			// back
+			1.0, 1.0, -1.0,
+			-1.0, 1.0, -1.0,
+			-1.0, -1.0, -1.0,
+			1.0, -1.0, -1.0,
+
+			// right
+			1.0, 1.0, -1.0,
+			1.0, 1.0, 1.0,
+			1.0, -1.0, 1.0,
+			1.0, -1.0, -1.0,
+
+			// left
+			-1.0, 1.0, 1.0,
+			-1.0, 1.0, -1.0, 
+			-1.0, -1.0, -1.0, 
+			-1.0, -1.0, 1.0
+		]);
+
+	var cubeTexcoords = new Float32Array
+		([	
+			0.0, 0.0,
+			1.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0,
+	
+			0.0, 0.0,
+			1.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0,
+	
+			0.0, 0.0,
+			1.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0,
+			// Bottom
+			0.0, 0.0,
+			0.0, 1.0,
+			1.0, 1.0,
+			1.0, 0.0,
+	
+			0.0, 0.0,
+			1.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0,
+	
+			0.0, 0.0,
+			1.0, 0.0,
+			1.0, 1.0,
+			0.0, 1.0
+		]);
+
 	// Vao and vbo code
+	vao_cube = gl.createVertexArray();
+	gl.bindVertexArray(vao_cube);
+	// Position
+	vbo_cube_position = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, vbo_cube_position);
+	gl.bufferData(gl.ARRAY_BUFFER, cubeVertices, gl.STATIC_DRAW);
+	gl.vertexAttribPointer(webGLMacros.SAB_ATTRIBUTE_POSITION, 3, gl.FLOAT, false, 0, 0);
+	gl.enableVertexAttribArray(webGLMacros.SAB_ATTRIBUTE_POSITION);
+	gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+	vbo_cube_texcoord = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, vbo_cube_texcoord);
+	gl.bufferData(gl.ARRAY_BUFFER, cubeTexcoords, gl.STATIC_DRAW);
+	gl.vertexAttribPointer(webGLMacros.SAB_ATTRIBUTE_TEXTURE0, 2, gl.FLOAT, false, 0, 0);
+	gl.enableVertexAttribArray(webGLMacros.SAB_ATTRIBUTE_TEXTURE0);
+	gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+	gl.bindVertexArray(null);
+
 	vao_pyramid = gl.createVertexArray();
 	gl.bindVertexArray(vao_pyramid);
 	// Position
@@ -209,6 +362,13 @@ function initialize(){
 	gl.bufferData(gl.ARRAY_BUFFER, pyramidVertices, gl.STATIC_DRAW);
 	gl.vertexAttribPointer(webGLMacros.SAB_ATTRIBUTE_POSITION, 3, gl.FLOAT, false, 0, 0);
 	gl.enableVertexAttribArray(webGLMacros.SAB_ATTRIBUTE_POSITION);
+	gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+	vbo_pyramid_texcoord = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, vbo_pyramid_texcoord);
+	gl.bufferData(gl.ARRAY_BUFFER, pyramidTexcoords, gl.STATIC_DRAW);
+	gl.vertexAttribPointer(webGLMacros.SAB_ATTRIBUTE_TEXTURE0, 2, gl.FLOAT, false, 0, 0);
+	gl.enableVertexAttribArray(webGLMacros.SAB_ATTRIBUTE_TEXTURE0);
 	gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
 	gl.bindVertexArray(null);
@@ -220,6 +380,7 @@ function initialize(){
 	// Clear the screen with black color
 	gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
+	// Enabling the texture
 	// Perspective projection matrix
 	perspectiveProjectionMatrix =  mat4.create();
 	
@@ -256,22 +417,63 @@ function display(){
 	// Use the shader program object
 	gl.useProgram(shaderProgramObject);
 
-	// Transformations Triangle
+	// Transformations Pyramid
 	var modelMatrix = mat4.create();
 	var modelViewProjectionMatrix = mat4.create();
 	var translationMatrix = mat4.create();
 	var rotationMatrix = mat4.create();
-	mat4.translate(translationMatrix, translationMatrix, [0.0, 0.0, -4.0]);
+	mat4.translate(translationMatrix, translationMatrix, [-1.5, 0.0, -6.0]);
 	mat4.rotateY(rotationMatrix, rotationMatrix, anglePyramid);
 	mat4.multiply(modelMatrix, translationMatrix, rotationMatrix);
 	mat4.multiply(modelViewProjectionMatrix, perspectiveProjectionMatrix, modelMatrix);
 
 	gl.uniformMatrix4fv(mvpMatrixUniform, false, modelViewProjectionMatrix);
 
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, texture_stone);
+	gl.uniform1i(textureSamplerUniform, 0);
 	gl.bindVertexArray(vao_pyramid);
 
 	gl.drawArrays(gl.TRIANGLES, 0, 12);
 
+	gl.bindTexture(gl.TEXTURE_2D, null);
+	gl.bindVertexArray(null);
+
+	// Transformations Cube
+	modelMatrix = mat4.create();
+	modelViewProjectionMatrix = mat4.create();
+	translationMatrix = mat4.create();
+	rotationMatrix = mat4.create();
+	var rotationMatrixX = mat4.create();
+	var rotationMatrixY = mat4.create();
+	var rotationMatrixZ = mat4.create();
+	var scaleMatrix = mat4.create();
+	mat4.translate(translationMatrix, translationMatrix, [1.5, 0.0, -6.0]);
+	mat4.rotateX(rotationMatrixX, rotationMatrixX, angleCube);
+	mat4.rotateY(rotationMatrixY, rotationMatrixY, angleCube);
+	mat4.rotateZ(rotationMatrixZ, rotationMatrixZ, angleCube);
+	mat4.scale(scaleMatrix, scaleMatrix, [0.75,0.75,0.75]);
+	mat4.multiply(rotationMatrix, rotationMatrixX, rotationMatrixY);
+	mat4.multiply(rotationMatrix, rotationMatrix, rotationMatrixZ);
+	mat4.multiply(modelMatrix, translationMatrix, rotationMatrix);
+	mat4.multiply(modelMatrix, modelMatrix, scaleMatrix);
+	mat4.multiply(modelViewProjectionMatrix, perspectiveProjectionMatrix, modelMatrix);
+
+	gl.uniformMatrix4fv(mvpMatrixUniform, false, modelViewProjectionMatrix);
+
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, texture_kundali);
+	gl.uniform1i(textureSamplerUniform, 0);
+	gl.bindVertexArray(vao_cube);
+
+	gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
+	gl.drawArrays(gl.TRIANGLE_FAN, 4, 4);
+	gl.drawArrays(gl.TRIANGLE_FAN, 8, 4);
+	gl.drawArrays(gl.TRIANGLE_FAN, 12, 4);
+	gl.drawArrays(gl.TRIANGLE_FAN, 16, 4);
+	gl.drawArrays(gl.TRIANGLE_FAN, 20, 4);
+
+	gl.bindTexture(gl.TEXTURE_2D, null);
 	gl.bindVertexArray(null);
 
 	gl.useProgram(null);
@@ -287,6 +489,10 @@ function update(){
 	anglePyramid = anglePyramid + 0.01;
 	if(anglePyramid > 2 * Math.PI)
 		anglePyramid -= 2 * Math.PI;
+	
+	angleCube = angleCube + 0.01;
+	if(angleCube > 2 * Math.PI)
+		angleCube -= 2 * Math.PI;
 
 }
 
@@ -313,6 +519,14 @@ function mouseDown(){
 
 function uninitialize(){
 	// Code
+	if(vbo_cube_position){
+		gl.deleteBuffer(vbo_cube_position);
+		vbo_cube_position = null;
+	}
+	if(vao_cube){
+		gl.deleteVertexArray(vao_cube);
+		vao_cube = null;
+	}
 	if(vbo_pyramid_position){
 		gl.deleteBuffer(vbo_pyramid_position);
 		vbo_pyramid_position = null;

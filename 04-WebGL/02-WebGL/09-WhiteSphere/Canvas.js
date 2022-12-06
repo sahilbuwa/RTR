@@ -13,11 +13,9 @@ const webGLMacros =
     SAB_ATTRIBUTE_TEXTURE0 : 3
 };
 
+var sphere = null;
 var shaderProgramObject;
-var vao_pyramid;
-var vbo_pyramid_position;
 var mvpMatrixUniform;
-var anglePyramid = 0.0;
 
 var perspectiveProjectionMatrix;
 
@@ -107,10 +105,13 @@ function initialize(){
 		"#version 300 es" +
 		"\n" +
 		"in vec4 a_position;" +
+		"in vec4 a_color;" +
 		"uniform mat4 u_mvpMatrix;" +
+		"out vec4 a_color_out;" +
 		"void main(void)" +
 		"{" +
 		"gl_Position = u_mvpMatrix * a_position;" +
+		"a_color_out = a_color;" +
 		"}";
 
 	var vertexShaderObject = gl.createShader(gl.VERTEX_SHADER);
@@ -133,10 +134,11 @@ function initialize(){
 		"#version 300 es" +
 		"\n" +
 		"precision highp float;" +
+		"in vec4 a_color_out;" +
 		"out vec4 FragColor;" +
 		"void main(void)" +
 		"{" +
-		"FragColor = vec4(1.0, 1.0, 1.0, 1.0);" +
+		"FragColor = a_color_out;" +
 		"}";
 
 	var fragmentShaderObject = gl.createShader(gl.FRAGMENT_SHADER);
@@ -160,6 +162,7 @@ function initialize(){
 	gl.attachShader(shaderProgramObject, fragmentShaderObject);
 	// Pre linking shader attribute binding
 	gl.bindAttribLocation(shaderProgramObject, webGLMacros.SAB_ATTRIBUTE_POSITION, "a_position");
+	gl.bindAttribLocation(shaderProgramObject, webGLMacros.SAB_ATTRIBUTE_COLOR, "a_color");
 	// Shader program linking
 	gl.linkProgram(shaderProgramObject);
 	if(gl.getProgramParameter(shaderProgramObject, gl.LINK_STATUS) == false)
@@ -177,41 +180,8 @@ function initialize(){
 	mvpMatrixUniform = gl.getUniformLocation(shaderProgramObject, "u_mvpMatrix");
 
 	// Declaration of vertex data arrays
-	var pyramidVertices = new Float32Array
-		([	
-			// front
-			0.0, 1.0, 0.0,
-			-1.0, -1.0, 1.0,
-			1.0, -1.0, 1.0,
-	
-			// right
-			0.0, 1.0, 0.0,
-			1.0, -1.0, 1.0,
-			1.0, -1.0, -1.0,
-	
-			// back
-			0.0, 1.0, 0.0,
-			1.0, -1.0, -1.0,
-			-1.0, -1.0, -1.0,
-	
-			// left
-			0.0, 1.0, 0.0,
-			-1.0, -1.0, -1.0,
-			-1.0, -1.0, 1.0
-		]);
-
-	// Vao and vbo code
-	vao_pyramid = gl.createVertexArray();
-	gl.bindVertexArray(vao_pyramid);
-	// Position
-	vbo_pyramid_position = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, vbo_pyramid_position);
-	gl.bufferData(gl.ARRAY_BUFFER, pyramidVertices, gl.STATIC_DRAW);
-	gl.vertexAttribPointer(webGLMacros.SAB_ATTRIBUTE_POSITION, 3, gl.FLOAT, false, 0, 0);
-	gl.enableVertexAttribArray(webGLMacros.SAB_ATTRIBUTE_POSITION);
-	gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-	gl.bindVertexArray(null);
+	sphere = new Mesh();
+	makeSphere(sphere, 2.0, 30, 30); 
 
 	gl.clearDepth(1.0);
 	gl.enable(gl.DEPTH_TEST);
@@ -246,48 +216,33 @@ function resize(){
 	mat4.perspective(perspectiveProjectionMatrix, 45.0, parseFloat(canvas.width)/parseFloat(canvas.height), 0.1, 100);
 }
 
-function degToRad(degrees){
-	return degrees * Math.PI / 180.0;
-}
-
 function display(){
 	// Code
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	// Use the shader program object
 	gl.useProgram(shaderProgramObject);
 
-	// Transformations Triangle
+	// Transformations
 	var modelMatrix = mat4.create();
 	var modelViewProjectionMatrix = mat4.create();
 	var translationMatrix = mat4.create();
-	var rotationMatrix = mat4.create();
-	mat4.translate(translationMatrix, translationMatrix, [0.0, 0.0, -4.0]);
-	mat4.rotateY(rotationMatrix, rotationMatrix, anglePyramid);
-	mat4.multiply(modelMatrix, translationMatrix, rotationMatrix);
+	mat4.translate(translationMatrix, translationMatrix, [0.0, 0.0, -5.0]);
+	mat4.multiply(modelMatrix, modelMatrix, translationMatrix);
 	mat4.multiply(modelViewProjectionMatrix, perspectiveProjectionMatrix, modelMatrix);
 
 	gl.uniformMatrix4fv(mvpMatrixUniform, false, modelViewProjectionMatrix);
 
-	gl.bindVertexArray(vao_pyramid);
-
-	gl.drawArrays(gl.TRIANGLES, 0, 12);
-
-	gl.bindVertexArray(null);
+	sphere.draw();
 
 	gl.useProgram(null);
 
-	// Update Call
-	update();
 	// Double buffering emulation
 	requestAnimationFrame(display, canvas);
 }
 
 function update(){
 	// Code
-	anglePyramid = anglePyramid + 0.01;
-	if(anglePyramid > 2 * Math.PI)
-		anglePyramid -= 2 * Math.PI;
-
+	
 }
 
 // Keyboard Event Listener
@@ -313,13 +268,9 @@ function mouseDown(){
 
 function uninitialize(){
 	// Code
-	if(vbo_pyramid_position){
-		gl.deleteBuffer(vbo_pyramid_position);
-		vbo_pyramid_position = null;
-	}
-	if(vao_pyramid){
-		gl.deleteVertexArray(vao_pyramid);
-		vao_pyramid = null;
+	if(sphere){
+		sphere.deallocate();
+		sphere = null;
 	}
 	if(shaderProgramObject){
 		gl.useProgram(shaderProgramObject);

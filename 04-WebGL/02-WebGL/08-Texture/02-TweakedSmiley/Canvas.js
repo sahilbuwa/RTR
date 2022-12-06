@@ -12,12 +12,16 @@ const webGLMacros =
     SAB_ATTRIBUTE_NORMAL : 2,
     SAB_ATTRIBUTE_TEXTURE0 : 3
 };
+var mvpMatrixUniform;
+var textureSamplerUniform;
 
 var shaderProgramObject;
-var vao_pyramid;
-var vbo_pyramid_position;
-var mvpMatrixUniform;
-var anglePyramid = 0.0;
+var vao;
+var vbo_position;
+var vbo_texcoord;
+var texture_smiley = 0;
+var keyPressed = -1;
+var texcoord = new Float32Array(8);
 
 var perspectiveProjectionMatrix;
 
@@ -102,15 +106,32 @@ function initialize(){
 	gl.viewportWidth = canvas.width;
 	gl.viewportHeight = canvas.height;
 
+	texture_smiley = gl.createTexture();
+	texture_smiley.image = new Image();
+	texture_smiley.image.src = "Smiley.png";
+	texture_smiley.image.onload = function()
+	{
+		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		gl.bindTexture(gl.TEXTURE_2D, texture_smiley);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); // Nearest is all browser compatible
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture_smiley.image);
+		gl.generateMipmap(gl.TEXTURE_2D);
+		gl.bindTexture(gl.TEXTURE_2D, null);
+	};
+
 	// Vertex Shader
 	var vertexShaderSourceCode = 
 		"#version 300 es" +
 		"\n" +
 		"in vec4 a_position;" +
+		"in vec2 a_texcoord;" +
 		"uniform mat4 u_mvpMatrix;" +
+		"out vec2 a_texcoord_out;" +
 		"void main(void)" +
 		"{" +
 		"gl_Position = u_mvpMatrix * a_position;" +
+		"a_texcoord_out = a_texcoord;" +
 		"}";
 
 	var vertexShaderObject = gl.createShader(gl.VERTEX_SHADER);
@@ -133,10 +154,20 @@ function initialize(){
 		"#version 300 es" +
 		"\n" +
 		"precision highp float;" +
+		"in vec2 a_texcoord_out;" +
+		"uniform sampler2D u_textureSampler;" +
+		"uniform int u_keyPressed;" +
 		"out vec4 FragColor;" +
 		"void main(void)" +
 		"{" +
+		"if(u_keyPressed == 1)" +
+		"{" +
+		"FragColor = texture(u_textureSampler, a_texcoord_out);" +
+		"}" +
+		"else" +
+		"{" +
 		"FragColor = vec4(1.0, 1.0, 1.0, 1.0);" +
+		"}" +
 		"}";
 
 	var fragmentShaderObject = gl.createShader(gl.FRAGMENT_SHADER);
@@ -160,6 +191,7 @@ function initialize(){
 	gl.attachShader(shaderProgramObject, fragmentShaderObject);
 	// Pre linking shader attribute binding
 	gl.bindAttribLocation(shaderProgramObject, webGLMacros.SAB_ATTRIBUTE_POSITION, "a_position");
+	gl.bindAttribLocation(shaderProgramObject, webGLMacros.SAB_ATTRIBUTE_TEXTURE0, "a_texcoord");
 	// Shader program linking
 	gl.linkProgram(shaderProgramObject);
 	if(gl.getProgramParameter(shaderProgramObject, gl.LINK_STATUS) == false)
@@ -175,40 +207,33 @@ function initialize(){
 
 	// Uniform locations
 	mvpMatrixUniform = gl.getUniformLocation(shaderProgramObject, "u_mvpMatrix");
-
+	textureSamplerUniform = gl.getUniformLocation(shaderProgramObject, "u_textureSampler");
+	keypressUniform = gl.getUniformLocation(shaderProgramObject, "u_keyPressed");
 	// Declaration of vertex data arrays
-	var pyramidVertices = new Float32Array
+	var vertices = new Float32Array
 		([	
-			// front
-			0.0, 1.0, 0.0,
-			-1.0, -1.0, 1.0,
-			1.0, -1.0, 1.0,
-	
-			// right
-			0.0, 1.0, 0.0,
-			1.0, -1.0, 1.0,
-			1.0, -1.0, -1.0,
-	
-			// back
-			0.0, 1.0, 0.0,
-			1.0, -1.0, -1.0,
-			-1.0, -1.0, -1.0,
-	
-			// left
-			0.0, 1.0, 0.0,
-			-1.0, -1.0, -1.0,
-			-1.0, -1.0, 1.0
+			1.0, 1.0, 0.0,
+			-1.0, 1.0, 0.0,
+			-1.0, -1.0, 0.0,
+			1.0, -1.0, 0.0
 		]);
 
 	// Vao and vbo code
-	vao_pyramid = gl.createVertexArray();
-	gl.bindVertexArray(vao_pyramid);
+	vao = gl.createVertexArray();
+	gl.bindVertexArray(vao);
 	// Position
-	vbo_pyramid_position = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, vbo_pyramid_position);
-	gl.bufferData(gl.ARRAY_BUFFER, pyramidVertices, gl.STATIC_DRAW);
+	vbo_position = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, vbo_position);
+	gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 	gl.vertexAttribPointer(webGLMacros.SAB_ATTRIBUTE_POSITION, 3, gl.FLOAT, false, 0, 0);
 	gl.enableVertexAttribArray(webGLMacros.SAB_ATTRIBUTE_POSITION);
+	gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+	vbo_texcoord = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, vbo_texcoord);
+	gl.bufferData(gl.ARRAY_BUFFER, texcoord , gl.DYNAMIC_DRAW);
+	gl.vertexAttribPointer(webGLMacros.SAB_ATTRIBUTE_TEXTURE0, 2, gl.FLOAT, false, 0, 0);
+	gl.enableVertexAttribArray(webGLMacros.SAB_ATTRIBUTE_TEXTURE0);
 	gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
 	gl.bindVertexArray(null);
@@ -220,6 +245,7 @@ function initialize(){
 	// Clear the screen with black color
 	gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
+	// Enabling the texture
 	// Perspective projection matrix
 	perspectiveProjectionMatrix =  mat4.create();
 	
@@ -256,22 +282,81 @@ function display(){
 	// Use the shader program object
 	gl.useProgram(shaderProgramObject);
 
-	// Transformations Triangle
+	// Transformations Pyramid
 	var modelMatrix = mat4.create();
 	var modelViewProjectionMatrix = mat4.create();
 	var translationMatrix = mat4.create();
-	var rotationMatrix = mat4.create();
 	mat4.translate(translationMatrix, translationMatrix, [0.0, 0.0, -4.0]);
-	mat4.rotateY(rotationMatrix, rotationMatrix, anglePyramid);
-	mat4.multiply(modelMatrix, translationMatrix, rotationMatrix);
+	mat4.multiply(modelMatrix, modelMatrix, translationMatrix);
 	mat4.multiply(modelViewProjectionMatrix, perspectiveProjectionMatrix, modelMatrix);
 
 	gl.uniformMatrix4fv(mvpMatrixUniform, false, modelViewProjectionMatrix);
 
-	gl.bindVertexArray(vao_pyramid);
+	if(keyPressed == 1)
+	{
+		texcoord[0] = 0.5;
+		texcoord[1] = 0.5;
+		texcoord[2] = 0.0;
+		texcoord[3] = 0.5;
+		texcoord[4] = 0.0;
+		texcoord[5] = 0.0;
+		texcoord[6] = 0.5;
+		texcoord[7] = 0.0;
+		gl.uniform1i(keypressUniform, 1);
+	}
+	else if(keyPressed == 2)
+	{
+		texcoord[0] = 1.0;
+		texcoord[1] = 1.0;
+		texcoord[2] = 0.0;
+		texcoord[3] = 1.0;
+		texcoord[4] = 0.0;
+		texcoord[5] = 0.0;
+		texcoord[6] = 1.0;
+		texcoord[7] = 0.0;
+		gl.uniform1i(keypressUniform, 1);
+	}
+	else if(keyPressed == 3)
+	{
+		texcoord[0] = 2.0;
+		texcoord[1] = 2.0;
+		texcoord[2] = 0.0;
+		texcoord[3] = 2.0;
+		texcoord[4] = 0.0;
+		texcoord[5] = 0.0;
+		texcoord[6] = 2.0;
+		texcoord[7] = 0.0;
+		gl.uniform1i(keypressUniform, 1);
+	}
+	else if(keyPressed == 4)
+	{
+		texcoord[0] = 0.5;
+		texcoord[1] = 0.5;
+		texcoord[2] = 0.5;
+		texcoord[3] = 0.5;
+		texcoord[4] = 0.5;
+		texcoord[5] = 0.5;
+		texcoord[6] = 0.5;
+		texcoord[7] = 0.5;
+		gl.uniform1i(keypressUniform, 1);
+	}
+	else
+	{
+		gl.uniform1i(keypressUniform, 0);
+	}
 
-	gl.drawArrays(gl.TRIANGLES, 0, 12);
+	gl.bindBuffer(gl.ARRAY_BUFFER, vbo_texcoord);
+	gl.bufferData(gl.ARRAY_BUFFER, texcoord, gl.DYNAMIC_DRAW);
+	gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, texture_smiley);
+	gl.uniform1i(textureSamplerUniform, 0);
+	gl.bindVertexArray(vao);
+
+	gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
+
+	gl.bindTexture(gl.TEXTURE_2D, null);
 	gl.bindVertexArray(null);
 
 	gl.useProgram(null);
@@ -284,9 +369,6 @@ function display(){
 
 function update(){
 	// Code
-	anglePyramid = anglePyramid + 0.01;
-	if(anglePyramid > 2 * Math.PI)
-		anglePyramid -= 2 * Math.PI;
 
 }
 
@@ -303,6 +385,21 @@ function keyDown(event){
 		case 70:
 			toggleFullscreen();
 			break;
+		case 49:
+			keyPressed = 1;
+			break;
+		case 50:
+			keyPressed = 2;
+			break;
+		case 51:
+			keyPressed = 3;
+			break;
+		case 52:
+			keyPressed = 4;
+			break;
+		default:
+			keyPressed = 0;
+			break;		
 	}
 }
 
@@ -313,13 +410,21 @@ function mouseDown(){
 
 function uninitialize(){
 	// Code
-	if(vbo_pyramid_position){
-		gl.deleteBuffer(vbo_pyramid_position);
-		vbo_pyramid_position = null;
+	if(texture_smiley){
+		gl.deleteTexture(texture_smiley);
+		texture_smiley = null;
 	}
-	if(vao_pyramid){
-		gl.deleteVertexArray(vao_pyramid);
-		vao_pyramid = null;
+	if(vbo_texcoord){
+		gl.deleteBuffer(vbo_texcoord);
+		vbo_texcoord = null;
+	}
+	if(vbo_position){
+		gl.deleteBuffer(vbo_position);
+		vbo_position = null;
+	}
+	if(vao){
+		gl.deleteVertexArray(vao);
+		vao = null;
 	}
 	if(shaderProgramObject){
 		gl.useProgram(shaderProgramObject);

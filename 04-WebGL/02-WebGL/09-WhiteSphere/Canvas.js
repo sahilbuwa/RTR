@@ -138,7 +138,7 @@ function initialize(){
 		"out vec4 FragColor;" +
 		"void main(void)" +
 		"{" +
-		"FragColor = a_color_out;" +
+		"FragColor = vec4(1.0, 1.0, 1.0, 1.0);" +
 		"}";
 
 	var fragmentShaderObject = gl.createShader(gl.FRAGMENT_SHADER);

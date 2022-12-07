@@ -404,7 +404,7 @@ int initialize(void)
     "vec3 lightDirection[2];\n" \
     "vec3 diffuse[2];\n" \
     "vec3 specular[2];\n" \
-    "vec3 reflectionVector[2];"
+    "vec3 reflectionVector[2];" \
     "for(int i=0;i<2;i++)\n" \
     "{\n" \
     "ambient[i] = u_la[i] * u_ka;\n" \

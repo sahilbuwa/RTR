@@ -8,26 +8,42 @@ var canvas_original_height;
 const webGLMacros = 
 {
 	SAB_ATTRIBUTE_POSITION : 0,
-	SAB_ATTRIBUTE_COLOR : 1,
-	SAB_ATTRIBUTE_NORMAL : 2,
-	SAB_ATTRIBUTE_TEXTURE0 : 3
+    SAB_ATTRIBUTE_COLOR : 1,
+    SAB_ATTRIBUTE_NORMAL : 2,
+    SAB_ATTRIBUTE_TEXTURE0 : 3
 };
-var Checkerboard_Width = 64;
-var Checkerboard_Height = 64;
 
-var mvpMatrixUniform;
-var textureSamplerUniform;
-
+var sphere = null;
 var shaderProgramObject;
-var vao;
-var vbo_position;
-var vbo_texcoord;
-var texture_checkerboard = 0;
-var keyPressed = -1;
+var modelMatrixUniform;
+var viewMatrixUniform;
+var projectionMatrixUniform;
 
-var position = new Float32Array(12);
-var checkerboard = new Uint8Array(Checkerboard_Width * Checkerboard_Height * 4);
 var perspectiveProjectionMatrix;
+
+var laUniform;
+var ldUniform;
+var lsUniform;
+var lightPositionUniform;
+
+var kaUniform;
+var kdUniform;
+var ksUniform;
+var materialShininessUniform;
+
+var lightingEnableUniform;
+
+var bLight = false;
+
+var lightAmbient = [1.0, 1.0, 1.0];
+var lightDiffuse = [1.0, 1.0, 1.0];
+var lightSpecular = [1.0, 1.0, 1.0];
+var lightPosition = [100.0, 100.0, 100.0, 1.0];
+
+var materialAmbient = [0.0, 0.0, 0.0];
+var materialDiffuse = [1.0, 1.0, 1.0];
+var materialSpecular = [1.0, 1.0, 1.0];
+var materialShininess = 50.0;
 
 var requestAnimationFrame = window.requestAnimationFrame ||
 							window.mozRequestAnimationFrame ||
@@ -97,24 +113,6 @@ function toggleFullscreen(){
 	}
 }
 
-function makeCheckerBoard()
-{
-	// Variable Declarations
-	var c = 0;
-	// Code
-	for(var i=0; i < Checkerboard_Width; i++)
-	{
-		for(var j=0; j < Checkerboard_Height; j+=4)
-		{
-			c = (((i & 0x8) == 0) ^ ((j & 0x8) == 0)) * 255;
-			checkerboard[j + i * Checkerboard_Height + 0] = c;
-			checkerboard[j + i * Checkerboard_Height + 1] = c;
-			checkerboard[j + i * Checkerboard_Height + 2] = c;
-			checkerboard[j + i * Checkerboard_Height + 3] = 255;
-		}
-	}
-}
-
 function initialize(){
 	// Code
 	// Get WebGL 2.0 context from canvas into gl
@@ -128,29 +126,47 @@ function initialize(){
 	gl.viewportWidth = canvas.width;
 	gl.viewportHeight = canvas.height;
 
-	makeCheckerBoard();
-	texture_checkerboard = gl.createTexture();
-	// gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-	gl.bindTexture(gl.TEXTURE_2D, texture_checkerboard);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); // Nearest is all browser compatible
-	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, Checkerboard_Width, Checkerboard_Height, 0, gl.RGBA, gl.UNSIGNED_BYTE, checkerboard);
-	gl.bindTexture(gl.TEXTURE_2D, null);
-
 	// Vertex Shader
 	var vertexShaderSourceCode = 
 		"#version 300 es" +
 		"\n" +
-		"in vec4 a_position;" +
-		"in vec2 a_texcoord;" +
-		"uniform mat4 u_mvpMatrix;" +
-		"out vec2 a_texcoord_out;" +
+		"precision highp float;" +
+		"precision highp int;" +
+		"in vec4 a_position;\n" +
+		"in vec3 a_normal;\n" +
+		"uniform mat4 u_modelMatrix;\n" +
+		"uniform mat4 u_viewMatrix;\n" +
+		"uniform mat4 u_projectionMatrix;\n" +
+		"uniform vec3 u_la;\n" +
+		"uniform vec3 u_ld;" +
+		"uniform vec3 u_ls;" +
+		"uniform vec4 u_lightPosition;" +
+		"uniform vec3 u_ka;" +
+		"uniform vec3 u_kd;" +
+		"uniform vec3 u_ks;" +
+		"uniform float u_materialShininess;" +
+		"uniform int u_lightingEnabled;" +
+		"out vec3 fong_ads_light;" +
 		"void main(void)" +
 		"{" +
-		"gl_Position = u_mvpMatrix * a_position;" +
-		"a_texcoord_out = a_texcoord;" +
+		"if(u_lightingEnabled == 1)" +
+		"{" +
+		"vec3 ambient = u_la * u_ka;" +
+		"vec4 eyeCoordinates = u_viewMatrix * u_modelMatrix * a_position;" +
+		"mat3 normalMatrix = mat3(u_viewMatrix * u_modelMatrix);" +
+		"vec3 transformedNormals = normalize(normalMatrix * a_normal);" +
+		"vec3 lightDirection = normalize(vec3(u_lightPosition) - eyeCoordinates.xyz);" +
+		"vec3 diffuse = u_ld * u_kd * max(dot(lightDirection, transformedNormals), 0.0);" +
+		"vec3 reflectionVector = reflect(-lightDirection, transformedNormals);" +
+		"vec3 viewerVector = normalize(-eyeCoordinates.xyz);" +
+		"vec3 specular = u_ls * u_ks * pow(max(dot(reflectionVector, viewerVector), 0.0), u_materialShininess);" +
+		"fong_ads_light = ambient + diffuse + specular;" +
+		"}" +
+		"else" +
+		"{" +
+		"fong_ads_light = vec3(1.0, 1.0, 1.0);" +
+		"}" +
+		"gl_Position = u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;" +
 		"}";
 
 	var vertexShaderObject = gl.createShader(gl.VERTEX_SHADER);
@@ -160,7 +176,7 @@ function initialize(){
 	if(gl.getShaderParameter(vertexShaderObject, gl.COMPILE_STATUS) == false)
 	{
 		var error = gl.getShaderInfoLog(vertexShaderObject);
-		if(error.length() > 0)
+		if(error.length > 0)
 		{
 			var errorString = "Vertex shader error : "+ error;
 			alert(errorString);
@@ -173,12 +189,12 @@ function initialize(){
 		"#version 300 es" +
 		"\n" +
 		"precision highp float;" +
-		"in vec2 a_texcoord_out;" +
-		"uniform sampler2D u_textureSampler;" +
+		"precision highp int;" +
+		"in vec3 fong_ads_light;" +
 		"out vec4 FragColor;" +
 		"void main(void)" +
 		"{" +
-		"FragColor = texture(u_textureSampler, a_texcoord_out);" +
+		"FragColor = vec4(fong_ads_light,1.0);" +
 		"}";
 
 	var fragmentShaderObject = gl.createShader(gl.FRAGMENT_SHADER);
@@ -188,7 +204,7 @@ function initialize(){
 	if(gl.getShaderParameter(fragmentShaderObject, gl.COMPILE_STATUS) == false)
 	{
 		var error = gl.getShaderInfoLog(fragmentShaderObject);
-		if(error.length() > 0)
+		if(error.length > 0)
 		{
 			var errorString = "Fragment shader error : "+ error;
 			alert(errorString);
@@ -202,13 +218,13 @@ function initialize(){
 	gl.attachShader(shaderProgramObject, fragmentShaderObject);
 	// Pre linking shader attribute binding
 	gl.bindAttribLocation(shaderProgramObject, webGLMacros.SAB_ATTRIBUTE_POSITION, "a_position");
-	gl.bindAttribLocation(shaderProgramObject, webGLMacros.SAB_ATTRIBUTE_TEXTURE0, "a_texcoord");
+	gl.bindAttribLocation(shaderProgramObject, webGLMacros.SAB_ATTRIBUTE_NORMAL, "a_normal");
 	// Shader program linking
 	gl.linkProgram(shaderProgramObject);
 	if(gl.getProgramParameter(shaderProgramObject, gl.LINK_STATUS) == false)
 	{
 		var error = gl.getProgramInfoLog(shaderProgramObject);
-		if(error.length() > 0)
+		if(error.length > 0)
 		{
 			var errorString = "Shader program error : "+ error;
 			alert(errorString);
@@ -217,45 +233,33 @@ function initialize(){
 	}
 
 	// Uniform locations
-	mvpMatrixUniform = gl.getUniformLocation(shaderProgramObject, "u_mvpMatrix");
-	textureSamplerUniform = gl.getUniformLocation(shaderProgramObject, "u_textureSampler");
+	modelMatrixUniform = gl.getUniformLocation(shaderProgramObject, "u_modelMatrix");
+	viewMatrixUniform = gl.getUniformLocation(shaderProgramObject, "u_viewMatrix");
+	projectionMatrixUniform = gl.getUniformLocation(shaderProgramObject, "u_projectionMatrix");
+
+	laUniform = gl.getUniformLocation(shaderProgramObject, "u_la");
+	ldUniform = gl.getUniformLocation(shaderProgramObject, "u_ld");
+	lsUniform = gl.getUniformLocation(shaderProgramObject, "u_ls");
+	lightPositionUniform = gl.getUniformLocation(shaderProgramObject, "u_lightPosition");
+
+	kaUniform = gl.getUniformLocation(shaderProgramObject, "u_ka");
+	kdUniform = gl.getUniformLocation(shaderProgramObject, "u_kd");
+	ksUniform = gl.getUniformLocation(shaderProgramObject, "u_ks");
+	materialShininessUniform = gl.getUniformLocation(shaderProgramObject, "u_materialShininess");
+
+	lightingEnableUniform = gl.getUniformLocation(shaderProgramObject, "u_lightingEnabled");
+
 	// Declaration of vertex data arrays
-	var texcoord = new Float32Array
-		([	
-			0.25, 0.25,
-			0.0, 0.25,
-			0.0, 0.0,
-			0.25, 0.0
-		]);
-
-	// Vao and vbo code
-	vao = gl.createVertexArray();
-	gl.bindVertexArray(vao);
-	// Position
-	vbo_position = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, vbo_position);
-	gl.bufferData(gl.ARRAY_BUFFER, position, gl.DYNAMIC_DRAW);
-	gl.vertexAttribPointer(webGLMacros.SAB_ATTRIBUTE_POSITION, 3, gl.FLOAT, false, 0, 0);
-	gl.enableVertexAttribArray(webGLMacros.SAB_ATTRIBUTE_POSITION);
-	gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-	vbo_texcoord = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, vbo_texcoord);
-	gl.bufferData(gl.ARRAY_BUFFER, texcoord , gl.STATIC_DRAW);
-	gl.vertexAttribPointer(webGLMacros.SAB_ATTRIBUTE_TEXTURE0, 2, gl.FLOAT, false, 0, 0);
-	gl.enableVertexAttribArray(webGLMacros.SAB_ATTRIBUTE_TEXTURE0);
-	gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-	gl.bindVertexArray(null);
+	sphere = new Mesh();
+	makeSphere(sphere, 2.0, 50, 50); 
 
 	gl.clearDepth(1.0);
 	gl.enable(gl.DEPTH_TEST);
 	gl.depthFunc(gl.LEQUAL);
 
 	// Clear the screen with black color
-	gl.clearColor(0.5, 0.5, 0.5, 1.0);
+	gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-	// Enabling the texture
 	// Perspective projection matrix
 	perspectiveProjectionMatrix =  mat4.create();
 	
@@ -282,74 +286,47 @@ function resize(){
 	mat4.perspective(perspectiveProjectionMatrix, 45.0, parseFloat(canvas.width)/parseFloat(canvas.height), 0.1, 100);
 }
 
-function degToRad(degrees){
-	return degrees * Math.PI / 180.0;
-}
-
 function display(){
 	// Code
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	// Use the shader program object
 	gl.useProgram(shaderProgramObject);
 
-	// Transformations Pyramid
+	// Transformations
 	var modelMatrix = mat4.create();
-	var modelViewProjectionMatrix = mat4.create();
+	var viewMatrix = mat4.create();
 	var translationMatrix = mat4.create();
-	mat4.translate(translationMatrix, translationMatrix, [0.0, 0.0, -4.0]);
-	mat4.multiply(modelMatrix, modelMatrix, translationMatrix);
-	mat4.multiply(modelViewProjectionMatrix, perspectiveProjectionMatrix, modelMatrix);
+	var rotationMatrix = mat4.create();
+	
+	mat4.translate(translationMatrix, translationMatrix, [0.0, 0.0, -5.0]);
+	mat4.multiply(modelMatrix, translationMatrix, rotationMatrix);
 
-	gl.uniformMatrix4fv(mvpMatrixUniform, false, modelViewProjectionMatrix);
+	gl.uniformMatrix4fv(modelMatrixUniform, false, modelMatrix);
+	gl.uniformMatrix4fv(viewMatrixUniform, false, viewMatrix);
+	gl.uniformMatrix4fv(projectionMatrixUniform, false, perspectiveProjectionMatrix);
 
-	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, texture_checkerboard);
-	gl.uniform1i(textureSamplerUniform, 0);
-	gl.bindVertexArray(vao);
+		// Sending Light Related Uniforms
+	if(bLight == true)
+	{
+		gl.uniform1i(lightingEnableUniform, 1);
 
-	position[0] = 0.0;
-	position[1] = 1.0;
-	position[2] = 0.0;
-	position[3] = -2.0;
-	position[4] = 1.0;
-	position[5] = 0.0;
-	position[6] = -2.0;
-	position[7] = -1.0;
-	position[8] = 0.0;
-	position[9] = 0.0;
-	position[10] = -1.0;
-	position[11] = 0.0;
+		gl.uniform3fv(laUniform, lightAmbient);
+		gl.uniform3fv(ldUniform, lightDiffuse);
+		gl.uniform3fv(lsUniform, lightSpecular);
+		gl.uniform4fv(lightPositionUniform, lightPosition);
 
-	gl.bindBuffer(gl.ARRAY_BUFFER, vbo_position);
-	gl.bufferData(gl.ARRAY_BUFFER, position, gl.DYNAMIC_DRAW);
-	gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-	gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
-
-	position[0] = 2.41421;
-	position[1] = 1.0;
-	position[2] = -1.41421;
-	position[3] = 1.0;
-	position[4] = 1.0;
-	position[5] = 0.0;
-	position[6] = 1.0;
-	position[7] = -1.0;
-	position[8] = 0.0;
-	position[9] = 2.41421;
-	position[10] = -1.0;
-	position[11] = -1.41421;
-
-	gl.bindBuffer(gl.ARRAY_BUFFER, vbo_position);
-	gl.bufferData(gl.ARRAY_BUFFER, position, gl.DYNAMIC_DRAW);
-	gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-	gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
-
-	gl.bindVertexArray(null);
-	gl.bindTexture(gl.TEXTURE_2D, null);
+		gl.uniform3fv(kaUniform, materialAmbient);
+		gl.uniform3fv(kdUniform, materialDiffuse);
+		gl.uniform3fv(ksUniform, materialSpecular);
+		gl.uniform1f(materialShininessUniform, materialShininess);
+	}
+	else
+	{
+		 gl.uniform1i(lightingEnableUniform, 0);
+	}
+	sphere.draw();
 
 	gl.useProgram(null);
-
 	// Update Call
 	update();
 	// Double buffering emulation
@@ -358,10 +335,7 @@ function display(){
 
 function update(){
 	// Code
-
 }
-
-
 
 // Keyboard Event Listener
 function keyDown(event){
@@ -375,7 +349,15 @@ function keyDown(event){
 			break;
 		case 70:
 			toggleFullscreen();
-			break;	
+			break;
+		case 76:
+			if(bLight == false){
+				bLight = true;
+			}
+			else{
+				bLight = false;
+			}
+			break;
 	}
 }
 
@@ -386,21 +368,9 @@ function mouseDown(){
 
 function uninitialize(){
 	// Code
-	if(texture_smiley){
-		gl.deleteTexture(texture_smiley);
-		texture_smiley = null;
-	}
-	if(vbo_texcoord){
-		gl.deleteBuffer(vbo_texcoord);
-		vbo_texcoord = null;
-	}
-	if(vbo_position){
-		gl.deleteBuffer(vbo_position);
-		vbo_position = null;
-	}
-	if(vao){
-		gl.deleteVertexArray(vao);
-		vao = null;
+	if(sphere){
+		sphere.deallocate();
+		sphere = null;
 	}
 	if(shaderProgramObject){
 		gl.useProgram(shaderProgramObject);

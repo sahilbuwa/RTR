@@ -1,7 +1,7 @@
 Log File Is Successfully Created. 
 OpenGL Vendor : NVIDIA Corporation
 OpenGL Renderer : NVIDIA GeForce RTX 3050 Ti Laptop GPU/PCIe/SSE2
-OpenGL Version : 4.6.0 NVIDIA 526.98
+OpenGL Version : 4.6.0 NVIDIA 527.37
 GLSL Version : 4.60 NVIDIA
 Number of supported extensions : 403
 GL_AMD_multi_draw_indirect

@@ -663,10 +663,10 @@ int initialize(void)
     "vec3 diffuse[3];\n" \
     "vec3 specular[3];\n" \
     "vec3 normalized_lightDirection[3];\n" \
-    "vec3 reflectionVector[3];\n"
+    "vec3 reflectionVector[3];\n" \
     "vec3 normalized_transformedNormals = normalize(transformedNormals);\n" \
-    "vec3 normalized_viewerVector = normalize(viewerVector);\n"
-    "for(int i=0;i<3;i++)\n"
+    "vec3 normalized_viewerVector = normalize(viewerVector);\n" \
+    "for(int i=0;i<3;i++)\n" \
     "{\n" \
     "ambient[i] = u_la[i] * u_ka;\n" \
     "normalized_lightDirection[i] = normalize(vec3(u_lightPosition[i]));\n" \
@@ -968,7 +968,6 @@ void update(void)
     if(blueLightAngle >= 360.0f)
         blueLightAngle -= 360.0f;
     lights[2].lightPosition = vec4(10.0f * cosf(blueLightAngle * M_PI / 180.0f), 10.0f * sinf(blueLightAngle * M_PI / 180.0f), 0.0f, 1.0f);
-
 }
 
 void uninitialize(void)

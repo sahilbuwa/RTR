@@ -404,14 +404,12 @@ function display(){
 		gl.uniform3fv(kdUniform, materialDiffuse);
 		gl.uniform3fv(ksUniform, materialSpecular);
 		gl.uniform1f(materialShininessUniform, materialShininess);
-
 		for(var i = 0; i < 2; i++){
-			gl.uniform3fv(laUniform, lightAmbient[i]);
-			gl.uniform3fv(ldUniform, lightDiffuse[i]);
-			gl.uniform3fv(lsUniform, lightSpecular[i]);
-			gl.uniform4fv(lightPositionUniform, lightPosition[i]);
+			gl.uniform3fv(laUniform[i], lightAmbient[i]);
+			gl.uniform3fv(ldUniform[i], lightDiffuse[i]);
+			gl.uniform3fv(lsUniform[i], lightSpecular[i]);
+			gl.uniform4fv(lightPositionUniform[i], lightPosition[i]);
 		}
-
 	}
 	else
 	{

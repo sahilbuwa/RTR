@@ -1,0 +1,7 @@
+Log File Is Successfully Created. 
+OpenGL Vendor : NVIDIA Corporation
+OpenGL Renderer : NVIDIA GeForce RTX 3050 Ti Laptop GPU/PCIe/SSE2
+OpenGL Version : 4.6.0 NVIDIA 527.56
+GLSL Version : 4.60 NVIDIA
+OpenGL context setting successfull.
+Log File Is Successfully Closed.

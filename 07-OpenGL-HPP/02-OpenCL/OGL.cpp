@@ -436,14 +436,45 @@ int initialize(void)
 	"{" \
 		"unsigned int i = get_global_id(0);" \
 		"unsigned int j = get_global_id(1);" \
-		"float u = float(i) / float(width);" \
-		"float v = float(j) / float(height);" \
+		"float u = (float)(i) / (float)(width);" \
+		"float v = (float)(j) / (float)(height);" \
 		"u = u * 2.0f - 1.0f;" \
 		"v = v * 2.0f - 1.0f;" \
 		"float frequency = 4.0f;" \
-		"float w = sinf(u * frequency + time) * cosf(v * frequency + time) * 0.5f;" \
-		"position[j * width + i] = float4(u, w, v, 1.0f);" \
+		"float w = sin(u * frequency + time) * cos(v * frequency + time) * 0.5f;" \
+		"position[j * width + i] = (float4)(u, w, v, 1.0f);" \
 	"}";
+
+	// 2. Create actual openCL program from above source code
+	oclProgram = clCreateProgramWithSource(oclContext, 1, (const char **)&oclKernelSourceCode, NULL, &oclResult);
+	if(oclResult != CL_SUCCESS)
+	{
+		fprintf(gpFile, "clCreateProgramWithSource() failed.\n");
+		uninitialize();
+		exit(EXIT_FAILURE);
+	}
+
+	// Build Program and get error log if any
+	oclResult = clBuildProgram(oclProgram, 0, NULL, "-cl-fast-relaxed-math", NULL, NULL);
+	if(oclResult != CL_SUCCESS)
+	{
+		fprintf(gpFile, "clBuildProgram() failed.\n");
+		char buffer[1024];
+		size_t length;
+		oclResult = clGetProgramBuildInfo(oclProgram, oclDeviceID, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &length);
+		fprintf(gpFile, "OpenCL kernel Build Log : %s\n", buffer);
+		uninitialize();
+		exit(EXIT_FAILURE);
+	}
+
+	// Create OpenCL Kernel
+	oclKernel = clCreateKernel(oclProgram, "sineWaveKernel", &oclResult);
+	if(oclResult != CL_SUCCESS)
+	{
+		fprintf(gpFile, "clCreateKernel() failed.\n");
+		uninitialize();
+		exit(EXIT_FAILURE);
+	}
 
 	// Vertex Shader
 	// Shader Source Code
@@ -566,13 +597,25 @@ int initialize(void)
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, MYARRAYSIZE * sizeof(float), NULL, GL_DYNAMIC_DRAW);
-
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glGenBuffers(1, &vbo_gpu);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_gpu);
+	glBufferData(GL_ARRAY_BUFFER, MYARRAYSIZE * sizeof(float), NULL, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 	glBindVertexArray(0);
 
-
+	// Create OpenCL-OpenGL interoperability resource
+	graphicsResource = clCreateFromGLBuffer(oclContext, CL_MEM_WRITE_ONLY, vbo_gpu, &oclResult);
+	if(oclResult != CL_SUCCESS)
+	{
+		fprintf(gpFile, "clCreateFromGLBuffer() failed.\n");
+		uninitialize();
+		exit(EXIT_FAILURE);
+	}
 	// Clear the screen using black color
-	glClearColor(0.0f,0.0f,0.0f,1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	// Depth Related Changes
 	glClearDepth(1.0f);
@@ -620,6 +663,11 @@ void display(void)
 {
 	// Function Declarations
 	void sineWave(unsigned int, unsigned int, float);
+	void uninitialize(void);
+
+	// Variable Declarations
+	size_t globalWorkSize[2];
+
 	// Code
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	// Use the Shader Program Object
@@ -630,7 +678,7 @@ void display(void)
 	mat4 modelViewMatrix = mat4::identity();
 	mat4 modelViewProjectionMatrix = mat4::identity();
 	translationMatrix = translate(0.0f, 0.0f, 0.0f); 
-	modelViewMatrix = translationMatrix;  
+	modelViewMatrix = translationMatrix;
 	
 	modelViewProjectionMatrix = perspectiveProjectionMatrix * modelViewMatrix;
 
@@ -638,10 +686,88 @@ void display(void)
 	
 	glBindVertexArray(vao);
 
-	sineWave(meshWidth, meshHeight, animationTime);
+	if(onGPU == TRUE)
+	{
+		// Set OpenCL kernel parameters
+		// Passing 0th parameter
+		oclResult = clSetKernelArg(oclKernel, 0, sizeof(cl_mem), (void *)&graphicsResource);
+		if(oclResult != CL_SUCCESS)
+		{
+			fprintf(gpFile, "clSetKernelArg() for 0th parameter failed.\n");
+			uninitialize();
+			exit(EXIT_FAILURE);
+		}
 
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, MYARRAYSIZE * sizeof(float), pos, GL_DYNAMIC_DRAW);
+		// Passing 1st parameter
+		oclResult = clSetKernelArg(oclKernel, 1, sizeof(unsigned int), &meshWidth);
+		if(oclResult != CL_SUCCESS)
+		{
+			fprintf(gpFile, "clSetKernelArg() for 1st parameter failed.\n");
+			uninitialize();
+			exit(EXIT_FAILURE);
+		}
+
+		// Passing 2nd parameter
+		oclResult = clSetKernelArg(oclKernel, 2, sizeof(unsigned int), &meshHeight);
+		if(oclResult != CL_SUCCESS)
+		{
+			fprintf(gpFile, "clSetKernelArg() for 2nd parameter failed.\n");
+			uninitialize();
+			exit(EXIT_FAILURE);
+		}
+
+		// Passing 3rd parameter
+		oclResult = clSetKernelArg(oclKernel, 3, sizeof(float), &animationTime);
+		if(oclResult != CL_SUCCESS)
+		{
+			fprintf(gpFile, "clSetKernelArg() for 3rd parameter failed.\n");
+			uninitialize();
+			exit(EXIT_FAILURE);
+		}
+		// Enqueue graphics resource into the command queue
+		oclResult = clEnqueueAcquireGLObjects(oclCommandQueue, 1, &graphicsResource, 0, NULL, NULL);
+		if(oclResult != CL_SUCCESS)
+		{
+			fprintf(gpFile, "clEnqueueAcquireGLObjects() failed.\n");
+			uninitialize();
+			exit(EXIT_FAILURE);
+		}
+
+		// Run the OpenCL Kernel
+		globalWorkSize[0] = meshWidth;
+		globalWorkSize[1] = meshHeight;
+		oclResult = clEnqueueNDRangeKernel(oclCommandQueue, oclKernel, 2, NULL, globalWorkSize, NULL, 0, NULL, NULL);
+		if(oclResult != CL_SUCCESS)
+		{
+			fprintf(gpFile, "clEnqueueNDRangeKernel() failed.\n");
+			uninitialize();
+			exit(EXIT_FAILURE);
+		}
+		
+		// Release graphics resources
+		oclResult = clEnqueueReleaseGLObjects(oclCommandQueue, 1, &graphicsResource, 0, NULL, NULL);
+		if(oclResult != CL_SUCCESS)
+		{
+			fprintf(gpFile, "clEnqueueReleaseGLObjects() failed.\n");
+			uninitialize();
+			exit(EXIT_FAILURE);
+		}
+
+		// Finished command queue
+		clFinish(oclCommandQueue);
+
+		// GPU vbo related code
+		glBindBuffer(GL_ARRAY_BUFFER, vbo_gpu);
+	}
+	else
+	{
+		// CPU Related Code
+		sineWave(meshWidth, meshHeight, animationTime);
+
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, MYARRAYSIZE * sizeof(float), pos, GL_DYNAMIC_DRAW);
+	}
+
 	glVertexAttribPointer(SAB_ATTRIBUTE_POSITION, 4, GL_FLOAT, GL_FALSE, 0, NULL);
 	glEnableVertexAttribArray(SAB_ATTRIBUTE_POSITION);
 
@@ -703,15 +829,39 @@ void uninitialize(void)
 	// Deletion and uninitialization of vbo
 	if(vbo_gpu)
 	{
+		if(graphicsResource)
+		{
+			clReleaseMemObject(graphicsResource);
+			graphicsResource = NULL;
+		}
 		glDeleteBuffers(1, &vbo_gpu);
 		vbo_gpu = 0;
+	}
+	if(oclKernel)
+	{
+		clReleaseKernel(oclKernel);
+		oclKernel = NULL;
+	}
+	if(oclProgram)
+	{
+		clReleaseProgram(oclProgram);
+		oclProgram = NULL;
+	}
+	if(oclCommandQueue)
+	{
+		clReleaseCommandQueue(oclCommandQueue);
+		oclCommandQueue = NULL;
+	}
+	if(oclContext)
+	{
+		clReleaseContext(oclContext);
+		oclContext = NULL;
 	}
 	if(vbo)
 	{
 		glDeleteBuffers(1, &vbo);
 		vbo = 0;
 	}
-
 	// Deletion and uninitialization of vao
 	if(vao)
 	{

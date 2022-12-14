@@ -256,7 +256,7 @@ function initialize(){
 	{
 		var error = gl.getProgramInfoLog(shaderProgramObjectV);
 		if(error.length > 0)
-		{F
+		{
 			var errorString = "Shader program error : "+ error;
 			alert(errorString);
 			uninitialize();

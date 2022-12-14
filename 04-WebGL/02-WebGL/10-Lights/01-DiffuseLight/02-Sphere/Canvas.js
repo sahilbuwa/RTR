@@ -276,7 +276,8 @@ function display(){
 	var rotationMatrix = mat4.create();
 	
 	mat4.translate(translationMatrix, translationMatrix, [0.0, 0.0, -5.0]);
-	mat4.rotateY(rotationMatrix, rotationMatrix, angleSphere);
+	mat4.rotateX(rotationMatrix, rotationMatrix, 90.0);
+	mat4.rotateZ(rotationMatrix, rotationMatrix, angleSphere);
 	mat4.multiply(modelMatrix, translationMatrix, rotationMatrix);
 
 	gl.uniformMatrix4fv(modelMatrixUniform, false, modelMatrix);

@@ -582,7 +582,7 @@ function resize(){
 	}
 
 	if(canvas.height == 0)
-		height = 1;
+		canvas.height = 1;
 
 	gl.viewport(0, 0, canvas.width, canvas.height);
 
@@ -625,7 +625,6 @@ function display(){
 	var rotationMatrixX = mat4.create();
 	var rotationMatrixY = mat4.create();
 	var rotationMatrixZ = mat4.create();
-	var scaleMatrix = mat4.create();
 	mat4.translate(translationMatrix, translationMatrix, [0.0, 0.0, -4.0]);
 	mat4.rotateX(rotationMatrixX, rotationMatrixX, angleCube);
 	mat4.rotateY(rotationMatrixY, rotationMatrixY, angleCube);
@@ -759,6 +758,7 @@ function keyDown(event){
 			else{
 				bLight = false;
 			}
+			break;
 	}
 }
 

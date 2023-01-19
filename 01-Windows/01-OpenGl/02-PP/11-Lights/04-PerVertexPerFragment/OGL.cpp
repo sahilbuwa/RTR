@@ -88,7 +88,7 @@ GLuint materialShininessUniformF;
 
 GLuint lightingEnabledUniformF;
 
-GLfloat lightAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLfloat lightAmbient[] = {0.1f, 0.1f, 0.1f, 1.0f};
 GLfloat lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
 GLfloat lightSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
 GLfloat lightPosition[] = {100.0f, 100.0f, 100.0f, 1.0f};

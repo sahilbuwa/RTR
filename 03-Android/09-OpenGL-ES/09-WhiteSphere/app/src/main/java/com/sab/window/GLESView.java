@@ -280,7 +280,7 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		// Transformations
 		float translationMatrix[] = new float[16];
 		Matrix.setIdentityM(translationMatrix, 0);
-		Matrix.translateM(translationMatrix, 0, 0.0f, 0.0f, -2.5f);
+		Matrix.translateM(translationMatrix, 0, 0.0f, 0.0f, -2.0f);
 		float modelMatrix[] = new float[16];
 		Matrix.setIdentityM(modelMatrix, 0);
 		float modelViewMatrix[] = new float[16];

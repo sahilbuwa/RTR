@@ -20,28 +20,28 @@ import java.nio.FloatBuffer;
 // Matrix related Packages
 import android.opengl.Matrix;
 
-// Texture related Packages
-import android.graphics.BitmapFactory;
-import android.graphics.Bitmap;
-import android.opengl.GLUtils;
-
 public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGestureListener, GLSurfaceView.Renderer
 {
 	private GestureDetector gestureDetector;
 	private Context context;
 	private int shaderProgramObject;
-	private int vao_pyramid[] = new int[1];
-	private int vbo_pyramid_position[] = new int[1];
-	private int vbo_pyramid_texcoord[] = new int[1];
-	private int vao_cube[] = new int[1];
-	private int vbo_cube_position[] = new int[1];
-	private int vbo_cube_texcoord[] = new int[1];
-	private int mvpMatrixUniform;
-	private int textureSamplerUniform;
-	private int texture_stone[] = new int[1];
-	private int texture_kundali[] = new int[1];
-	private float anglePyramid = 0.0f;
-	private float angleCube = 0.0f;
+	private int vao_square[] = new int[1];
+	private int vbo_square_position[] = new int[1];
+	private int vao_circle[] = new int[1];
+	private int vbo_circle_position[] = new int[1];
+	private int vao_triangle[] = new int[1];
+	private int vbo_triangle_position[] = new int[1];
+	private int vao_graph[] = new int[1];
+	private int vbo_graph_position[] = new int[1];
+	private int vao_axes[] = new int[1];
+	private int vbo_axes_position[] = new int[1];
+
+	private int mvpMatrixUniform = 0;
+	private int colorUniform = 0;
+	private float circleVertices[] = new float [1080];
+	private float graphLineVertices[] = new float [480];
+	private float angle = 0.0f;
+	private int index = 0;
 
 	private float perspectiveProjectionMatrix[] = new float[16];
 
@@ -76,15 +76,15 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 	@Override
 	public void onSurfaceChanged(GL10 unused, int width, int height)
 	{
-		resize(width, height);	
+		resize(width, height);
 	}
 
 	@Override
 	public void onDrawFrame(GL10 unused)
 	{
 		// onDrawFrame should be considered as game loop
-		update();
 		display();
+		update();
 	}
 
 	// Custom Private functions
@@ -95,13 +95,10 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 			"#version 320 es" +
 			"\n" +
 			"in vec4 a_position;" +
-			"in vec2 a_texcoord;" +
 			"uniform mat4 u_mvpMatrix;" +
-			"out vec2 a_texcoord_out;" +
 			"void main(void)" +
 			"{" +
 			"gl_Position = u_mvpMatrix * a_position;" +
-			"a_texcoord_out = a_texcoord;" +
 			"}"
 		);
 		int vertexShaderObject = GLES32.glCreateShader(GLES32.GL_VERTEX_SHADER);
@@ -129,12 +126,11 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 			"#version 320 es" +
 			"\n" +
 			"precision highp float;" +
-			"in vec2 a_texcoord_out;" +
-			"uniform highp sampler2D u_textureSampler;" +
+			"uniform vec3 u_color;" +
 			"out vec4 FragColor;" +
 			"void main(void)" +
 			"{" +
-			"FragColor = texture(u_textureSampler, a_texcoord_out);" +
+			"FragColor = vec4(u_color, 1.0);" +
 			"}"
 		);
 		int fragmentShaderObject = GLES32.glCreateShader(GLES32.GL_FRAGMENT_SHADER);
@@ -162,7 +158,6 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		GLES32.glAttachShader(shaderProgramObject, vertexShaderObject);
 		GLES32.glAttachShader(shaderProgramObject, fragmentShaderObject);
 		GLES32.glBindAttribLocation(shaderProgramObject, MyGLESMacros.SAB_ATTRIBUTE_POSITION, "a_position");
-		GLES32.glBindAttribLocation(shaderProgramObject, MyGLESMacros.SAB_ATTRIBUTE_TEXTURE0, "a_texcoord");
 		GLES32.glLinkProgram(shaderProgramObject);
 		
 		// Error Checking
@@ -181,182 +176,154 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 				System.exit(0);
 			}
 		}
-
 		// Post linking Uniforms
 		mvpMatrixUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_mvpMatrix");
-		textureSamplerUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_textureSampler");
-
-		final float pyramidPosition[] = new float[] 
+		colorUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_color");
+		
+		final float squareVertices[] = new float[] 
 		{
-			// front
-			0.0f, 1.0f, 0.0f,
-			-1.0f, -1.0f, 1.0f,
-			1.0f, -1.0f, 1.0f,
-	
-			// right
-			0.0f, 1.0f, 0.0f,
-			1.0f, -1.0f, 1.0f,
-			1.0f, -1.0f, -1.0f,
-	
-			// back
-			0.0f, 1.0f, 0.0f,
-			1.0f, -1.0f, -1.0f,
-			-1.0f, -1.0f, -1.0f,
-	
-			// left
-			0.0f, 1.0f, 0.0f,
-			-1.0f, -1.0f, -1.0f,
-			-1.0f, -1.0f, 1.0f
+			1.0f, 1.0f, 0.0f,
+			-1.0f, 1.0f, 0.0f,
+			-1.0f, -1.0f, 0.0f,
+			1.0f, -1.0f, 0.0f
 		};
 
-		final float cubePosition[] = new float[] 
+		final float triangleVertices[] = new float[] 
 		{
-			// top
-			1.0f, 1.0f, -1.0f,
-			-1.0f, 1.0f, -1.0f, 
-			-1.0f, 1.0f, 1.0f,
-			1.0f, 1.0f, 1.0f,  
-	
-			// bottom
-			1.0f, -1.0f, -1.0f,
-		   -1.0f, -1.0f, -1.0f,
-		   -1.0f, -1.0f,  1.0f,
-			1.0f, -1.0f,  1.0f,
-	
-			// front
-			1.0f, 1.0f, 1.0f,
-		   -1.0f, 1.0f, 1.0f,
-		   -1.0f, -1.0f, 1.0f,
-			1.0f, -1.0f, 1.0f,
-	
-			// back
-			1.0f, 1.0f, -1.0f,
-		   -1.0f, 1.0f, -1.0f,
-		   -1.0f, -1.0f, -1.0f,
-			1.0f, -1.0f, -1.0f,
-	
-			// right
-			1.0f, 1.0f, -1.0f,
-			1.0f, 1.0f, 1.0f,
-			1.0f, -1.0f, 1.0f,
-			1.0f, -1.0f, -1.0f,
-	
-			// left
-			-1.0f, 1.0f, 1.0f,
-			-1.0f, 1.0f, -1.0f, 
-			-1.0f, -1.0f, -1.0f, 
-			-1.0f, -1.0f, 1.0f,
+			(float)Math.cos(Math.PI/2.0f), (float)Math.sin(Math.PI/2.0f), 0.0f,
+			(float)Math.cos(-(Math.PI/6.0f)), (float)Math.sin(-(Math.PI/6.0f)) , 0.0f,
+			(float)Math.cos((7.0f*Math.PI)/6.0f), (float)Math.sin((7.0f*Math.PI)/6.0f), 0.0f
 		};
 
-		final float pyramidTexcoords[] = new float[]
+		final float axesVertices[] = new float[] 
 		{
-			0.5f, 1.0f, // front-top
-			0.0f, 0.0f, // front-left
-			1.0f, 0.0f, // front-right
-	
-			0.5f, 1.0f, // right-top
-			1.0f, 0.0f, // right-left
-			0.0f, 0.0f, // right-right
-	
-			0.5f, 1.0f, // back-top
-			1.0f, 0.0f, // back-left
-			0.0f, 0.0f, // back-right
-	
-			0.5f, 1.0f, // left-top
-			0.0f, 0.0f, // left-left
-			1.0f, 0.0f // left-right
+			0.0f, 1.25f, 0.0f,
+			0.0f, -1.25f, 0.0f,
+			1.25f, 0.0f, 0.0f,
+			-1.25f, 0.0f, 0.0f
 		};
 
-		final float cubeTexcoords[] = new float[]
+		for (int i = 0; i < 360; i++ )
 		{
-			0.0f, 0.0f,
-			1.0f, 0.0f,
-			1.0f, 1.0f,
-			0.0f, 1.0f,
-	
-			0.0f, 0.0f,
-			1.0f, 0.0f,
-			1.0f, 1.0f,
-			0.0f, 1.0f,
-	
-			0.0f, 0.0f,
-			1.0f, 0.0f,
-			1.0f, 1.0f,
-			0.0f, 1.0f,
-			// Bottom
-			0.0f, 0.0f,
-			0.0f, 1.0f,
-			1.0f, 1.0f,
-			1.0f, 0.0f,
-	
-			0.0f, 0.0f,
-			1.0f, 0.0f,
-			1.0f, 1.0f,
-			0.0f, 1.0f,
-	
-			0.0f, 0.0f,
-			1.0f, 0.0f,
-			1.0f, 1.0f,
-			0.0f, 1.0f
-		};
-		// Vao Pyramid
-		GLES32.glGenVertexArrays(1, vao_pyramid, 0);
-		GLES32.glBindVertexArray(vao_pyramid[0]);
-		// Vbo Position
-		GLES32.glGenBuffers(1, vbo_pyramid_position, 0);
-		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_pyramid_position[0]);
-		ByteBuffer byteBuffer = ByteBuffer.allocateDirect(pyramidPosition.length * 4); // sizeof replacement
+			angle = (float)i * (float)Math.PI / 180.0f;
+			circleVertices[i * 3 + 0] = (float)Math.cos(angle);
+			circleVertices[i * 3 + 1] = (float)Math.sin(angle);
+			circleVertices[i * 3 + 2] = 0.0f;
+		}
+
+		for (float i = -1.25f; i <= 1.25f; i += 0.0625f)
+		{
+			if(i == 0.0f)
+				continue;
+
+			graphLineVertices[index * 3] = 1.25f;
+			graphLineVertices[index * 3 + 1] = (float)i; 
+			graphLineVertices[index * 3 + 2] = 0.0f;
+			index++;
+
+			graphLineVertices[index * 3] = -1.25f;
+			graphLineVertices[index * 3 + 1] = (float)i;
+			graphLineVertices[index * 3 + 2] = 0.0f; 
+			index++;
+
+			graphLineVertices[index * 3] = (float)i;
+			graphLineVertices[index * 3 + 1] = 1.25f; 
+			graphLineVertices[index * 3 + 2] = 0.0f; 
+			index++;
+
+			graphLineVertices[index * 3] = (float)i;
+			graphLineVertices[index * 3 + 1] = -1.25f; 
+			graphLineVertices[index * 3 + 2] = 0.0f; 
+			index++;
+		}
+
+
+		// Vao
+		GLES32.glGenVertexArrays(1, vao_square, 0);
+		GLES32.glBindVertexArray(vao_square[0]);
+		// Vbo
+		GLES32.glGenBuffers(1, vbo_square_position, 0);
+		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_square_position[0]);
+		ByteBuffer byteBuffer = ByteBuffer.allocateDirect(squareVertices.length * 4); // sizeof replacement
 		byteBuffer.order(ByteOrder.nativeOrder());
 		FloatBuffer positionBuffer = byteBuffer.asFloatBuffer();
-		positionBuffer.put(pyramidPosition);
+		positionBuffer.put(squareVertices);
 		positionBuffer.position(0);
-		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, pyramidPosition.length * 4, positionBuffer, GLES32.GL_STATIC_DRAW);
+		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, squareVertices.length * 4, positionBuffer, GLES32.GL_STATIC_DRAW);
 		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_POSITION, 3, GLES32.GL_FLOAT, false, 0, 0);
 		GLES32.glEnableVertexAttribArray(MyGLESMacros.SAB_ATTRIBUTE_POSITION);
 		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, 0);
 
-		// Vbo Texcoord
-		GLES32.glGenBuffers(1, vbo_pyramid_texcoord, 0);
-		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_pyramid_texcoord[0]);
-		byteBuffer = ByteBuffer.allocateDirect(pyramidTexcoords.length * 4); // sizeof replacement
+		GLES32.glBindVertexArray(0);
+
+		// Vao
+		GLES32.glGenVertexArrays(1, vao_circle, 0);
+		GLES32.glBindVertexArray(vao_circle[0]);
+		// Vbo
+		GLES32.glGenBuffers(1, vbo_circle_position, 0);
+		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_circle_position[0]);
+		byteBuffer = ByteBuffer.allocateDirect(circleVertices.length * 4); // sizeof replacement
 		byteBuffer.order(ByteOrder.nativeOrder());
-		FloatBuffer texcoordBuffer = byteBuffer.asFloatBuffer();
-		texcoordBuffer.put(pyramidTexcoords);
-		texcoordBuffer.position(0);
-		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, pyramidTexcoords.length * 4, texcoordBuffer, GLES32.GL_STATIC_DRAW);
-		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_TEXTURE0, 2, GLES32.GL_FLOAT, false, 0, 0);
-		GLES32.glEnableVertexAttribArray(MyGLESMacros.SAB_ATTRIBUTE_TEXTURE0);
+		positionBuffer = byteBuffer.asFloatBuffer();
+		positionBuffer.put(circleVertices);
+		positionBuffer.position(0);
+		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, circleVertices.length * 4, positionBuffer, GLES32.GL_STATIC_DRAW);
+		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_POSITION, 3, GLES32.GL_FLOAT, false, 0, 0);
+		GLES32.glEnableVertexAttribArray(MyGLESMacros.SAB_ATTRIBUTE_POSITION);
 		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, 0);
 		
 		GLES32.glBindVertexArray(0);
 
-		// Vao Cube
-		GLES32.glGenVertexArrays(1, vao_cube, 0);
-		GLES32.glBindVertexArray(vao_cube[0]);
-		// Vbo Position
-		GLES32.glGenBuffers(1, vbo_cube_position, 0);
-		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_cube_position[0]);
-		byteBuffer = ByteBuffer.allocateDirect(cubePosition.length * 4); // sizeof replacement
+		// Vao
+		GLES32.glGenVertexArrays(1, vao_triangle, 0);
+		GLES32.glBindVertexArray(vao_triangle[0]);
+		// Vbo
+		GLES32.glGenBuffers(1, vbo_triangle_position, 0);
+		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_triangle_position[0]);
+		byteBuffer = ByteBuffer.allocateDirect(triangleVertices.length * 4); // sizeof replacement
 		byteBuffer.order(ByteOrder.nativeOrder());
 		positionBuffer = byteBuffer.asFloatBuffer();
-		positionBuffer.put(cubePosition);
+		positionBuffer.put(triangleVertices);
 		positionBuffer.position(0);
-		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, cubePosition.length * 4, positionBuffer, GLES32.GL_STATIC_DRAW);
+		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, triangleVertices.length * 4, positionBuffer, GLES32.GL_STATIC_DRAW);
 		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_POSITION, 3, GLES32.GL_FLOAT, false, 0, 0);
 		GLES32.glEnableVertexAttribArray(MyGLESMacros.SAB_ATTRIBUTE_POSITION);
 		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, 0);
+		
+		GLES32.glBindVertexArray(0);
 
-		// Vbo Texcoord
-		GLES32.glGenBuffers(1, vbo_cube_texcoord, 0);
-		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_cube_texcoord[0]);
-		byteBuffer = ByteBuffer.allocateDirect(cubeTexcoords.length * 4); // sizeof replacement
+		// Vao
+		GLES32.glGenVertexArrays(1, vao_axes, 0);
+		GLES32.glBindVertexArray(vao_axes[0]);
+		// Vbo
+		GLES32.glGenBuffers(1, vbo_axes_position, 0);
+		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_axes_position[0]);
+		byteBuffer = ByteBuffer.allocateDirect(axesVertices.length * 4); // sizeof replacement
 		byteBuffer.order(ByteOrder.nativeOrder());
-		texcoordBuffer = byteBuffer.asFloatBuffer();
-		texcoordBuffer.put(cubeTexcoords);
-		texcoordBuffer.position(0);
-		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, cubeTexcoords.length * 4, texcoordBuffer, GLES32.GL_STATIC_DRAW);
-		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_TEXTURE0, 2, GLES32.GL_FLOAT, false, 0, 0);
-		GLES32.glEnableVertexAttribArray(MyGLESMacros.SAB_ATTRIBUTE_TEXTURE0);
+		positionBuffer = byteBuffer.asFloatBuffer();
+		positionBuffer.put(axesVertices);
+		positionBuffer.position(0);
+		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, axesVertices.length * 4, positionBuffer, GLES32.GL_STATIC_DRAW);
+		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_POSITION, 3, GLES32.GL_FLOAT, false, 0, 0);
+		GLES32.glEnableVertexAttribArray(MyGLESMacros.SAB_ATTRIBUTE_POSITION);
+		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, 0);
+		
+		GLES32.glBindVertexArray(0);
+
+		// Vao
+		GLES32.glGenVertexArrays(1, vao_graph, 0);
+		GLES32.glBindVertexArray(vao_graph[0]);
+		// Vbo
+		GLES32.glGenBuffers(1, vbo_graph_position, 0);
+		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_graph_position[0]);
+		byteBuffer = ByteBuffer.allocateDirect(graphLineVertices.length * 4); // sizeof replacement
+		byteBuffer.order(ByteOrder.nativeOrder());
+		positionBuffer = byteBuffer.asFloatBuffer();
+		positionBuffer.put(graphLineVertices);
+		positionBuffer.position(0);
+		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, graphLineVertices.length * 4, positionBuffer, GLES32.GL_STATIC_DRAW);
+		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_POSITION, 3, GLES32.GL_FLOAT, false, 0, 0);
+		GLES32.glEnableVertexAttribArray(MyGLESMacros.SAB_ATTRIBUTE_POSITION);
 		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, 0);
 		
 		GLES32.glBindVertexArray(0);
@@ -365,46 +332,17 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		GLES32.glClearDepthf(1.0f);
 		GLES32.glEnable(GLES32.GL_DEPTH_TEST);
 		GLES32.glDepthFunc(GLES32.GL_LEQUAL);
-
-		// Enable texture
-		GLES32.glEnable(GLES32.GL_TEXTURE_2D);
+		// Enable Culling
+		GLES32.glEnable(GLES32.GL_CULL_FACE);
 		// Clearing the screen to black color
 		GLES32.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-		// LoadGLTexture call
-		texture_stone[0] = loadGLTexture(R.raw.stone);
-		texture_kundali[0] = loadGLTexture(R.raw.kundali);
 
 		// Initialization of Projection Matrix
 		Matrix.setIdentityM(perspectiveProjectionMatrix, 0); // OpenGL purpose
 	}
 
-	private int loadGLTexture(int imageResourceID)
-	{
-		// Code
-		BitmapFactory.Options options = new BitmapFactory.Options();
-		options.inScaled = false;
-
-		Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), imageResourceID, options);
-		int texture[] = new int[1];
-		GLES32.glPixelStorei(GLES32.GL_UNPACK_ALIGNMENT, 1);
-		GLES32.glGenTextures(1, texture, 0);
-		GLES32.glBindTexture(GLES32.GL_TEXTURE_2D, texture[0]);
-		GLES32.glTexParameteri(GLES32.GL_TEXTURE_2D, GLES32.GL_TEXTURE_MAG_FILTER, GLES32.GL_LINEAR);
-		GLES32.glTexParameteri(GLES32.GL_TEXTURE_2D, GLES32.GL_TEXTURE_MIN_FILTER, GLES32.GL_LINEAR_MIPMAP_LINEAR);
-
-		// Create The Texture
-		GLUtils.texImage2D(GLES32.GL_TEXTURE_2D, 0, bitmap, 0);
-		GLES32.glGenerateMipmap(GLES32.GL_TEXTURE_2D);
-
-		GLES32.glBindTexture(GLES32.GL_TEXTURE_2D, 0);
-
-		return texture[0];
-	}
-
 	private void resize(int width, int height)
 	{
-		// Code
 		if(height == 0)
 			height = 1;
 		GLES32.glViewport(0, 0, width, height);
@@ -413,85 +351,74 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 
 	private void display()
 	{
-		// Code
 		GLES32.glClear(GLES32.GL_COLOR_BUFFER_BIT | GLES32.GL_DEPTH_BUFFER_BIT);
 		GLES32.glUseProgram(shaderProgramObject);
-		// Transformations Pyramid
+
+		// Transformations
 		float translationMatrix[] = new float[16];
 		Matrix.setIdentityM(translationMatrix, 0);
-		Matrix.translateM(translationMatrix, 0, -1.5f, 0.0f, -6.0f);
-		float rotationMatrix[] = new float[16];
-		Matrix.setIdentityM(rotationMatrix, 0);
-		Matrix.rotateM(rotationMatrix, 0, anglePyramid, 0.0f, 1.0f, 0.0f);
+		Matrix.translateM(translationMatrix, 0, 0.0f, 0.0f, -3.25f);
 		float modelMatrix[] = new float[16];
 		Matrix.setIdentityM(modelMatrix, 0);
 		float modelViewMatrix[] = new float[16];
 		Matrix.setIdentityM(modelViewMatrix, 0);
 		float modelViewProjectionMatrix[] = new float[16];
 		Matrix.setIdentityM(modelViewProjectionMatrix, 0);
-		Matrix.multiplyMM(modelMatrix, 0, translationMatrix, 0, rotationMatrix, 0);
+		Matrix.multiplyMM(modelMatrix, 0, modelMatrix, 0, translationMatrix, 0);
 		Matrix.multiplyMM(modelViewMatrix, 0, modelViewMatrix, 0, modelMatrix, 0);
 		Matrix.multiplyMM(modelViewProjectionMatrix , 0, perspectiveProjectionMatrix, 0, modelViewMatrix, 0);
 
 		GLES32.glUniformMatrix4fv(mvpMatrixUniform, 1, false, modelViewProjectionMatrix, 0);
-		
-		GLES32.glBindVertexArray(vao_pyramid[0]);
 
-		GLES32.glActiveTexture(GLES32.GL_TEXTURE0);
-		GLES32.glBindTexture(GLES32.GL_TEXTURE_2D, texture_stone[0]);
-		GLES32.glUniform1i(textureSamplerUniform, 0);
-		// Drawing Code
-		GLES32.glDrawArrays(GLES32.GL_TRIANGLES, 0, 12);
+		// Graph Lines
+		GLES32.glLineWidth(1.0f);
+		GLES32.glUniform3f(colorUniform, 0.0f, 0.0f, 1.0f);
+		GLES32.glBindVertexArray(vao_graph[0]);
+
+		GLES32.glDrawArrays(GLES32.GL_LINES, 0, 320);
+
+		GLES32.glBindVertexArray(0);
+		// Axes
+		GLES32.glLineWidth(2.0f);
+		GLES32.glUniform3f(colorUniform, 0.0f, 1.0f, 0.0f);
+		GLES32.glBindVertexArray(vao_axes[0]);
+
+		GLES32.glDrawArrays(GLES32.GL_LINES, 0, 2);
+
+		GLES32.glUniform3f(colorUniform, 1.0f, 0.0f, 0.0f);
+		GLES32.glDrawArrays(GLES32.GL_LINES, 2, 2);
 
 		GLES32.glBindVertexArray(0);
 
-		// Transformations Cube
-		Matrix.setIdentityM(translationMatrix, 0);
-		Matrix.translateM(translationMatrix, 0, 1.5f, 0.0f, -6.0f);
-		Matrix.setIdentityM(rotationMatrix, 0);
-		Matrix.rotateM(rotationMatrix, 0, angleCube, 1.0f, 0.0f, 0.0f);
-		Matrix.rotateM(rotationMatrix, 0, angleCube, 0.0f, 1.0f, 0.0f);
-		Matrix.rotateM(rotationMatrix, 0, angleCube, 0.0f, 0.0f, 1.0f);
-		Matrix.setIdentityM(modelMatrix, 0);
-		Matrix.setIdentityM(modelViewMatrix, 0);
-		Matrix.setIdentityM(modelViewProjectionMatrix, 0);
-		Matrix.multiplyMM(modelMatrix, 0, translationMatrix, 0, rotationMatrix, 0);
-		Matrix.multiplyMM(modelViewMatrix, 0, modelViewMatrix, 0, modelMatrix, 0);
-		Matrix.multiplyMM(modelViewProjectionMatrix , 0, perspectiveProjectionMatrix, 0, modelViewMatrix, 0);
+		// Square
+		GLES32.glUniform3f(colorUniform, 1.0f, 1.0f, 0.0f);
+		GLES32.glBindVertexArray(vao_square[0]);
 
-		GLES32.glUniformMatrix4fv(mvpMatrixUniform, 1, false, modelViewProjectionMatrix, 0);
-		
-		GLES32.glBindVertexArray(vao_cube[0]);
-
-		GLES32.glActiveTexture(GLES32.GL_TEXTURE0);
-		GLES32.glBindTexture(GLES32.GL_TEXTURE_2D, texture_kundali[0]);
-		GLES32.glUniform1i(textureSamplerUniform, 0);
-		// Drawing Code
-		GLES32.glDrawArrays(GLES32.GL_TRIANGLE_FAN, 0, 4);
-		GLES32.glDrawArrays(GLES32.GL_TRIANGLE_FAN, 4, 4);
-		GLES32.glDrawArrays(GLES32.GL_TRIANGLE_FAN, 8, 4);
-		GLES32.glDrawArrays(GLES32.GL_TRIANGLE_FAN, 12, 4);
-		GLES32.glDrawArrays(GLES32.GL_TRIANGLE_FAN, 16, 4);
-		GLES32.glDrawArrays(GLES32.GL_TRIANGLE_FAN, 20, 4);
+		GLES32.glDrawArrays(GLES32.GL_LINE_LOOP, 0, 4);
 
 		GLES32.glBindVertexArray(0);
 
+		// Triangle
+		GLES32.glBindVertexArray(vao_triangle[0]);
+
+		GLES32.glDrawArrays(GLES32.GL_LINE_LOOP, 0, 3);
+
+		GLES32.glBindVertexArray(0);
+
+		// Circle
+		GLES32.glBindVertexArray(vao_circle[0]);
+
+		GLES32.glDrawArrays(GLES32.GL_LINE_LOOP, 0, 360);
+
+		GLES32.glBindVertexArray(0);
 		// Unuse the shader program object
 		GLES32.glUseProgram(0);
-
 		requestRender(); // SwapBuffers()
 	}
 
 	private void update()
 	{
 		// Code
-		anglePyramid = anglePyramid + 0.1f;
-		if(anglePyramid >= 360.0f)
-			anglePyramid -= 360.0f;
-			
-		angleCube = angleCube + 0.1f;
-		if(angleCube >= 360.0f)
-			angleCube -= 360.0f;
 	}
 
 	private void uninitialize()
@@ -518,45 +445,56 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 			GLES32.glDeleteProgram(shaderProgramObject);
 			shaderProgramObject = 0;	
 		}
-		if(texture_stone[0] > 0)
+		
+		if(vbo_square_position[0] > 0)
 		{
-			GLES32.glDeleteTextures(1, texture_stone, 0);
-			texture_stone[0] = 0;
+			GLES32.glDeleteBuffers(1, vbo_square_position, 0);
+			vbo_square_position[0] = 0;
 		}
-		if(texture_kundali[0] > 0)
+		if(vao_square[0] > 0)
 		{
-			GLES32.glDeleteTextures(1, texture_kundali, 0);
-			texture_kundali[0] = 0;
+			GLES32.glDeleteVertexArrays(1, vao_square, 0);
+			vao_square[0] = 0;
 		}
-		if(vbo_cube_texcoord[0] > 0)
+		if(vbo_triangle_position[0] > 0)
 		{
-			GLES32.glDeleteBuffers(1, vbo_cube_texcoord, 0);
-			vbo_cube_texcoord[0] = 0;
+			GLES32.glDeleteBuffers(1, vbo_triangle_position, 0);
+			vbo_triangle_position[0] = 0;
 		}
-		if(vbo_cube_position[0] > 0)
+		if(vao_triangle[0] > 0)
 		{
-			GLES32.glDeleteBuffers(1, vbo_cube_position, 0);
-			vbo_cube_position[0] = 0;
+			GLES32.glDeleteVertexArrays(1, vao_triangle, 0);
+			vao_triangle[0] = 0;
 		}
-		if(vao_cube[0] > 0)
+		if(vbo_axes_position[0] > 0)
 		{
-			GLES32.glDeleteVertexArrays(1, vao_cube, 0);
-			vao_cube[0] = 0;
+			GLES32.glDeleteBuffers(1, vbo_axes_position, 0);
+			vbo_axes_position[0] = 0;
 		}
-		if(vbo_pyramid_texcoord[0] > 0)
+		if(vao_axes[0] > 0)
 		{
-			GLES32.glDeleteBuffers(1, vbo_pyramid_texcoord, 0);
-			vbo_pyramid_texcoord[0] = 0;
+			GLES32.glDeleteVertexArrays(1, vao_axes, 0);
+			vao_axes[0] = 0;
 		}
-		if(vbo_pyramid_position[0] > 0)
+		if(vbo_graph_position[0] > 0)
 		{
-			GLES32.glDeleteBuffers(1, vbo_pyramid_position, 0);
-			vbo_pyramid_position[0] = 0;
+			GLES32.glDeleteBuffers(1, vbo_graph_position, 0);
+			vbo_graph_position[0] = 0;
 		}
-		if(vao_pyramid[0] > 0)
+		if(vao_graph[0] > 0)
 		{
-			GLES32.glDeleteVertexArrays(1, vao_pyramid, 0);
-			vao_pyramid[0] = 0;
+			GLES32.glDeleteVertexArrays(1, vao_graph, 0);
+			vao_graph[0] = 0;
+		}
+		if(vbo_circle_position[0] > 0)
+		{
+			GLES32.glDeleteBuffers(1, vbo_circle_position, 0);
+			vbo_circle_position[0] = 0;
+		}
+		if(vao_circle[0] > 0)
+		{
+			GLES32.glDeleteVertexArrays(1, vao_circle, 0);
+			vao_circle[0] = 0;
 		}
 	}
 
@@ -567,7 +505,6 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		if(!gestureDetector.onTouchEvent(e))
 		{
 			super.onTouchEvent(e);
-			
 		}
 		return true;
 	}
@@ -594,7 +531,7 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		return true;
 	}
 
-	// 6 methods of ontaplistener
+	// 6 methods of onTaplistener
 	@Override
 	public boolean onDown(MotionEvent e)
 	{
@@ -636,5 +573,4 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		// Code
 		return true;
 	}
-
 }

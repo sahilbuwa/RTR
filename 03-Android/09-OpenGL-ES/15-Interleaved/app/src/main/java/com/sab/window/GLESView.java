@@ -30,18 +30,38 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 	private GestureDetector gestureDetector;
 	private Context context;
 	private int shaderProgramObject;
-	private int vao_pyramid[] = new int[1];
-	private int vbo_pyramid_position[] = new int[1];
-	private int vbo_pyramid_texcoord[] = new int[1];
 	private int vao_cube[] = new int[1];
-	private int vbo_cube_position[] = new int[1];
-	private int vbo_cube_texcoord[] = new int[1];
-	private int mvpMatrixUniform;
+	private int vbo_cube[] = new int[1];
+	private int modelMatrixUniform;
+	private int viewMatrixUniform;
+	private int projectionMatrixUniform;
 	private int textureSamplerUniform;
-	private int texture_stone[] = new int[1];
-	private int texture_kundali[] = new int[1];
-	private float anglePyramid = 0.0f;
+	private int texture_marble[] = new int[1];
 	private float angleCube = 0.0f;
+
+	private int ldUniform = 0;
+	private int laUniform = 0;
+	private int lsUniform = 0;
+	private int lightPositionUniform = 0;
+
+	private int kaUniform = 0;
+	private int kdUniform = 0;
+	private int ksUniform = 0;
+	private int materialShininessUniform = 0;
+
+	private int lightingEnabledUniform = 0;
+
+	private float[] lightAmbient = new float[] {0.1f, 0.1f, 0.1f, 1.0f};
+	private float[] lightDiffuse = new float[] {1.0f, 1.0f, 1.0f, 1.0f};
+	private float[] lightSpecular = new float[] {1.0f, 1.0f, 1.0f, 1.0f};
+	private float[] lightPosition = new float[] {100.0f, 100.0f, 100.0f, 1.0f};
+	
+	private float[] materialAmbient = new float[] {0.1f, 0.1f, 0.1f, 1.0f};
+	private float[] materialDiffuse = new float[] {1.0f, 1.0f, 1.0f, 1.0f};
+	private float[] materialSpecular = new float[] {1.0f, 1.0f, 1.0f, 1.0f};
+	private float materialShininess = 50.0f;
+
+	private int doubleTapCount = 0;
 
 	private float perspectiveProjectionMatrix[] = new float[16];
 
@@ -94,15 +114,36 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		final String vertexShaderSourceCode = String.format(
 			"#version 320 es" +
 			"\n" +
-			"in vec4 a_position;" +
-			"in vec2 a_texcoord;" +
-			"uniform mat4 u_mvpMatrix;" +
-			"out vec2 a_texcoord_out;" +
-			"void main(void)" +
-			"{" +
-			"gl_Position = u_mvpMatrix * a_position;" +
-			"a_texcoord_out = a_texcoord;" +
-			"}"
+			"precision highp float;" +
+			"precision highp int;" +
+			"in vec4 a_position;\n" +
+			"in vec3 a_normal;\n" +
+			"in vec2 a_texcoord;\n" +
+			"in vec4 a_color;\n" +
+			"uniform mat4 u_modelMatrix;\n" +
+			"uniform mat4 u_viewMatrix;\n" +
+			"uniform mat4 u_projectionMatrix;\n" +
+			"uniform vec4 u_lightPosition;\n" +
+			"uniform int u_lightingEnabled;\n" +
+			"out vec3 transformedNormals;\n" +
+			"out vec3 lightDirection;\n" +
+			"out vec3 viewerVector;\n" +
+			"out vec2 a_texcoord_out;\n" +
+			"out vec4 a_color_out;\n" +
+			"void main(void)\n" +
+			"{\n" +
+			"if(u_lightingEnabled == 1)\n" +
+			"{\n" +
+			"vec4 eyeCoordinates = u_viewMatrix * u_modelMatrix * a_position;\n" +
+			"mat3 normalMatrix = mat3(u_viewMatrix * u_modelMatrix);\n" +
+			"transformedNormals = normalMatrix * a_normal;\n" +
+			"lightDirection = vec3(u_lightPosition) - eyeCoordinates.xyz;\n" +
+			"viewerVector = -eyeCoordinates.xyz;\n" +
+			"}\n" +
+			"a_texcoord_out = a_texcoord;\n" +
+			"a_color_out = a_color;\n" +
+			"gl_Position = u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;\n" +
+			"}\n"
 		);
 		int vertexShaderObject = GLES32.glCreateShader(GLES32.GL_VERTEX_SHADER);
 		GLES32.glShaderSource(vertexShaderObject, vertexShaderSourceCode);
@@ -129,13 +170,43 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 			"#version 320 es" +
 			"\n" +
 			"precision highp float;" +
-			"in vec2 a_texcoord_out;" +
-			"uniform highp sampler2D u_textureSampler;" +
-			"out vec4 FragColor;" +
-			"void main(void)" +
-			"{" +
-			"FragColor = texture(u_textureSampler, a_texcoord_out);" +
-			"}"
+			"precision highp int;" +
+			"in vec4 a_color_out;" +
+			"in vec2 a_texcoord_out;\n" +
+			"in vec3 transformedNormals;\n" +
+			"in vec3 lightDirection;\n" +
+			"in vec3 viewerVector;\n" +
+			"uniform sampler2D u_textureSampler;\n" +
+			"uniform vec3 u_la;\n" +
+			"uniform vec3 u_ld;\n" +
+			"uniform vec3 u_ls;\n" +
+			"uniform vec3 u_ka;\n" +
+			"uniform vec3 u_kd;\n" +
+			"uniform vec3 u_ks;\n" +
+			"uniform float u_materialShininess;\n" +
+			"uniform int u_lightingEnabled;\n" +
+			"out vec4 FragColor;\n" +
+			"void main(void)\n" +
+			"{\n" +
+			"vec4 fong_ads_light;" +
+			"if(u_lightingEnabled == 1)\n" +
+			"{\n" +
+			"vec3 ambient = u_la * u_ka;\n" +
+			"vec3 normalized_transformedNormals = normalize(transformedNormals);\n" +
+			"vec3 normalized_lightDirection = normalize(lightDirection);\n" +
+			"vec3 diffuse = u_ld * u_kd * max(dot(normalized_lightDirection, normalized_transformedNormals), 0.0);\n" +
+			"vec3 reflectionVector = reflect(-normalized_lightDirection, normalized_transformedNormals);\n" +
+			"vec3 normalized_viewerVector = normalize(viewerVector);\n" +
+			"vec3 specular = u_ls * u_ks * pow(max(dot(reflectionVector, normalized_viewerVector), 0.0), u_materialShininess);\n" +
+			"fong_ads_light = vec4(ambient + diffuse + specular, 1.0);\n" +
+			"}\n" +
+			"else\n" +
+			"{\n" +
+			"fong_ads_light = vec4(1.0, 1.0, 1.0, 1.0);\n" +
+			"}\n" +
+			"vec4 tex = texture(u_textureSampler, a_texcoord_out);\n" +
+			"FragColor = fong_ads_light * tex * a_color_out;\n" +
+			"}\n"
 		);
 		int fragmentShaderObject = GLES32.glCreateShader(GLES32.GL_FRAGMENT_SHADER);
 		GLES32.glShaderSource(fragmentShaderObject, fragmentShaderSourceCode);
@@ -162,7 +233,9 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		GLES32.glAttachShader(shaderProgramObject, vertexShaderObject);
 		GLES32.glAttachShader(shaderProgramObject, fragmentShaderObject);
 		GLES32.glBindAttribLocation(shaderProgramObject, MyGLESMacros.SAB_ATTRIBUTE_POSITION, "a_position");
+		GLES32.glBindAttribLocation(shaderProgramObject, MyGLESMacros.SAB_ATTRIBUTE_COLOR, "a_color");
 		GLES32.glBindAttribLocation(shaderProgramObject, MyGLESMacros.SAB_ATTRIBUTE_TEXTURE0, "a_texcoord");
+		GLES32.glBindAttribLocation(shaderProgramObject, MyGLESMacros.SAB_ATTRIBUTE_NORMAL, "a_normal");
 		GLES32.glLinkProgram(shaderProgramObject);
 		
 		// Error Checking
@@ -183,180 +256,89 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		}
 
 		// Post linking Uniforms
-		mvpMatrixUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_mvpMatrix");
-		textureSamplerUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_textureSampler");
-
-		final float pyramidPosition[] = new float[] 
-		{
-			// front
-			0.0f, 1.0f, 0.0f,
-			-1.0f, -1.0f, 1.0f,
-			1.0f, -1.0f, 1.0f,
-	
-			// right
-			0.0f, 1.0f, 0.0f,
-			1.0f, -1.0f, 1.0f,
-			1.0f, -1.0f, -1.0f,
-	
-			// back
-			0.0f, 1.0f, 0.0f,
-			1.0f, -1.0f, -1.0f,
-			-1.0f, -1.0f, -1.0f,
-	
-			// left
-			0.0f, 1.0f, 0.0f,
-			-1.0f, -1.0f, -1.0f,
-			-1.0f, -1.0f, 1.0f
-		};
-
-		final float cubePosition[] = new float[] 
-		{
-			// top
-			1.0f, 1.0f, -1.0f,
-			-1.0f, 1.0f, -1.0f, 
-			-1.0f, 1.0f, 1.0f,
-			1.0f, 1.0f, 1.0f,  
-	
-			// bottom
-			1.0f, -1.0f, -1.0f,
-		   -1.0f, -1.0f, -1.0f,
-		   -1.0f, -1.0f,  1.0f,
-			1.0f, -1.0f,  1.0f,
-	
-			// front
-			1.0f, 1.0f, 1.0f,
-		   -1.0f, 1.0f, 1.0f,
-		   -1.0f, -1.0f, 1.0f,
-			1.0f, -1.0f, 1.0f,
-	
-			// back
-			1.0f, 1.0f, -1.0f,
-		   -1.0f, 1.0f, -1.0f,
-		   -1.0f, -1.0f, -1.0f,
-			1.0f, -1.0f, -1.0f,
-	
-			// right
-			1.0f, 1.0f, -1.0f,
-			1.0f, 1.0f, 1.0f,
-			1.0f, -1.0f, 1.0f,
-			1.0f, -1.0f, -1.0f,
-	
-			// left
-			-1.0f, 1.0f, 1.0f,
-			-1.0f, 1.0f, -1.0f, 
-			-1.0f, -1.0f, -1.0f, 
-			-1.0f, -1.0f, 1.0f,
-		};
-
-		final float pyramidTexcoords[] = new float[]
-		{
-			0.5f, 1.0f, // front-top
-			0.0f, 0.0f, // front-left
-			1.0f, 0.0f, // front-right
-	
-			0.5f, 1.0f, // right-top
-			1.0f, 0.0f, // right-left
-			0.0f, 0.0f, // right-right
-	
-			0.5f, 1.0f, // back-top
-			1.0f, 0.0f, // back-left
-			0.0f, 0.0f, // back-right
-	
-			0.5f, 1.0f, // left-top
-			0.0f, 0.0f, // left-left
-			1.0f, 0.0f // left-right
-		};
-
-		final float cubeTexcoords[] = new float[]
-		{
-			0.0f, 0.0f,
-			1.0f, 0.0f,
-			1.0f, 1.0f,
-			0.0f, 1.0f,
-	
-			0.0f, 0.0f,
-			1.0f, 0.0f,
-			1.0f, 1.0f,
-			0.0f, 1.0f,
-	
-			0.0f, 0.0f,
-			1.0f, 0.0f,
-			1.0f, 1.0f,
-			0.0f, 1.0f,
-			// Bottom
-			0.0f, 0.0f,
-			0.0f, 1.0f,
-			1.0f, 1.0f,
-			1.0f, 0.0f,
-	
-			0.0f, 0.0f,
-			1.0f, 0.0f,
-			1.0f, 1.0f,
-			0.0f, 1.0f,
-	
-			0.0f, 0.0f,
-			1.0f, 0.0f,
-			1.0f, 1.0f,
-			0.0f, 1.0f
-		};
-		// Vao Pyramid
-		GLES32.glGenVertexArrays(1, vao_pyramid, 0);
-		GLES32.glBindVertexArray(vao_pyramid[0]);
-		// Vbo Position
-		GLES32.glGenBuffers(1, vbo_pyramid_position, 0);
-		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_pyramid_position[0]);
-		ByteBuffer byteBuffer = ByteBuffer.allocateDirect(pyramidPosition.length * 4); // sizeof replacement
-		byteBuffer.order(ByteOrder.nativeOrder());
-		FloatBuffer positionBuffer = byteBuffer.asFloatBuffer();
-		positionBuffer.put(pyramidPosition);
-		positionBuffer.position(0);
-		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, pyramidPosition.length * 4, positionBuffer, GLES32.GL_STATIC_DRAW);
-		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_POSITION, 3, GLES32.GL_FLOAT, false, 0, 0);
-		GLES32.glEnableVertexAttribArray(MyGLESMacros.SAB_ATTRIBUTE_POSITION);
-		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, 0);
-
-		// Vbo Texcoord
-		GLES32.glGenBuffers(1, vbo_pyramid_texcoord, 0);
-		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_pyramid_texcoord[0]);
-		byteBuffer = ByteBuffer.allocateDirect(pyramidTexcoords.length * 4); // sizeof replacement
-		byteBuffer.order(ByteOrder.nativeOrder());
-		FloatBuffer texcoordBuffer = byteBuffer.asFloatBuffer();
-		texcoordBuffer.put(pyramidTexcoords);
-		texcoordBuffer.position(0);
-		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, pyramidTexcoords.length * 4, texcoordBuffer, GLES32.GL_STATIC_DRAW);
-		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_TEXTURE0, 2, GLES32.GL_FLOAT, false, 0, 0);
-		GLES32.glEnableVertexAttribArray(MyGLESMacros.SAB_ATTRIBUTE_TEXTURE0);
-		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, 0);
+		modelMatrixUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_modelMatrix");
+		viewMatrixUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_viewMatrix");
+		projectionMatrixUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_projectionMatrix");
 		
-		GLES32.glBindVertexArray(0);
+		laUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_la");
+		ldUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_ld");
+		lsUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_ls");
+		lightPositionUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_lightPosition");
+	
+		kaUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_ka");
+		kdUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_kd");
+		ksUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_ks");
+		materialShininessUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_materialShininess");
+	
+		lightingEnabledUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_lightingEnabled");
+		textureSamplerUniform = GLES32.glGetUniformLocation(shaderProgramObject, "u_textureSampler");
+	
 
-		// Vao Cube
+		final float cubepcnt[] = new float[] 
+		{
+		//front             //color-red         //normal-front      //texture-front
+		1.0f, 1.0f, 1.0f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f,   1.0f, 0.0f,
+		-1.0f, 1.0f, 1.0f,  1.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+		-1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 1.0f,
+		1.0f, -1.0f, 1.0f,  1.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f,
+
+		//right             //color-green       //normal-right      //texture-right
+		1.0f, 1.0f, -1.0f,  0.0f, 1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 0.0f,
+		1.0f, 1.0f, 1.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f,
+		1.0f, -1.0f, 1.0f,  0.0f, 1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+		1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,
+
+		//back              //color-blue        //normal-back       //texture-back
+		-1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f,   0.0f, 0.0f, -1.0f,  1.0f, 0.0f,
+		1.0f, 1.0f, -1.0f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f, -1.0f,  0.0f, 0.0f,
+		1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f,   0.0f, 0.0f, -1.0f,  0.0f, 1.0f,
+		-1.0f, -1.0f, -1.0f,0.0f, 0.0f, 1.0f,   0.0f, 0.0f, -1.0f,  1.0f, 1.0f,
+
+		//left              //color-cyan        //normal-left       //texture-back
+		-1.0f, 1.0f, 1.0f,  0.0f, 1.0f, 1.0f,   -1.0f, 0.0f, 0.0f,  1.0f, 0.0f,
+		-1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 1.0f,   -1.0f, 0.0f, 0.0f,  0.0f, 0.0f,
+		-1.0f, -1.0f, -1.0f,0.0f, 1.0f, 1.0f,   -1.0f, 0.0f, 0.0f,  0.0f, 1.0f,
+		-1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,   -1.0f, 0.0f, 0.0f,  1.0f, 1.0f,
+
+		//top               //color-magenta     //normal-top        //texture-top
+		1.0f, 1.0f, -1.0f,  1.0f, 0.0f, 1.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,
+		-1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f,   0.0f, 1.0f, 0.0f,   0.0f, 0.0f,
+		-1.0f, 1.0f, 1.0f,  1.0f, 0.0f, 1.0f,   0.0f, 1.0f, 0.0f,   0.0f, 1.0f,
+		1.0f, 1.0f, 1.0f,   1.0f, 0.0f, 1.0f,   0.0f, 1.0f, 0.0f,   1.0f, 1.0f,
+
+		//bottom            //color-yellow      //normal-bottom     //texture-bottom
+		1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 0.0f,   0.0f, -1.0f, 0.0f,  1.0f, 0.0f,
+		-1.0f, -1.0f, -1.0f,1.0f, 1.0f, 0.0f,   0.0f, -1.0f, 0.0f,  0.0f, 0.0f,
+		-1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 0.0f,   0.0f, -1.0f, 0.0f,  0.0f, 1.0f,
+		1.0f, -1.0f, 1.0f,  1.0f, 1.0f, 0.0f,   0.0f, -1.0f, 0.0f,  1.0f, 1.0f
+
+		};
+
+		// Vao
 		GLES32.glGenVertexArrays(1, vao_cube, 0);
 		GLES32.glBindVertexArray(vao_cube[0]);
 		// Vbo Position
-		GLES32.glGenBuffers(1, vbo_cube_position, 0);
-		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_cube_position[0]);
-		byteBuffer = ByteBuffer.allocateDirect(cubePosition.length * 4); // sizeof replacement
+		GLES32.glGenBuffers(1, vbo_cube, 0);
+		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_cube[0]);
+		ByteBuffer byteBuffer = ByteBuffer.allocateDirect(cubepcnt.length * 4); // sizeof replacement
 		byteBuffer.order(ByteOrder.nativeOrder());
-		positionBuffer = byteBuffer.asFloatBuffer();
-		positionBuffer.put(cubePosition);
+		FloatBuffer positionBuffer = byteBuffer.asFloatBuffer();
+		positionBuffer.put(cubepcnt);
 		positionBuffer.position(0);
-		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, cubePosition.length * 4, positionBuffer, GLES32.GL_STATIC_DRAW);
-		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_POSITION, 3, GLES32.GL_FLOAT, false, 0, 0);
+		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, cubepcnt.length * 4, positionBuffer, GLES32.GL_STATIC_DRAW);
+		// Position
+		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_POSITION, 3, GLES32.GL_FLOAT, false, 11 * 4, 0);
 		GLES32.glEnableVertexAttribArray(MyGLESMacros.SAB_ATTRIBUTE_POSITION);
-		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, 0);
-
-		// Vbo Texcoord
-		GLES32.glGenBuffers(1, vbo_cube_texcoord, 0);
-		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, vbo_cube_texcoord[0]);
-		byteBuffer = ByteBuffer.allocateDirect(cubeTexcoords.length * 4); // sizeof replacement
-		byteBuffer.order(ByteOrder.nativeOrder());
-		texcoordBuffer = byteBuffer.asFloatBuffer();
-		texcoordBuffer.put(cubeTexcoords);
-		texcoordBuffer.position(0);
-		GLES32.glBufferData(GLES32.GL_ARRAY_BUFFER, cubeTexcoords.length * 4, texcoordBuffer, GLES32.GL_STATIC_DRAW);
-		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_TEXTURE0, 2, GLES32.GL_FLOAT, false, 0, 0);
+		// Color
+		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_COLOR, 3, GLES32.GL_FLOAT, false, 11 * 4, 3 * 4);
+		GLES32.glEnableVertexAttribArray(MyGLESMacros.SAB_ATTRIBUTE_COLOR);
+		// Normals
+		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_NORMAL, 3, GLES32.GL_FLOAT, false, 11 * 4, 6 * 4);
+		GLES32.glEnableVertexAttribArray(MyGLESMacros.SAB_ATTRIBUTE_NORMAL);
+		// Texture
+		GLES32.glVertexAttribPointer(MyGLESMacros.SAB_ATTRIBUTE_TEXTURE0, 2, GLES32.GL_FLOAT, false, 11 * 4, 9 * 4);
 		GLES32.glEnableVertexAttribArray(MyGLESMacros.SAB_ATTRIBUTE_TEXTURE0);
+
 		GLES32.glBindBuffer(GLES32.GL_ARRAY_BUFFER, 0);
 		
 		GLES32.glBindVertexArray(0);
@@ -372,9 +354,7 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		GLES32.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 		// LoadGLTexture call
-		texture_stone[0] = loadGLTexture(R.raw.stone);
-		texture_kundali[0] = loadGLTexture(R.raw.kundali);
-
+		texture_marble[0] = loadGLTexture(R.raw.marble);
 		// Initialization of Projection Matrix
 		Matrix.setIdentityM(perspectiveProjectionMatrix, 0); // OpenGL purpose
 	}
@@ -416,55 +396,53 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		// Code
 		GLES32.glClear(GLES32.GL_COLOR_BUFFER_BIT | GLES32.GL_DEPTH_BUFFER_BIT);
 		GLES32.glUseProgram(shaderProgramObject);
-		// Transformations Pyramid
+		// Transformations
 		float translationMatrix[] = new float[16];
 		Matrix.setIdentityM(translationMatrix, 0);
-		Matrix.translateM(translationMatrix, 0, -1.5f, 0.0f, -6.0f);
+		Matrix.translateM(translationMatrix, 0, 0.0f, 0.0f, -6.0f);
+
 		float rotationMatrix[] = new float[16];
-		Matrix.setIdentityM(rotationMatrix, 0);
-		Matrix.rotateM(rotationMatrix, 0, anglePyramid, 0.0f, 1.0f, 0.0f);
-		float modelMatrix[] = new float[16];
-		Matrix.setIdentityM(modelMatrix, 0);
-		float modelViewMatrix[] = new float[16];
-		Matrix.setIdentityM(modelViewMatrix, 0);
-		float modelViewProjectionMatrix[] = new float[16];
-		Matrix.setIdentityM(modelViewProjectionMatrix, 0);
-		Matrix.multiplyMM(modelMatrix, 0, translationMatrix, 0, rotationMatrix, 0);
-		Matrix.multiplyMM(modelViewMatrix, 0, modelViewMatrix, 0, modelMatrix, 0);
-		Matrix.multiplyMM(modelViewProjectionMatrix , 0, perspectiveProjectionMatrix, 0, modelViewMatrix, 0);
-
-		GLES32.glUniformMatrix4fv(mvpMatrixUniform, 1, false, modelViewProjectionMatrix, 0);
-		
-		GLES32.glBindVertexArray(vao_pyramid[0]);
-
-		GLES32.glActiveTexture(GLES32.GL_TEXTURE0);
-		GLES32.glBindTexture(GLES32.GL_TEXTURE_2D, texture_stone[0]);
-		GLES32.glUniform1i(textureSamplerUniform, 0);
-		// Drawing Code
-		GLES32.glDrawArrays(GLES32.GL_TRIANGLES, 0, 12);
-
-		GLES32.glBindVertexArray(0);
-
-		// Transformations Cube
-		Matrix.setIdentityM(translationMatrix, 0);
-		Matrix.translateM(translationMatrix, 0, 1.5f, 0.0f, -6.0f);
 		Matrix.setIdentityM(rotationMatrix, 0);
 		Matrix.rotateM(rotationMatrix, 0, angleCube, 1.0f, 0.0f, 0.0f);
 		Matrix.rotateM(rotationMatrix, 0, angleCube, 0.0f, 1.0f, 0.0f);
 		Matrix.rotateM(rotationMatrix, 0, angleCube, 0.0f, 0.0f, 1.0f);
-		Matrix.setIdentityM(modelMatrix, 0);
-		Matrix.setIdentityM(modelViewMatrix, 0);
-		Matrix.setIdentityM(modelViewProjectionMatrix, 0);
-		Matrix.multiplyMM(modelMatrix, 0, translationMatrix, 0, rotationMatrix, 0);
-		Matrix.multiplyMM(modelViewMatrix, 0, modelViewMatrix, 0, modelMatrix, 0);
-		Matrix.multiplyMM(modelViewProjectionMatrix , 0, perspectiveProjectionMatrix, 0, modelViewMatrix, 0);
 
-		GLES32.glUniformMatrix4fv(mvpMatrixUniform, 1, false, modelViewProjectionMatrix, 0);
+		float modelMatrix[] = new float[16];
+		Matrix.setIdentityM(modelMatrix, 0);
+
+		float viewMatrix[] = new float[16];
+		Matrix.setIdentityM(viewMatrix, 0);
+
+		Matrix.multiplyMM(modelMatrix, 0, translationMatrix, 0, rotationMatrix, 0);
+
+		GLES32.glUniformMatrix4fv(modelMatrixUniform, 1, false, modelMatrix, 0);
+		GLES32.glUniformMatrix4fv(viewMatrixUniform, 1, false, viewMatrix, 0);
+		GLES32.glUniformMatrix4fv(projectionMatrixUniform, 1, false, perspectiveProjectionMatrix, 0);
 		
+		if(doubleTapCount == 1)
+		{
+			GLES32.glUniform1i(lightingEnabledUniform, 1);
+
+			GLES32.glUniform3fv(laUniform, 1, lightAmbient, 0);
+			GLES32.glUniform3fv(ldUniform, 1, lightDiffuse, 0);
+			GLES32.glUniform3fv(lsUniform, 1, lightSpecular, 0);
+			GLES32.glUniform4fv(lightPositionUniform, 1, lightPosition, 0);
+
+			GLES32.glUniform3fv(kaUniform, 1, materialAmbient, 0);
+			GLES32.glUniform3fv(kdUniform, 1, materialDiffuse, 0);
+			GLES32.glUniform3fv(ksUniform, 1, materialSpecular, 0);
+			GLES32.glUniform1f(materialShininessUniform, materialShininess);
+
+		}
+		else
+		{
+			GLES32.glUniform1i(lightingEnabledUniform, 0);
+		}
+
 		GLES32.glBindVertexArray(vao_cube[0]);
 
 		GLES32.glActiveTexture(GLES32.GL_TEXTURE0);
-		GLES32.glBindTexture(GLES32.GL_TEXTURE_2D, texture_kundali[0]);
+		GLES32.glBindTexture(GLES32.GL_TEXTURE_2D, texture_marble[0]);
 		GLES32.glUniform1i(textureSamplerUniform, 0);
 		// Drawing Code
 		GLES32.glDrawArrays(GLES32.GL_TRIANGLE_FAN, 0, 4);
@@ -473,6 +451,8 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		GLES32.glDrawArrays(GLES32.GL_TRIANGLE_FAN, 12, 4);
 		GLES32.glDrawArrays(GLES32.GL_TRIANGLE_FAN, 16, 4);
 		GLES32.glDrawArrays(GLES32.GL_TRIANGLE_FAN, 20, 4);
+
+		GLES32.glBindTexture(GLES32.GL_TEXTURE_2D, 0);
 
 		GLES32.glBindVertexArray(0);
 
@@ -485,11 +465,7 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 	private void update()
 	{
 		// Code
-		anglePyramid = anglePyramid + 0.1f;
-		if(anglePyramid >= 360.0f)
-			anglePyramid -= 360.0f;
-			
-		angleCube = angleCube + 0.1f;
+		angleCube = angleCube + 1.5f;
 		if(angleCube >= 360.0f)
 			angleCube -= 360.0f;
 	}
@@ -518,45 +494,20 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 			GLES32.glDeleteProgram(shaderProgramObject);
 			shaderProgramObject = 0;	
 		}
-		if(texture_stone[0] > 0)
+		if(texture_marble[0] > 0)
 		{
-			GLES32.glDeleteTextures(1, texture_stone, 0);
-			texture_stone[0] = 0;
+			GLES32.glDeleteTextures(1, texture_marble, 0);
+			texture_marble[0] = 0;
 		}
-		if(texture_kundali[0] > 0)
+		if(vbo_cube[0] > 0)
 		{
-			GLES32.glDeleteTextures(1, texture_kundali, 0);
-			texture_kundali[0] = 0;
-		}
-		if(vbo_cube_texcoord[0] > 0)
-		{
-			GLES32.glDeleteBuffers(1, vbo_cube_texcoord, 0);
-			vbo_cube_texcoord[0] = 0;
-		}
-		if(vbo_cube_position[0] > 0)
-		{
-			GLES32.glDeleteBuffers(1, vbo_cube_position, 0);
-			vbo_cube_position[0] = 0;
+			GLES32.glDeleteBuffers(1, vbo_cube, 0);
+			vbo_cube[0] = 0;
 		}
 		if(vao_cube[0] > 0)
 		{
 			GLES32.glDeleteVertexArrays(1, vao_cube, 0);
 			vao_cube[0] = 0;
-		}
-		if(vbo_pyramid_texcoord[0] > 0)
-		{
-			GLES32.glDeleteBuffers(1, vbo_pyramid_texcoord, 0);
-			vbo_pyramid_texcoord[0] = 0;
-		}
-		if(vbo_pyramid_position[0] > 0)
-		{
-			GLES32.glDeleteBuffers(1, vbo_pyramid_position, 0);
-			vbo_pyramid_position[0] = 0;
-		}
-		if(vao_pyramid[0] > 0)
-		{
-			GLES32.glDeleteVertexArrays(1, vao_pyramid, 0);
-			vao_pyramid[0] = 0;
 		}
 	}
 
@@ -577,6 +528,9 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 	public boolean onDoubleTap(MotionEvent e)
 	{
 		// Code
+		doubleTapCount++;
+		if(doubleTapCount > 1)
+			doubleTapCount = 0;
 		return true;
 	}
 	

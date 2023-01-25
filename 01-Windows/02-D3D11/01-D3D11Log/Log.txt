@@ -1,0 +1,6 @@
+Log File Is Successfully Created. 
+PrintD3DInfo:CreateDXGIFactory() Successful.
+Graphics Card Name is NVIDIA GeForce RTX 3050 Ti Laptop GPU
+Graphics Card Memory(VRAM) = 4 GBs
+Initialize() Successful.
+Log File Is Successfully Closed.

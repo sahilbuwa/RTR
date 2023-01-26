@@ -833,8 +833,8 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		GLES32.glUseProgram(shaderProgramObject_sphere);
 		GLES32.glUniformMatrix4fv(modelMatrixUniform_sphere, 1, false, modelMatrix, 0);
 		GLES32.glUniformMatrix4fv(viewMatrixUniform_sphere, 1, false, viewMatrix, 0);
-		GLES32.glUniformMatrix4fv(projectionMatrixUniform_sphere, 1, false, perspectiveProjectionMatrix, 0);
-			
+		GLES32.glUniformMatrix4fv(projectionMatrixUniform_sphere, 1, false, perspectiveProjectionMatrix_sphere, 0);
+
 		if(doubleTapCount == 1)
 		{
 			GLES32.glUniform1i(lightingEnableUniform_sphere, 1);

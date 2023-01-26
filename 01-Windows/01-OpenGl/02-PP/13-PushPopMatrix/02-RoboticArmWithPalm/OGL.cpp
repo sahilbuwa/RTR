@@ -380,7 +380,6 @@ int initialize(void)
 	const GLchar *vertexShaderSourceCode = "#version 460 core" \
 	"\n" \
 	"in vec4 a_position;" \
-	"in vec4 a_normal;" \
 	"uniform mat4 u_modelMatrix;" \
 	"uniform mat4 u_viewMatrix;" \
 	"uniform mat4 u_projectionMatrix;" \
@@ -458,7 +457,6 @@ int initialize(void)
 	glAttachShader(shaderProgramObject, vertexShaderObject);
 	glAttachShader(shaderProgramObject, fragmentShaderObject);
 	glBindAttribLocation(shaderProgramObject, SAB_ATTRIBUTE_POSITION, "a_position"); // Andhaar
-	glBindAttribLocation(shaderProgramObject, SAB_ATTRIBUTE_NORMAL, "a_normal");
 	glLinkProgram(shaderProgramObject);
 	// Error Checking
 	status = 0;

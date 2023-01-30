@@ -252,7 +252,7 @@ function display(){
 	var translationMatrix = mat4.create();
 
 	gl.uniformMatrix4fv(projectionMatrixUniform, false, perspectiveProjectionMatrix);
-	mat4.translate(viewMatrix, viewMatrix, [0.0, 0.0, -20.0]);
+	mat4.translate(viewMatrix, viewMatrix, [0.0, 0.0, -30.0]);
 
 	gl.uniformMatrix4fv(viewMatrixUniform, false, viewMatrix);
 

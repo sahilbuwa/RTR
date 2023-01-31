@@ -468,10 +468,10 @@ int initialize(void)
     "{\n" \
     "vec3 ambient = u_la * u_ka;\n" \
     "vec3 normalized_transformedNormals = normalize(transformedNormals);\n" \
-    "vec3 normalized_lightDirection = normalize(lightDirection);\n"
+    "vec3 normalized_lightDirection = normalize(lightDirection);\n" \
     "vec3 diffuse = u_ld * u_kd * max(dot(normalized_lightDirection, normalized_transformedNormals), 0.0);\n" \
     "vec3 reflectionVector = reflect(-normalized_lightDirection, normalized_transformedNormals);\n" \
-    "vec3 normalized_viewerVector = normalize(viewerVector);\n"
+    "vec3 normalized_viewerVector = normalize(viewerVector);\n" \
     "vec3 specular = u_ls * u_ks * pow(max(dot(reflectionVector, normalized_viewerVector), 0.0), u_materialShininess);\n" \
     "fong_ads_light = vec4(ambient + diffuse + specular, 1.0);\n" \
     "}\n" \

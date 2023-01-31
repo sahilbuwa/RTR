@@ -548,7 +548,7 @@ void MakeCheckerBoard(void)
             checkerboard[i][j][1] = (GLubyte)c;
             checkerboard[i][j][2] = (GLubyte)c;
             checkerboard[i][j][3] = (GLubyte)255;
-        }
+		}
     }
 }
 

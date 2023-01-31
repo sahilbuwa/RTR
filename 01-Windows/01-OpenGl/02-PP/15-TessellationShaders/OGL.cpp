@@ -167,7 +167,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
 			}
-
 		}
 		else
 		{
@@ -291,7 +290,6 @@ void ToggleFullScreen(void)
 		ShowCursor(TRUE);
 		gbFullScreen=FALSE;
 	}
-
 }
 
 int initialize(void)
@@ -635,7 +633,7 @@ void display(void)
 	glUniform1i(numberOfSegmentsUniform, uiNumberOfSegments);
 	// Caption change of window
 	TCHAR str[255];
-	wsprintf(str, TEXT("Sahil Ajit Buwa - OGL Window || Number of segments = %d"),uiNumberOfSegments);
+	wsprintf(str, TEXT("Sahil Ajit Buwa - OGL Window || Number of segments = %d"), uiNumberOfSegments);
 	SetWindowText(ghwnd, str);
 
 	glUniform1i(numberOfStripsUniform, 1); // 1 strip is there.

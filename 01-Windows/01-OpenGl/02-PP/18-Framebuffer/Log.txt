@@ -1,0 +1,7 @@
+Log File Is Successfully Created. 
+OpenGL Vendor : ATI Technologies Inc.
+OpenGL Renderer : AMD Radeon(TM) Graphics
+OpenGL Version : 4.6.14802 Compatibility Profile Context 21.40.52.09 30.0.14052.9003
+GLSL Version : 4.60
+OpenGL context setting successfull.
+Log File Is Successfully Closed.

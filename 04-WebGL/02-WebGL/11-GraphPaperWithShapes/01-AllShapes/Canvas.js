@@ -31,6 +31,12 @@ var circleVertices = new Float32Array(1080);
 var graphLineVertices = new Float32Array(480);
 var perspectiveProjectionMatrix;
 
+var toggleCircle = 1;
+var toggleGraph = 1;
+var toggleSquare = 1;
+var toggleTriangle = 1;
+
+
 var requestAnimationFrame = window.requestAnimationFrame ||
 							window.mozRequestAnimationFrame ||
 							window.webkitRequestAnimationFrame ||
@@ -350,47 +356,57 @@ function display(){
 
 	gl.uniformMatrix4fv(mvpMatrixUniform, false, modelViewProjectionMatrix);
 
-	gl.lineWidth(1.0);
-	gl.uniform3f(colorUniform, 0.0, 0.0, 1.0);
-	gl.bindVertexArray(vao_graphs);
+	if(toggleGraph == 1)
+	{
+		gl.lineWidth(1.0);
+		gl.uniform3f(colorUniform, 0.0, 0.0, 1.0);
+		gl.bindVertexArray(vao_graphs);
 
-	gl.drawArrays(gl.LINES, 0, 160);
+		gl.drawArrays(gl.LINES, 0, 160);
 
-	gl.bindVertexArray(null);
-	// Axes
-	gl.lineWidth(2.0);
-	gl.uniform3f(colorUniform, 0.0, 1.0, 0.0);
-	gl.bindVertexArray(vao_axes);
+		gl.bindVertexArray(null);
+		// Axes
+		gl.lineWidth(2.0);
+		gl.uniform3f(colorUniform, 0.0, 1.0, 0.0);
+		gl.bindVertexArray(vao_axes);
 
-	gl.drawArrays(gl.LINES, 0, 2);
+		gl.drawArrays(gl.LINES, 0, 2);
 
-	gl.uniform3f(colorUniform, 1.0, 0.0, 0.0);
-	gl.drawArrays(gl.LINES, 2, 2);
+		gl.uniform3f(colorUniform, 1.0, 0.0, 0.0);
+		gl.drawArrays(gl.LINES, 2, 2);
 
-	gl.bindVertexArray(null);
+		gl.bindVertexArray(null);
+	}
+	if(toggleSquare  == 1)
+	{
+		// Square
+		gl.uniform3f(colorUniform, 1.0, 1.0, 0.0);
+		gl.bindVertexArray(vao_square);
 
-	// Square
-	gl.uniform3f(colorUniform, 1.0, 1.0, 0.0);
-	gl.bindVertexArray(vao_square);
+		gl.drawArrays(gl.LINE_LOOP, 0, 4);
 
-	gl.drawArrays(gl.LINE_LOOP, 0, 4);
+		gl.bindVertexArray(null);
+	}
+	if(toggleTriangle == 1)
+	{
+		// Triangle
+		gl.uniform3f(colorUniform, 1.0, 1.0, 0.0);
+		gl.bindVertexArray(vao_triangle);
 
-	gl.bindVertexArray(null);
+		gl.drawArrays(gl.LINE_LOOP, 0, 3);
 
-	// Triangle
-	gl.bindVertexArray(vao_triangle);
+		gl.bindVertexArray(null);
+	}
+	if(toggleCircle == 1)
+	{
+		// Circle
+		gl.uniform3f(colorUniform, 1.0, 1.0, 0.0);
+		gl.bindVertexArray(vao_circle);
 
-	gl.drawArrays(gl.LINE_LOOP, 0, 3);
+		gl.drawArrays(gl.LINE_LOOP, 0, 360);
 
-	gl.bindVertexArray(null);
-
-	// Circle
-	gl.bindVertexArray(vao_circle);
-
-	gl.drawArrays(gl.LINE_LOOP, 0, 360);
-
-	gl.bindVertexArray(null);
-
+		gl.bindVertexArray(null);
+	}
 	gl.useProgram(null);
 
 	// Double buffering emulation
@@ -407,6 +423,9 @@ function keyDown(event){
 	// Code
 	switch(event.keyCode)
 	{
+		case 67:
+			toggleCircle *= -1;
+			break;
 		case 69:
 			uninitialize();
 			// Request to browser to close but not all follow.
@@ -414,6 +433,15 @@ function keyDown(event){
 			break;
 		case 70:
 			toggleFullscreen();
+			break;
+		case 71:
+			toggleGraph *= -1;
+			break;
+		case 83:
+			toggleSquare *= -1;
+			break;
+		case 84:
+			toggleTriangle *= -1;
 			break;
 	}
 }

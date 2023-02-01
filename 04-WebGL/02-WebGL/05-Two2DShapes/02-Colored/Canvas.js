@@ -170,6 +170,7 @@ function initialize(){
 	gl.attachShader(shaderProgramObject, fragmentShaderObject);
 	// Pre linking shader attribute binding
 	gl.bindAttribLocation(shaderProgramObject, webGLMacros.SAB_ATTRIBUTE_POSITION, "a_position");
+	gl.bindAttribLocation(shaderProgramObject, webGLMacros.SAB_ATTRIBUTE_COLOR, "a_color");
 	// Shader program linking
 	gl.linkProgram(shaderProgramObject);
 	if(gl.getProgramParameter(shaderProgramObject, gl.LINK_STATUS) == false)

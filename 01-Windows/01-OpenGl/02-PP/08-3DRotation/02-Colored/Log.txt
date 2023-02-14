@@ -1,7 +1,7 @@
 Log File Is Successfully Created. 
 OpenGL Vendor : ATI Technologies Inc.
 OpenGL Renderer : AMD Radeon(TM) Graphics
-OpenGL Version : 4.6.14802 Compatibility Profile Context 21.40.52 30.0.14052.5
+OpenGL Version : 4.6.14802 Compatibility Profile Context 21.40.52.09 30.0.14052.9003
 GLSL Version : 4.60
 Number of supported extensions : 306
 GL_AMDX_debug_output

@@ -40,8 +40,8 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 	private int lightingEnableUniform = 0;
 	private float angleCube = 0.0f;
 	private float[] lightDiffuse = new float[] {1.0f, 1.0f, 1.0f, 1.0f};
-	private float[] materialDiffuse = new float[] {1.0f, 1.0f, 1.0f, 1.0f};
-	private float[] lightPosition = new float[] {1.0f, 1.0f, 1.0f, 1.0f};
+	private float[] materialDiffuse = new float[] {0.5f, 0.5f, 0.5f, 1.0f};
+	private float[] lightPosition = new float[] {0.0f, 0.0f, 2.0f, 1.0f};
 	private int doubleTapCount = 0;
 	private float perspectiveProjectionMatrix[] = new float[16];
 
@@ -95,6 +95,7 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 			"#version 320 es" +
 			"\n" +
 			"precision mediump int;" +
+			"precision highp float;" +
 			"in vec4 a_position;" +
 			"in vec3 a_normal;" +
 			"uniform mat4 u_modelMatrix;" +

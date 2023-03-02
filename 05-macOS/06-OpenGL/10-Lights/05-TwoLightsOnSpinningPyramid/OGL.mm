@@ -28,7 +28,7 @@ enum
     SAB_ATTRIBUTE_POSITION = 0,
     SAB_ATTRIBUTE_COLOR,
     SAB_ATTRIBUTE_NORMAL,
-    SAB_ATTRIBUTE_TEXURE0
+    SAB_ATTRIBUTE_TEXTURE0
 };
 
 // Interface / Class Declarations (Should be in header file)
@@ -151,17 +151,35 @@ int main(int argc, char* argv[])
     GLuint viewMatrixUniform;
     GLuint projectionMatrixUniform;
 
-    GLuint ldUniform;
-    GLuint kdUniform;
-    GLuint lightPositionUniform;
+    GLuint ldUniform[2];
+    GLuint laUniform[2];
+    GLuint lsUniform[2];
+    GLuint lightPositionUniform[2];
 
-    GLuint lightingEnableUniform;
+    GLuint kaUniform;
+    GLuint kdUniform;
+    GLuint ksUniform;
+    GLuint materialShininessUniform;
+
+    GLuint lightingEnabledUniform;
     BOOL bLight;
     GLfloat anglepyramid;
     
-    GLfloat lightDiffuse[4];
-    GLfloat materialDiffuse[4];
-    GLfloat lightPosition[4];
+    struct Light
+    {
+        vec4 lightAmbient;
+        vec4 lightDiffuse;
+        vec4 lightSpecular;
+        vec4 lightPosition;
+    };
+    Light lights[2];
+    
+    
+    vec4 materialAmbient;
+    vec4 materialDiffuse;
+    vec4 materialSpecular;
+    GLfloat materialShininess;
+    
     mat4 perspectiveProjectionMatrix;
 }
 
@@ -320,28 +338,50 @@ int main(int argc, char* argv[])
     const GLchar *vertexShaderSourceCode =
     "#version 410 core" \
     "\n" \
-    "in vec4 a_position;" \
-    "in vec3 a_normal;" \
-    "uniform mat4 u_modelMatrix;" \
-    "uniform mat4 u_viewMatrix;" \
-    "uniform mat4 u_projectionMatrix;" \
-    "uniform vec3 u_ld;" \
-    "uniform vec3 u_kd;" \
-    "uniform vec4 u_lightPosition;" \
-    "uniform int u_lightingEnabled;" \
-    "out vec3 diffuse_light_color;" \
-    "void main(void)" \
-    "{" \
-    "if(u_lightingEnabled == 1)" \
-    "{" \
-    "vec4 eyeCoordinates = u_viewMatrix * u_modelMatrix * a_position;" \
-    "mat3 normalMatrix = mat3(transpose(inverse(u_viewMatrix * u_modelMatrix)));" \
-    "vec3 transformedNormals = normalize(normalMatrix * a_normal);" \
-    "vec3 lightDirection = normalize(vec3(u_lightPosition - eyeCoordinates));" \
-    "diffuse_light_color = u_ld * u_kd * max(dot(lightDirection, transformedNormals), 0.0);" \
-    "}" \
-    "gl_Position =  u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;" \
-    "}";
+    "in vec4 a_position;\n" \
+    "in vec3 a_normal;\n" \
+    "uniform mat4 u_modelMatrix;\n" \
+    "uniform mat4 u_viewMatrix;\n" \
+    "uniform mat4 u_projectionMatrix;\n" \
+    "uniform vec3 u_la[2];\n" \
+    "uniform vec3 u_ld[2];\n" \
+    "uniform vec3 u_ls[2];\n" \
+    "uniform vec4 u_lightPosition[2];\n" \
+    "uniform vec3 u_ka;\n" \
+    "uniform vec3 u_kd;\n" \
+    "uniform vec3 u_ks;\n" \
+    "uniform float u_materialShininess;\n" \
+    "uniform int u_lightingEnabled;\n" \
+    "out vec3 fong_ads_light;\n" \
+    "void main(void)\n" \
+    "{\n" \
+    "if(u_lightingEnabled == 1)\n" \
+    "{\n" \
+    "vec4 eyeCoordinates = u_viewMatrix * u_modelMatrix * a_position;\n" \
+    "mat3 normalMatrix = mat3(u_viewMatrix * u_modelMatrix);\n" \
+    "vec3 transformedNormals = normalize(normalMatrix * a_normal);\n" \
+    "vec3 viewerVector = normalize(-eyeCoordinates.xyz);\n" \
+    "vec3 ambient[2];\n" \
+    "vec3 lightDirection[2];\n" \
+    "vec3 diffuse[2];\n" \
+    "vec3 specular[2];\n" \
+    "vec3 reflectionVector[2];" \
+    "for(int i=0;i<2;i++)\n" \
+    "{\n" \
+    "ambient[i] = u_la[i] * u_ka;\n" \
+    "lightDirection[i] = normalize(vec3(u_lightPosition[i]) - eyeCoordinates.xyz);\n" \
+    "diffuse[i] = u_ld[i] * u_kd * max(dot(lightDirection[i], transformedNormals), 0.0);\n" \
+    "reflectionVector[i] = reflect(-lightDirection[i], transformedNormals);\n" \
+    "specular[i] = u_ls[i] * u_ks * pow(max(dot(reflectionVector[i], viewerVector), 0.0), u_materialShininess);\n" \
+    "fong_ads_light = fong_ads_light + ambient[i] + diffuse[i] + specular[i];\n" \
+    "}\n" \
+    "}\n" \
+    "else\n" \
+    "{\n" \
+    "fong_ads_light = vec3(1.0, 1.0, 1.0);\n" \
+    "}\n" \
+    "gl_Position = u_projectionMatrix * u_viewMatrix * u_modelMatrix * a_position;\n" \
+    "}\n";
     // Vertex Shader cha Object tayar kela
     GLuint vertexShaderObject = glCreateShader(GL_VERTEX_SHADER);
     // Object la Source code dila
@@ -375,19 +415,11 @@ int main(int argc, char* argv[])
     const GLchar *fragmentShaderSourceCode =
     "#version 410 core" \
     "\n" \
-    "in vec3 diffuse_light_color;" \
-    "uniform int u_lightingEnabled;" \
+    "in vec3 fong_ads_light;" \
     "out vec4 FragColor;" \
     "void main(void)" \
     "{" \
-    "if(u_lightingEnabled == 1)" \
-    "{" \
-    "FragColor = vec4(diffuse_light_color, 1.0);" \
-    "}" \
-    "else" \
-    "{" \
-    "FragColor = vec4(1.0, 1.0, 1.0, 1.0);" \
-    "}" \
+    "FragColor = vec4(fong_ads_light,1.0);" \
     "}";
 
     GLuint fragmentShaderObject = glCreateShader(GL_FRAGMENT_SHADER);
@@ -448,10 +480,22 @@ int main(int argc, char* argv[])
     viewMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_viewMatrix");
     projectionMatrixUniform = glGetUniformLocation(shaderProgramObject, "u_projectionMatrix");
 
-    ldUniform = glGetUniformLocation(shaderProgramObject, "u_ld");
+    laUniform[0] = glGetUniformLocation(shaderProgramObject, "u_la[0]");
+    ldUniform[0] = glGetUniformLocation(shaderProgramObject, "u_ld[0]");
+    lsUniform[0] = glGetUniformLocation(shaderProgramObject, "u_ls[0]");
+    lightPositionUniform[0] = glGetUniformLocation(shaderProgramObject, "u_lightPosition[0]");
+
+    laUniform[1] = glGetUniformLocation(shaderProgramObject, "u_la[1]");
+    ldUniform[1] = glGetUniformLocation(shaderProgramObject, "u_ld[1]");
+    lsUniform[1] = glGetUniformLocation(shaderProgramObject, "u_ls[1]");
+    lightPositionUniform[1] = glGetUniformLocation(shaderProgramObject, "u_lightPosition[1]");
+
+    kaUniform = glGetUniformLocation(shaderProgramObject, "u_ka");
     kdUniform = glGetUniformLocation(shaderProgramObject, "u_kd");
-    lightPositionUniform = glGetUniformLocation(shaderProgramObject, "u_lightPosition");
-    lightingEnableUniform = glGetUniformLocation(shaderProgramObject, "u_lightingEnabled");
+    ksUniform = glGetUniformLocation(shaderProgramObject, "u_ks");
+    materialShininessUniform = glGetUniformLocation(shaderProgramObject, "u_materialShininess");
+
+    lightingEnabledUniform = glGetUniformLocation(shaderProgramObject, "u_lightingEnabled");
 
     // Declaration of vertex data arrays
     const GLfloat pyramidPosition[] =
@@ -528,20 +572,21 @@ int main(int argc, char* argv[])
     glDepthFunc(GL_LEQUAL);
     
     // Arrays Initialization
-    lightDiffuse[0] = 1.0f;
-    lightDiffuse[1] = 1.0f;
-    lightDiffuse[2] = 1.0f;
-    lightDiffuse[3] = 1.0f;
+    lights[0].lightAmbient = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    lights[0].lightDiffuse = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    lights[0].lightSpecular = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    lights[0].lightPosition = vec4(-2.0f, 0.0f, 0.0f, 1.0f);
+   
+    lights[1].lightAmbient = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    lights[1].lightDiffuse = vec4(0.0f, 0.0f, 1.0f, 1.0f);
+    lights[1].lightSpecular = vec4(0.0f, 0.0f, 1.0f, 1.0f);
+    lights[1].lightPosition = vec4(2.0f, 0.0f, 0.0f, 1.0f);
     
-    materialDiffuse[0] = 0.5f;
-    materialDiffuse[1] = 0.5f;
-    materialDiffuse[2] = 0.5f;
-    materialDiffuse[3] = 1.0f;
+    materialAmbient = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    materialDiffuse = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    materialSpecular = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    materialShininess = 50.0f;
     
-    lightPosition[0] = 0.0f;
-    lightPosition[1] = 0.0f;
-    lightPosition[2] = 2.0f;
-    lightPosition[3] = 1.0f;
     
     // bLight Initialize
     bLight = NO;
@@ -589,17 +634,24 @@ int main(int argc, char* argv[])
     glUniformMatrix4fv(projectionMatrixUniform, 1, GL_FALSE, perspectiveProjectionMatrix);
 
     // Sending Light Related Uniforms
-    if(bLight == TRUE)
+    if(bLight == YES)
     {
-        glUniform1i(lightingEnableUniform, 1);
-
-        glUniform3fv(ldUniform, 1, lightDiffuse);
+        glUniform1i(lightingEnabledUniform, 1);
+        glUniform3fv(kaUniform, 1, materialAmbient);
         glUniform3fv(kdUniform, 1, materialDiffuse);
-        glUniform4fv(lightPositionUniform, 1, lightPosition);
+        glUniform3fv(ksUniform, 1, materialSpecular);
+        glUniform1f(materialShininessUniform, materialShininess);
+        for(int i = 0; i < 2; i++)
+        {
+            glUniform3fv(laUniform[i], 1, lights[i].lightAmbient);
+            glUniform3fv(ldUniform[i], 1, lights[i].lightDiffuse);
+            glUniform3fv(lsUniform[i], 1, lights[i].lightSpecular);
+            glUniform4fv(lightPositionUniform[i], 1, lights[i].lightPosition);
+        }
     }
     else
     {
-         glUniform1i(lightingEnableUniform, 0);
+         glUniform1i(lightingEnabledUniform, 0);
     }
     glBindVertexArray(vao_pyramid);
 

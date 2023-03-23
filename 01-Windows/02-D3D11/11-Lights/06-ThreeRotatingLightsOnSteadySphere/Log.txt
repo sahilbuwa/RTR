@@ -1,0 +1,23 @@
+Log File Is Successfully Created. 
+PrintD3DInfo:CreateDXGIFactory() Successful.
+Graphics Card Name is NVIDIA GeForce RTX 3050 Ti Laptop GPU
+Graphics Card Memory(VRAM) = 4 GBs
+D3D11 obtained Hardware Driver.
+D3D11 obtained 11.0 feature level.
+initialize:D3DCompile() successful for PV vertex shader.
+initialize:ID3D11Device::CreateVertexShader() PV Successful.
+initialize:D3DCompile() successful for PV pixel shader.
+initialize:ID3D11Device::CreatePixelShader() PV Successful.
+initialize:D3DCompile() successful for PF vertex shader.
+initialize:ID3D11Device::CreateVertexShader() PF Successful.
+initialize:D3DCompile() successful for PF pixel shader.
+initialize:ID3D11Device::CreatePixelShader() PF Successful.
+initialize:ID3D11Device::CreateInputLayout() Successful for PV.
+initialize:ID3D11Device::CreateInputLayout() Successful For PF.
+initialize:ID3D11Device::CreateBuffer() Successful for position buffer.
+initialize:ID3D11Device::CreateBuffer() Successful for normal buffer.
+initialize:ID3D11Device::CreateBuffer() Successful for index buffer.
+initialize:ID3D11Device::CreateBuffer() Successful for constant buffer.
+initialize:ID3D11Device::CreateBuffer() Successful for constant buffer.
+initialize:resize() Successful.
+Initialize() Successful.

@@ -5,7 +5,6 @@
 #include<math.h>	// For ceil()
 #include"D3D.h"		//Aplya path (local) madhli header file declare karaichi padhhat
 #include"XNAMath/xnamath.h"
-#include"Sphere.h" // Sphere sathi
 
 // DirectX related header files
 #include<dxgi.h>	// DirectX Graphic Infrastructure
@@ -16,11 +15,12 @@
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
-#pragma comment(lib,"Sphere.lib")
 
 // Defines
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
+#define M_PI 3.141592
+#define M_PI_2 1.570796
 
 // Global Variable Declarations
 HWND ghwnd = NULL;
@@ -34,58 +34,30 @@ IDXGISwapChain *gpIDXGISwapChain = NULL;
 ID3D11Device *gpID3D11Device = NULL;
 ID3D11DeviceContext *gpID3D11DeviceContext = NULL;
 ID3D11RenderTargetView *gpID3D11RenderTargetView = NULL;
-ID3D11RasterizerState *gpID3D11RasterizerState = NULL;
-ID3D11DepthStencilView *gpID3D11DepthStencilView = NULL;
 float clearColor[4];
 
 ID3D11VertexShader *gpID3D11VertexShader = NULL;
 ID3D11PixelShader *gpID3D11PixelShader = NULL;
 ID3D11InputLayout *gpID3D11InputLayout = NULL;
-ID3D11Buffer *gpID3D11Buffer_PositionBuffer_Sphere = NULL;
-ID3D11Buffer *gpID3D11Buffer_NormalBuffer_Sphere = NULL;
-ID3D11Buffer *gpID3D11Buffer_IndexBuffer_Sphere = NULL;
+ID3D11Buffer *gpID3D11Buffer_PositionBuffer_Square = NULL;
+ID3D11Buffer *gpID3D11Buffer_PositionBuffer_Circle = NULL;
+ID3D11Buffer *gpID3D11Buffer_PositionBuffer_Triangle = NULL;
+ID3D11Buffer *gpID3D11Buffer_PositionBuffer_Point = NULL;
+ID3D11Buffer *gpID3D11Buffer_PositionBuffer_Graph = NULL;
+ID3D11Buffer *gpID3D11Buffer_PositionBuffer_Axes = NULL;
 ID3D11Buffer *gpID3D11Buffer_ConstantBuffer = NULL;
 
 // mvpMatrixUniform
 struct CBUFFER 
 {
-	XMMATRIX WorldMatrix;
-	XMMATRIX ViewMatrix;
-	XMMATRIX ProjectionMatrix;
-
-	XMVECTOR La;
-	XMVECTOR Ld;
-	XMVECTOR Ls;
-
-	XMVECTOR Ka;
-	XMVECTOR Kd;
-	XMVECTOR Ks;
-	float MaterialShininess;
-	
-	XMVECTOR LightPosition;
-	unsigned int LightingEnabled;
+	XMMATRIX WorldViewProjectionMatrix;
+	XMVECTOR Color;
 };
 
-// Sphere arrays
-float sphere_vertices[1146];
-float sphere_normals[1146];
-float sphere_textures[764];
-unsigned short sphere_elements[2280];
-unsigned int numElements;
-unsigned int numVertices;
-
-float lightAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
-float lightDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
-float lightSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
-float lightPosition[] = {100.0f, 100.0f, -100.0f, 1.0f};
-
-float materialAmbient[] = {0.0f, 0.0f, 0.0f, 1.0f};
-float materialDiffuse[] = {1.0f, 1.0f, 1.0f, 1.0f};
-float materialSpecular[] = {1.0f, 1.0f, 1.0f, 1.0f};
-float materialShininess = 50.0f;
-
 XMMATRIX perspectiveProjectionMatrix;
-BOOL bLight = FALSE;
+
+float circleVertices[1080];
+float graphLineVertices[480];
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -236,17 +208,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 				case 'F':
 				case 'f':
 					ToggleFullScreen();
-					break;
-				case 'L':
-				case 'l':
-					if (bLight == FALSE)
-					{
-						bLight = TRUE;
-					}
-					else
-					{
-						bLight = FALSE;
-					}
 					break;
 				default:
 					break;
@@ -450,50 +411,14 @@ HRESULT initialize(void)
 	const char* vertexShaderSourceCode = 
 	"cbuffer ConstantBuffer" \
 	"{" \
-	"float4x4 worldMatrix;" \
-	"float4x4 viewMatrix;" \
-	"float4x4 projectionMatrix;" \
-	"float4 la;" \
-	"float4 ld;" \
-	"float4 ls;" \
-	"float4 ka;" \
-	"float4 kd;" \
-	"float4 ks;" \
-	"float materialShininess;" \
-	"float4 lightPosition;" \
-	"uint lightingEnabled;" \
+	"float4x4 worldViewProjectionMatrix;" \
+	"float3 color;" \
 	"}" \
-	"struct vertex" \
+	"float4 main(float4 pos:POSITION):SV_POSITION" \
 	"{" \
-	"float4 position:SV_POSITION;" \
-	"float3 fong_ads_light:COLOR;" \
-	"};" \
-	"vertex main(float4 position:POSITION, float4 normals:NORMAL)" \
-	"{" \
-	"vertex output;" \
-	"if(lightingEnabled == 1)" \
-	"{" \
-	"float4 eyeCoordinates = mul(worldMatrix, position);" \
-	"eyeCoordinates = mul(viewMatrix, eyeCoordinates);\n" \
-	"float3x3 normalMatrix = (float3x3)worldMatrix;\n" \
-	"float3 transformedNormals = normalize(mul(normalMatrix, (float3)normals));" \
-	"float3 lightDirection = normalize((float3)lightPosition - (float3)eyeCoordinates);" \
-	"float3 ambient = la * ka;" \
-	"float3 diffuse = ld * kd * max(dot(lightDirection, transformedNormals), 0.0);" \
-	"float3 reflectionVector = reflect(-lightDirection, transformedNormals);" \
-	"float3 viewerVector = normalize(-eyeCoordinates.xyz);" \
-	"float3 specular = ls * ks * pow(max(dot(reflectionVector, viewerVector), 0.0), materialShininess);" \
-	"output.fong_ads_light = ambient + diffuse + specular;" \
-	"}" \
-	"else" \
-	"{" \
-	"output.fong_ads_light = float3(1.0, 1.0, 1.0);" \
-	"}" \
-	"float4 pos = mul(worldMatrix, position);" \
-	"pos = mul(viewMatrix, pos);" \
-	"pos = mul(projectionMatrix, pos);" \
-	"output.position = pos;" \
-	"return output;" \
+	"float4 position;" \
+	"position = mul(worldViewProjectionMatrix, pos);" \
+	"return position;" \
 	"}";
 
 	// Compile Vertex shader
@@ -542,14 +467,14 @@ HRESULT initialize(void)
 
 	// Pixel Shader
 	const char* pixelShaderSourceCode = 
-	"struct vertex" \
+	"cbuffer ConstantBuffer" \
 	"{" \
-	"float4 position:SV_POSITION;" \
-	"float3 fong_ads_light:COLOR;" \
-	"};" \
-	"float4 main(vertex input):SV_TARGET" \
+	"float4x4 worldViewProjectionMatrix;" \
+	"float3 color;" \
+	"}" \
+	"float4 main(void):SV_TARGET" \
 	"{" \
-	"return float4(input.fong_ads_light, 1.0);"
+	"return float4(color, 1.0);" \
 	"}";
 
 	pID3DBlob_Error = NULL;
@@ -597,34 +522,21 @@ HRESULT initialize(void)
 	// Set this pixel shader in pixel shader stage of pipeline
 	gpID3D11DeviceContext->PSSetShader(gpID3D11PixelShader, NULL, 0);
 
-	// Declaration of vertex data arrays
-    getSphereVertexData(sphere_vertices, sphere_normals, sphere_textures, sphere_elements);
-    numVertices = getNumberOfSphereVertices();
-    numElements = getNumberOfSphereElements();
-	
 	// Create Input Layout
 	// Initialize input layout structure
-	D3D11_INPUT_ELEMENT_DESC d3d11InputElementDescriptor[2];
-	ZeroMemory((void*)d3d11InputElementDescriptor, sizeof(D3D11_INPUT_ELEMENT_DESC) * _ARRAYSIZE(d3d11InputElementDescriptor));
-	d3d11InputElementDescriptor[0].SemanticName = "POSITION";
-	d3d11InputElementDescriptor[0].SemanticIndex = 0;
-	d3d11InputElementDescriptor[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;	//RGB are symbolic for 3 floats.
-	d3d11InputElementDescriptor[0].AlignedByteOffset = 0;
-	d3d11InputElementDescriptor[0].InputSlot = 0;
-	d3d11InputElementDescriptor[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-	d3d11InputElementDescriptor[0].InstanceDataStepRate = 0;
-
-	d3d11InputElementDescriptor[1].SemanticName = "NORMAL";
-	d3d11InputElementDescriptor[1].SemanticIndex = 0;
-	d3d11InputElementDescriptor[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;	//RGB are symbolic for 3 floats.
-	d3d11InputElementDescriptor[1].AlignedByteOffset = 0;
-	d3d11InputElementDescriptor[1].InputSlot = 1;
-	d3d11InputElementDescriptor[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-	d3d11InputElementDescriptor[1].InstanceDataStepRate = 0;
+	D3D11_INPUT_ELEMENT_DESC d3d11InputElementDescriptor;
+	ZeroMemory((void*)&d3d11InputElementDescriptor, sizeof(D3D11_INPUT_ELEMENT_DESC));
+	d3d11InputElementDescriptor.SemanticName = "POSITION";
+	d3d11InputElementDescriptor.SemanticIndex = 0;
+	d3d11InputElementDescriptor.Format = DXGI_FORMAT_R32G32B32_FLOAT;	//RGB are symbolic for 3 floats.
+	d3d11InputElementDescriptor.AlignedByteOffset = 0;
+	d3d11InputElementDescriptor.InputSlot = 0;
+	d3d11InputElementDescriptor.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	d3d11InputElementDescriptor.InstanceDataStepRate = 0;
 
 	// Create Input layout
-	hr = gpID3D11Device->CreateInputLayout(d3d11InputElementDescriptor, _ARRAYSIZE(d3d11InputElementDescriptor), pID3DBlob_VertexShaderCode->GetBufferPointer(), pID3DBlob_VertexShaderCode->GetBufferSize(), &gpID3D11InputLayout);
-	if(FAILED(hr))
+	hr = gpID3D11Device->CreateInputLayout(&d3d11InputElementDescriptor, 1, pID3DBlob_VertexShaderCode->GetBufferPointer(), pID3DBlob_VertexShaderCode->GetBufferSize(), &gpID3D11InputLayout);
+		if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
 		fprintf(gpFile, "initialize:ID3D11Device::CreateInputLayout() failed.\n");
@@ -646,88 +558,227 @@ HRESULT initialize(void)
 	pID3DBlob_PixelShaderCode->Release();
 	pID3DBlob_PixelShaderCode = NULL;
 
-	// Sphere
+	// Geometry
+	const float squareVertices[] =
+	{
+		-1.0f, 1.0f, 0.0f,
+		-1.0f, -1.0f, 0.0f,
+		1.0f, -1.0f, 0.0f,
+		1.0f, 1.0f, 0.0f,
+		-1.0f, 1.0f, 0.0f
+	};
+
+	const float triangleVertices[] =
+	{
+		cosf(M_PI_2), sinf(M_PI_2), 0.0f,
+		cosf(-(M_PI/6.0f)), sinf(-(M_PI/6.0f)) , 0.0f,
+		cosf((7.0f*M_PI)/6.0f), sinf((7.0f*M_PI)/6.0f), 0.0f,
+		cosf(M_PI_2), sinf(M_PI_2), 0.0f
+	};
+	float angle;
+	for(int i = 0; i < 360; i++)
+	{
+		angle = i * M_PI / 180.0f;
+		circleVertices[i * 3] = cosf(angle);
+		circleVertices[i * 3 + 1] = sinf(angle);
+		circleVertices[i * 3 + 2] = 0.0f;
+	}
+	int index = 0;
+	for(float i = -1.25f;i <= 1.25f; i += 0.0625f)
+	{
+		if(i == 0.0f)
+			continue;
+		graphLineVertices[index * 3] = 1.25f;
+		graphLineVertices[index * 3 + 1] = i; 
+		graphLineVertices[index * 3 + 2] = 0.0f;
+		index++;
+		graphLineVertices[index * 3] = -1.25f;
+		graphLineVertices[index * 3 + 1] = i;
+		graphLineVertices[index * 3 + 2] = 0.0f; 
+		index++;
+		graphLineVertices[index * 3] = i;
+		graphLineVertices[index * 3 + 1] = 1.25f; 
+		graphLineVertices[index * 3 + 2] = 0.0f; 
+		index++;
+		graphLineVertices[index * 3] = i;
+		graphLineVertices[index * 3 + 1] = -1.25f; 
+		graphLineVertices[index * 3 + 2] = 0.0f; 
+		index++;
+	}
+	const float axesVertices[] =
+	{ 
+		0.0f, 1.25f, 0.0f,
+		0.0f, -1.25f, 0.0f,
+		1.25f, 0.0f, 0.0f,
+		-1.25f, 0.0f, 0.0f
+	};
+	const float pointVertex[] =
+	{
+		0.0f, 0.0f, 0.0f
+	};
+
 	// Create vertex buffer for above position vertices
-	// Position
+	// Square
 	// A.Initialize buffer descriptor(glGenBuffer)
 	D3D11_BUFFER_DESC d3d11BufferDescriptor;
 	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
 	d3d11BufferDescriptor.Usage = D3D11_USAGE_DEFAULT;	// GL_STATIC_DRAW similar
-	d3d11BufferDescriptor.ByteWidth = sizeof(float) * 3 * numVertices;
+	d3d11BufferDescriptor.ByteWidth = sizeof(float) * _ARRAYSIZE(squareVertices);
 	d3d11BufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
 	// B.Initialize subresource data structure to put data into the buffer(glBufferData)
 	D3D11_SUBRESOURCE_DATA d3d11SubresourceData;
 	ZeroMemory((void*)&d3d11SubresourceData, sizeof(D3D11_SUBRESOURCE_DATA));
-	d3d11SubresourceData.pSysMem = sphere_vertices;
+	d3d11SubresourceData.pSysMem = squareVertices;
 
 	// C.Create actual buffer
-	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_PositionBuffer_Sphere);
+	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_PositionBuffer_Square);
 	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for position buffer.\n");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for position buffer for square.\n");
 		fclose(gpFile);
 		return hr;
 	}
 	else
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() Successful for position buffer.\n");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() Successful for position buffer for square.\n");
 		fclose(gpFile);
 	}
 
-	// Normal
+	// Circle
 	// A.Initialize buffer descriptor(glGenBuffer)
 	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
 	d3d11BufferDescriptor.Usage = D3D11_USAGE_DEFAULT;	// GL_STATIC_DRAW similar
-	d3d11BufferDescriptor.ByteWidth = sizeof(float) * 3 * numVertices;
+	d3d11BufferDescriptor.ByteWidth = sizeof(float) * _ARRAYSIZE(circleVertices);
 	d3d11BufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
 	// B.Initialize subresource data structure to put data into the buffer(glBufferData)
 	ZeroMemory((void*)&d3d11SubresourceData, sizeof(D3D11_SUBRESOURCE_DATA));
-	d3d11SubresourceData.pSysMem = sphere_normals;
+	d3d11SubresourceData.pSysMem = circleVertices;
 
 	// C.Create actual buffer
-	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_NormalBuffer_Sphere);
+	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_PositionBuffer_Circle);
 	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for normal buffer.\n");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for position buffer for circle.\n");
 		fclose(gpFile);
 		return hr;
 	}
 	else
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() Successful for normal buffer.\n");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() Successful for position buffer for circle.\n");
 		fclose(gpFile);
 	}
 
-	// Elements / Index
+	// Triangle
 	// A.Initialize buffer descriptor(glGenBuffer)
 	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
 	d3d11BufferDescriptor.Usage = D3D11_USAGE_DEFAULT;	// GL_STATIC_DRAW similar
-	d3d11BufferDescriptor.ByteWidth = sizeof(short) * numElements;
-	d3d11BufferDescriptor.BindFlags = D3D11_BIND_INDEX_BUFFER;	// Index instead of vertex
+	d3d11BufferDescriptor.ByteWidth = sizeof(float) * _ARRAYSIZE(triangleVertices);
+	d3d11BufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
 	// B.Initialize subresource data structure to put data into the buffer(glBufferData)
 	ZeroMemory((void*)&d3d11SubresourceData, sizeof(D3D11_SUBRESOURCE_DATA));
-	d3d11SubresourceData.pSysMem = sphere_elements;
+	d3d11SubresourceData.pSysMem = triangleVertices;
 
 	// C.Create actual buffer
-	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_IndexBuffer_Sphere);
+	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_PositionBuffer_Triangle);
 	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for index buffer.\n");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for position buffer for triangle.\n");
 		fclose(gpFile);
 		return hr;
 	}
 	else
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() Successful for index buffer.\n");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() Successful for position buffer for triangle.\n");
+		fclose(gpFile);
+	}
+
+	// Point
+	// A.Initialize buffer descriptor(glGenBuffer)
+	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
+	d3d11BufferDescriptor.Usage = D3D11_USAGE_DEFAULT;	// GL_STATIC_DRAW similar
+	d3d11BufferDescriptor.ByteWidth = sizeof(float) * _ARRAYSIZE(pointVertex);
+	d3d11BufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+	// B.Initialize subresource data structure to put data into the buffer(glBufferData)
+	ZeroMemory((void*)&d3d11SubresourceData, sizeof(D3D11_SUBRESOURCE_DATA));
+	d3d11SubresourceData.pSysMem = pointVertex;
+
+	// C.Create actual buffer
+	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_PositionBuffer_Point);
+	if(FAILED(hr))
+	{
+		fopen_s(&gpFile, gszLogFileName, "a+");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for position buffer for point.\n");
+		fclose(gpFile);
+		return hr;
+	}
+	else
+	{
+		fopen_s(&gpFile, gszLogFileName, "a+");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() Successful for position buffer for point.\n");
+		fclose(gpFile);
+	}
+
+	// Graphs
+	// A.Initialize buffer descriptor(glGenBuffer)
+	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
+	d3d11BufferDescriptor.Usage = D3D11_USAGE_DEFAULT;	// GL_STATIC_DRAW similar
+	d3d11BufferDescriptor.ByteWidth = sizeof(float) * _ARRAYSIZE(graphLineVertices);
+	d3d11BufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+	// B.Initialize subresource data structure to put data into the buffer(glBufferData)
+	ZeroMemory((void*)&d3d11SubresourceData, sizeof(D3D11_SUBRESOURCE_DATA));
+	d3d11SubresourceData.pSysMem = graphLineVertices;
+
+	// C.Create actual buffer
+	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_PositionBuffer_Graph);
+	if(FAILED(hr))
+	{
+		fopen_s(&gpFile, gszLogFileName, "a+");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for position buffer for graph.\n");
+		fclose(gpFile);
+		return hr;
+	}
+	else
+	{
+		fopen_s(&gpFile, gszLogFileName, "a+");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() Successful for position buffer for graph.\n");
+		fclose(gpFile);
+	}
+
+	// Axes
+	// A.Initialize buffer descriptor(glGenBuffer)
+	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
+	d3d11BufferDescriptor.Usage = D3D11_USAGE_DEFAULT;	// GL_STATIC_DRAW similar
+	d3d11BufferDescriptor.ByteWidth = sizeof(float) * _ARRAYSIZE(axesVertices);
+	d3d11BufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+	// B.Initialize subresource data structure to put data into the buffer(glBufferData)
+	ZeroMemory((void*)&d3d11SubresourceData, sizeof(D3D11_SUBRESOURCE_DATA));
+	d3d11SubresourceData.pSysMem = axesVertices;
+
+	// C.Create actual buffer
+	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_PositionBuffer_Axes);
+	if(FAILED(hr))
+	{
+		fopen_s(&gpFile, gszLogFileName, "a+");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for position buffer for Axes.\n");
+		fclose(gpFile);
+		return hr;
+	}
+	else
+	{
+		fopen_s(&gpFile, gszLogFileName, "a+");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() Successful for position buffer for Axes.\n");
 		fclose(gpFile);
 	}
 
@@ -756,45 +807,12 @@ HRESULT initialize(void)
 
 	// C. Set constant buffer into the pipeline
 	gpID3D11DeviceContext->VSSetConstantBuffers(0, 1, &gpID3D11Buffer_ConstantBuffer);
-
-	// Enabling rasterizer state
-	// A.Initialize rasterizer descriptor
-	D3D11_RASTERIZER_DESC d3d11RasterizerDescriptor;
-	ZeroMemory((void*)&d3d11RasterizerDescriptor, sizeof(D3D11_RASTERIZER_DESC));
-	d3d11RasterizerDescriptor.CullMode = D3D11_CULL_NONE;
-	d3d11RasterizerDescriptor.FillMode = D3D11_FILL_SOLID;
-	d3d11RasterizerDescriptor.FrontCounterClockwise = FALSE;
-	d3d11RasterizerDescriptor.MultisampleEnable = FALSE;
-	d3d11RasterizerDescriptor.ScissorEnable = FALSE;
-	d3d11RasterizerDescriptor.DepthClipEnable = TRUE;
-	d3d11RasterizerDescriptor.AntialiasedLineEnable = FALSE;
-	d3d11RasterizerDescriptor.DepthBias = 0;
-	d3d11RasterizerDescriptor.DepthBiasClamp = 0.0;
-	d3d11RasterizerDescriptor.SlopeScaledDepthBias = FALSE;
-
-	// B.Create Rasterizer state
-	hr = gpID3D11Device->CreateRasterizerState(&d3d11RasterizerDescriptor, &gpID3D11RasterizerState);
-	if(FAILED(hr))
-	if(FAILED(hr))
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateRasterizerState() failed.\n");
-		fclose(gpFile);
-		return hr;
-	}
-	else
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateRasterizerState() Successful.\n");
-		fclose(gpFile);
-	}
-	// C.Set this state into rasterizer stage of pipeline
-	gpID3D11DeviceContext->RSSetState(gpID3D11RasterizerState);
+	gpID3D11DeviceContext->PSSetConstantBuffers(0, 1, &gpID3D11Buffer_ConstantBuffer);
 
 	// Initialize clearColor array
 	clearColor[0] = 0.0f;
 	clearColor[1] = 0.0f;
-	clearColor[2] = 0.0f;
+	clearColor[2] = 0.0f;	// Blue
 	clearColor[3] = 1.0f;
 
 	perspectiveProjectionMatrix = XMMatrixIdentity();
@@ -902,69 +920,15 @@ HRESULT resize(int width, int height)
 	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "resize:CreateRenderTargetView() failed.\n");
+		fprintf(gpFile, "resize() failed.\n");
 		fclose(gpFile);
 	}
 	// Release dummy texture interface
 	pID3D11Texture2D_backBuffer->Release();
 	pID3D11Texture2D_backBuffer = NULL;
 
-	// Depth
-	// Release existing DSV(DepthStencilView) 
-	if(gpID3D11DepthStencilView)
-	{
-		gpID3D11DepthStencilView->Release();
-		gpID3D11DepthStencilView = NULL;
-	}
-	// Initialize texture2D descriptor
-	D3D11_TEXTURE2D_DESC d3d11Texture2DDescriptor;
-	ZeroMemory((void*)&d3d11Texture2DDescriptor, sizeof(D3D11_TEXTURE2D_DESC));
-
-	d3d11Texture2DDescriptor.Width = (UINT)width;
-	d3d11Texture2DDescriptor.Height = (UINT)height;
-	d3d11Texture2DDescriptor.ArraySize = 1;
-	d3d11Texture2DDescriptor.MipLevels = 1;
-	d3d11Texture2DDescriptor.SampleDesc.Count = 1;
-	d3d11Texture2DDescriptor.SampleDesc.Quality = 0;
-	d3d11Texture2DDescriptor.Usage = D3D11_USAGE_DEFAULT;
-	d3d11Texture2DDescriptor.Format = DXGI_FORMAT_D32_FLOAT;
-	d3d11Texture2DDescriptor.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-	d3d11Texture2DDescriptor.CPUAccessFlags = 0;	// Default rights
-	d3d11Texture2DDescriptor.MiscFlags = 0;	// No Misc Flags - Is the depth for DOF or transform depth
-
-	// Declare a 2D texture which is going to be converted into depth buffer
-	ID3D11Texture2D *pID3D11Texture2D_DepthBuffer = NULL;
-	hr = gpID3D11Device->CreateTexture2D(&d3d11Texture2DDescriptor, NULL, &pID3D11Texture2D_DepthBuffer);
-	if(FAILED(hr))
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "resize:CreateTexture2D() failed.\n");
-		fclose(gpFile);
-	}
-
-	// Initialize DSV descriptor
-	D3D11_DEPTH_STENCIL_VIEW_DESC d3d11DepthStencilViewDescriptor;
-	ZeroMemory((void*)&d3d11DepthStencilViewDescriptor, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
-	d3d11DepthStencilViewDescriptor.Format = DXGI_FORMAT_D32_FLOAT;
-	d3d11DepthStencilViewDescriptor.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;	// Multi-Sampled
-
-	// Using this descriptor create a DSV
-	hr = gpID3D11Device->CreateDepthStencilView(pID3D11Texture2D_DepthBuffer, &d3d11DepthStencilViewDescriptor, &gpID3D11DepthStencilView);
-	if(FAILED(hr))
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "resize:CreateDepthStencilView() failed.\n");
-		fclose(gpFile);
-		pID3D11Texture2D_DepthBuffer->Release();
-		pID3D11Texture2D_DepthBuffer = NULL;
-	}
-
-	// Release the local depth buffer
-	pID3D11Texture2D_DepthBuffer->Release();
-	pID3D11Texture2D_DepthBuffer = NULL;
-
 	// 5.Set this new render target view in pipeline
-	gpID3D11DeviceContext->OMSetRenderTargets(1, &gpID3D11RenderTargetView, gpID3D11DepthStencilView);
+	gpID3D11DeviceContext->OMSetRenderTargets(1, &gpID3D11RenderTargetView, NULL);
 	
 	// Initialize viewport structure
 	D3D11_VIEWPORT d3d11Viewport;
@@ -989,60 +953,129 @@ void display(void)
 	// Code
 	// Clear Render Target View with clearColor similar to glClearColor()
 	gpID3D11DeviceContext->ClearRenderTargetView(gpID3D11RenderTargetView, clearColor);
-	gpID3D11DeviceContext->ClearDepthStencilView(gpID3D11DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-	// Cube
+	
+	// Graph Lines
 	// Set position buffer into IA stage of pipeline
 	UINT stride = sizeof(float) * 3;
 	UINT offset = 0;
-	gpID3D11DeviceContext->IASetVertexBuffers(0, 1, &gpID3D11Buffer_PositionBuffer_Sphere, &stride, &offset);
-
-	// Set normal buffer into IA stage of pipeline
-	stride = sizeof(float) * 3;
-	offset = 0;
-	gpID3D11DeviceContext->IASetVertexBuffers(1, 1, &gpID3D11Buffer_NormalBuffer_Sphere, &stride, &offset);
-
-	// Set index buffer into IA stage of pipeline
-	gpID3D11DeviceContext->IASetIndexBuffer(gpID3D11Buffer_IndexBuffer_Sphere, DXGI_FORMAT_R16_UINT, 0);	// This format corresponds to short
-
+	gpID3D11DeviceContext->IASetVertexBuffers(0, 1, &gpID3D11Buffer_PositionBuffer_Graph, &stride, &offset);
+	
 	// Set primitive topology in input assembly state in pipeline
-	gpID3D11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	gpID3D11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
 	// Transformations
 	// A. Initialize matrices
-	XMMATRIX translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 2.0f);
-	XMMATRIX worldMatrix = translationMatrix;	// Order is important
+	XMMATRIX worldMatrix = XMMatrixTranslation(0.0f, 0.0f, 3.25f);
 	XMMATRIX viewMatrix = XMMatrixIdentity();
+	XMMATRIX wvpMatrix = worldMatrix * viewMatrix * perspectiveProjectionMatrix;
 
 	// B. Put them into constant buffer
 	CBUFFER ConstantBuffer;
 	ZeroMemory((void*)&ConstantBuffer, sizeof(CBUFFER));
-	ConstantBuffer.WorldMatrix = worldMatrix;
-	ConstantBuffer.ViewMatrix = viewMatrix;
-	ConstantBuffer.ProjectionMatrix = perspectiveProjectionMatrix;
-	// Light related Code
-	if(bLight == TRUE)
-	{
-		ConstantBuffer.La = XMVectorSet(lightAmbient[0], lightAmbient[1], lightAmbient[2], lightAmbient[3]);
-		ConstantBuffer.Ld = XMVectorSet(lightDiffuse[0], lightDiffuse[1], lightDiffuse[2], lightDiffuse[3]);
-		ConstantBuffer.Ls = XMVectorSet(lightSpecular[0], lightSpecular[1], lightSpecular[2], lightSpecular[3]);
-
-		ConstantBuffer.Ka = XMVectorSet(materialAmbient[0], materialAmbient[1], materialAmbient[2], materialAmbient[3]);
-		ConstantBuffer.Kd = XMVectorSet(materialDiffuse[0], materialDiffuse[1], materialDiffuse[2], materialDiffuse[3]);
-		ConstantBuffer.Ks = XMVectorSet(materialSpecular[0], materialSpecular[1], materialSpecular[2], materialSpecular[3]);
-		
-		ConstantBuffer.MaterialShininess = materialShininess;
-		ConstantBuffer.LightPosition = XMVectorSet(lightPosition[0], lightPosition[1], lightPosition[2], lightPosition[3]);
-		ConstantBuffer.LightingEnabled = 1;
-	}
-	else
-	{
-		ConstantBuffer.LightingEnabled = 0;
-	}
-
+	ConstantBuffer.WorldViewProjectionMatrix = wvpMatrix;
+	ConstantBuffer.Color = XMVectorSet(0.0f, 0.0f, 1.0f, 1.0f);
 	gpID3D11DeviceContext->UpdateSubresource(gpID3D11Buffer_ConstantBuffer, 0, NULL, &ConstantBuffer, 0, 0);
 
-	gpID3D11DeviceContext->DrawIndexed(numElements, 0, 0);
+	// Draw the primitive(glDrawArrays(-, 2, 1))
+	gpID3D11DeviceContext->Draw(320, 0);
+
+	// Axes
+	// Set position buffer into IA stage of pipeline
+	stride = sizeof(float) * 3;
+	offset = 0;
+	gpID3D11DeviceContext->IASetVertexBuffers(0, 1, &gpID3D11Buffer_PositionBuffer_Axes, &stride, &offset);
+	
+	// Set primitive topology in input assembly state in pipeline
+	gpID3D11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+
+	// B. Put them into constant buffer
+	ZeroMemory((void*)&ConstantBuffer, sizeof(CBUFFER));
+	ConstantBuffer.WorldViewProjectionMatrix = wvpMatrix;
+	ConstantBuffer.Color = XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f);
+	gpID3D11DeviceContext->UpdateSubresource(gpID3D11Buffer_ConstantBuffer, 0, NULL, &ConstantBuffer, 0, 0);
+
+	// Draw the primitive(glDrawArrays(-, 2, 1))
+	gpID3D11DeviceContext->Draw(2, 0);
+
+	ZeroMemory((void*)&ConstantBuffer, sizeof(CBUFFER));
+	ConstantBuffer.WorldViewProjectionMatrix = wvpMatrix;
+	ConstantBuffer.Color = XMVectorSet(1.0f, 0.0f, 0.0f, 1.0f);
+	gpID3D11DeviceContext->UpdateSubresource(gpID3D11Buffer_ConstantBuffer, 0, NULL, &ConstantBuffer, 0, 0);
+
+	// Draw the primitive(glDrawArrays(-, 2, 1))
+	gpID3D11DeviceContext->Draw(2, 2);
+
+	// Square
+	// Set position buffer into IA stage of pipeline
+	stride = sizeof(float) * 3;
+	offset = 0;
+	gpID3D11DeviceContext->IASetVertexBuffers(0, 1, &gpID3D11Buffer_PositionBuffer_Square, &stride, &offset);
+	
+	// Set primitive topology in input assembly state in pipeline
+	gpID3D11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP);
+
+	// B. Put them into constant buffer
+	ZeroMemory((void*)&ConstantBuffer, sizeof(CBUFFER));
+	ConstantBuffer.WorldViewProjectionMatrix = wvpMatrix;
+	ConstantBuffer.Color = XMVectorSet(1.0f, 1.0f, 0.0f, 1.0f);
+	gpID3D11DeviceContext->UpdateSubresource(gpID3D11Buffer_ConstantBuffer, 0, NULL, &ConstantBuffer, 0, 0);
+
+	// Draw the primitive(glDrawArrays(-, 2, 1))
+	gpID3D11DeviceContext->Draw(5, 0);
+
+	// Triangle
+	// Set position buffer into IA stage of pipeline
+	stride = sizeof(float) * 3;
+	offset = 0;
+	gpID3D11DeviceContext->IASetVertexBuffers(0, 1, &gpID3D11Buffer_PositionBuffer_Triangle, &stride, &offset);
+	
+	// Set primitive topology in input assembly state in pipeline
+	gpID3D11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP);
+
+	// B. Put them into constant buffer
+	ZeroMemory((void*)&ConstantBuffer, sizeof(CBUFFER));
+	ConstantBuffer.WorldViewProjectionMatrix = wvpMatrix;
+	ConstantBuffer.Color = XMVectorSet(1.0f, 1.0f, 0.0f, 1.0f);
+	gpID3D11DeviceContext->UpdateSubresource(gpID3D11Buffer_ConstantBuffer, 0, NULL, &ConstantBuffer, 0, 0);
+
+	// Draw the primitive(glDrawArrays(-, 2, 1))
+	gpID3D11DeviceContext->Draw(4, 0);
+
+	// Circle
+	// Set position buffer into IA stage of pipeline
+	stride = sizeof(float) * 3;
+	offset = 0;
+	gpID3D11DeviceContext->IASetVertexBuffers(0, 1, &gpID3D11Buffer_PositionBuffer_Circle, &stride, &offset);
+	
+	// Set primitive topology in input assembly state in pipeline
+	gpID3D11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP);
+
+	// B. Put them into constant buffer
+	ZeroMemory((void*)&ConstantBuffer, sizeof(CBUFFER));
+	ConstantBuffer.WorldViewProjectionMatrix = wvpMatrix;
+	ConstantBuffer.Color = XMVectorSet(1.0f, 1.0f, 0.0f, 1.0f);
+	gpID3D11DeviceContext->UpdateSubresource(gpID3D11Buffer_ConstantBuffer, 0, NULL, &ConstantBuffer, 0, 0);
+
+	// Draw the primitive(glDrawArrays(-, 2, 1))
+	gpID3D11DeviceContext->Draw(360, 0);
+
+	// Point
+	// Set position buffer into IA stage of pipeline
+	stride = sizeof(float) * 3;
+	offset = 0;
+	gpID3D11DeviceContext->IASetVertexBuffers(0, 1, &gpID3D11Buffer_PositionBuffer_Point, &stride, &offset);
+	
+	// Set primitive topology in input assembly state in pipeline
+	gpID3D11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
+
+	// B. Put them into constant buffer
+	ZeroMemory((void*)&ConstantBuffer, sizeof(CBUFFER));
+	ConstantBuffer.WorldViewProjectionMatrix = wvpMatrix;
+	ConstantBuffer.Color = XMVectorSet(1.0f, 1.0f, 0.0f, 1.0f);
+	gpID3D11DeviceContext->UpdateSubresource(gpID3D11Buffer_ConstantBuffer, 0, NULL, &ConstantBuffer, 0, 0);
+
+	// Draw the primitive(glDrawArrays(-, 2, 1))
+	gpID3D11DeviceContext->Draw(1, 0);
 
 	// Swap Buffers by presenting them 
 	gpIDXGISwapChain->Present(0, 0);
@@ -1059,35 +1092,40 @@ void uninitialize(void)
 	// Function Declarations
 	void ToggleFullscreen(void);
 	// Code
-	if(gpID3D11DepthStencilView)
-	{
-		gpID3D11DepthStencilView->Release();
-		gpID3D11DepthStencilView = NULL;
-	}
-	if(gpID3D11RasterizerState)
-	{
-		gpID3D11RasterizerState->Release();
-		gpID3D11RasterizerState = NULL;
-	}
 	if(gpID3D11Buffer_ConstantBuffer)
 	{
 		gpID3D11Buffer_ConstantBuffer->Release();
 		gpID3D11Buffer_ConstantBuffer = NULL;
 	}
-	if(gpID3D11Buffer_IndexBuffer_Sphere)
+	if(gpID3D11Buffer_PositionBuffer_Axes)
 	{
-		gpID3D11Buffer_IndexBuffer_Sphere->Release();
-		gpID3D11Buffer_IndexBuffer_Sphere = NULL;
+		gpID3D11Buffer_PositionBuffer_Axes->Release();
+		gpID3D11Buffer_PositionBuffer_Axes = NULL;
 	}
-	if(gpID3D11Buffer_NormalBuffer_Sphere)
+	if(gpID3D11Buffer_PositionBuffer_Circle)
 	{
-		gpID3D11Buffer_NormalBuffer_Sphere->Release();
-		gpID3D11Buffer_NormalBuffer_Sphere = NULL;
+		gpID3D11Buffer_PositionBuffer_Circle->Release();
+		gpID3D11Buffer_PositionBuffer_Circle = NULL;
 	}
-	if(gpID3D11Buffer_PositionBuffer_Sphere)
+	if(gpID3D11Buffer_PositionBuffer_Square)
 	{
-		gpID3D11Buffer_PositionBuffer_Sphere->Release();
-		gpID3D11Buffer_PositionBuffer_Sphere = NULL;
+		gpID3D11Buffer_PositionBuffer_Square->Release();
+		gpID3D11Buffer_PositionBuffer_Square = NULL;
+	}
+	if(gpID3D11Buffer_PositionBuffer_Graph)
+	{
+		gpID3D11Buffer_PositionBuffer_Graph->Release();
+		gpID3D11Buffer_PositionBuffer_Graph = NULL;
+	}
+	if(gpID3D11Buffer_PositionBuffer_Triangle)
+	{
+		gpID3D11Buffer_PositionBuffer_Triangle->Release();
+		gpID3D11Buffer_PositionBuffer_Triangle = NULL;
+	}
+	if(gpID3D11Buffer_PositionBuffer_Point)
+	{
+		gpID3D11Buffer_PositionBuffer_Point->Release();
+		gpID3D11Buffer_PositionBuffer_Point = NULL;
 	}
 	if(gpID3D11InputLayout)
 	{

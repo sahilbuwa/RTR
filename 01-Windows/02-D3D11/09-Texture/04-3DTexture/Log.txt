@@ -1,0 +1,24 @@
+Log File Is Successfully Created. 
+WinMain:CoInitialize() Successful.
+PrintD3DInfo:CreateDXGIFactory() Successful.
+Graphics Card Name is NVIDIA GeForce RTX 3050 Ti Laptop GPU
+Graphics Card Memory(VRAM) = 4 GBs
+D3D11 obtained Hardware Driver.
+D3D11 obtained 11.0 feature level.
+initialize:D3DCompile() successful for vertex shader.
+initialize:ID3D11Device::CreateVertexShader() Successful.
+initialize:D3DCompile() successful for pixel shader.
+initialize:ID3D11Device::CreatePixelShader() Successful.
+initialize:ID3D11Device::CreateInputLayout() Successful.
+initialize:ID3D11Device::CreateBuffer() Successful for position buffer.
+initialize:ID3D11Device::CreateBuffer() Successful for color buffer.
+initialize:ID3D11Device::CreateBuffer() Successful for position buffer.
+initialize:ID3D11Device::CreateBuffer() Successful for texture buffer.
+initialize:ID3D11Device::CreateBuffer() Successful for constant buffer.
+initialize:ID3D11Device::CreateRasterizerState() Successful.
+initialize:LoadD3DTexture() Successfulfor Kundali.bmp.
+initialize:ID3D11Device::CreateSamplerState() Successful.
+initialize:LoadD3DTexture() Successful for Stone.bmp.
+initialize:ID3D11Device::CreateSamplerState() Successful.
+initialize:resize() Successful.
+Initialize() Successful.

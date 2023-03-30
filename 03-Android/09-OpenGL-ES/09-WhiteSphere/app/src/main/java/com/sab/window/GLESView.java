@@ -305,8 +305,6 @@ public class GLESView extends GLSurfaceView implements OnDoubleTapListener, OnGe
 		// Unuse the shader program object
 		GLES32.glUseProgram(0);
 
-		// UnuseProgram
-		GLES32.glUseProgram(0);
 		requestRender(); // SwapBuffers()
 	}
 

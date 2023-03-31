@@ -1,5 +1,4 @@
 Log File Is Successfully Created. 
-WinMain:CoInitialize() Successful.
 PrintD3DInfo:CreateDXGIFactory() Successful.
 Graphics Card Name is NVIDIA GeForce RTX 3050 Ti Laptop GPU
 Graphics Card Memory(VRAM) = 4 GBs
@@ -11,5 +10,7 @@ initialize:D3DCompile() successful for pixel shader.
 initialize:ID3D11Device::CreatePixelShader() Successful.
 initialize:ID3D11Device::CreateInputLayout() Successful.
 initialize:ID3D11Device::CreateBuffer() Successful for position buffer.
-initialize:ID3D11Device::CreateBuffer() failed for texture buffer.
-Initialize() failed.
+initialize:ID3D11Device::CreateBuffer() Successful for color buffer.
+initialize:ID3D11Device::CreateBuffer() Successful for constant buffer.
+initialize:resize() Successful.
+Initialize() Successful.

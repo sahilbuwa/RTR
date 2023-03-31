@@ -5,7 +5,6 @@
 #include<math.h>	// For ceil()
 #include"D3D.h"		//Aplya path (local) madhli header file declare karaichi padhhat
 #include"XNAMath/xnamath.h"
-#include"WICTextureLoader.h"	
 
 // DirectX related header files
 #include<dxgi.h>	// DirectX Graphic Infrastructure
@@ -16,10 +15,6 @@
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
-#pragma comment(lib, "DirectXTK.lib")
-
-// Namespace defined for directx
-// using namespace DirectX;
 
 // Defines
 #define WIN_WIDTH 800
@@ -44,21 +39,19 @@ float clearColor[4];
 ID3D11VertexShader *gpID3D11VertexShader = NULL;
 ID3D11PixelShader *gpID3D11PixelShader = NULL;
 ID3D11InputLayout *gpID3D11InputLayout = NULL;
-ID3D11Buffer *gpID3D11Buffer_PositionBuffer_Quad = NULL;
-ID3D11Buffer *gpID3D11Buffer_TextureBuffer_Quad = NULL;
+ID3D11Buffer *gpID3D11Buffer_PositionBuffer_Pyramid = NULL;
+ID3D11Buffer *gpID3D11Buffer_ColorBuffer_Pyramid = NULL;
 ID3D11Buffer *gpID3D11Buffer_ConstantBuffer = NULL;
-ID3D11ShaderResourceView *gpID3D11ShaderResourceView_Texture_Smiley = NULL;
-ID3D11SamplerState *gpID3D11SamplerState_Texture = NULL;
+
+float anglePyramid = 0.0f;
 
 // mvpMatrixUniform
 struct CBUFFER 
 {
 	XMMATRIX WorldViewProjectionMatrix;
-	unsigned int KeyPressed;
 };
 
 XMMATRIX perspectiveProjectionMatrix;
-int keyPressed = 0;
 
 
 // Global Function Declarations
@@ -90,22 +83,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 	else
 	{
 		fprintf(gpFile,"Log File Is Successfully Created. \n");
-		fclose(gpFile);
-	}
-
-	// Initialize COM
-	hr = CoInitialize(NULL);
-	if(FAILED(hr))
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "WinMain:CoInitialize() failed.\n");
-		fclose(gpFile);
-		return hr;
-	}
-	else
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "WinMain:CoInitialize() Successful.\n");
 		fclose(gpFile);
 	}
 
@@ -227,20 +204,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 				case 'f':
 					ToggleFullScreen();
 					break;
-				case 49:
-					keyPressed = 1;
-					break;
-				case 50:
-					keyPressed = 2;
-					break;
-				case 51:
-					keyPressed = 3;
-					break;
-				case 52:
-					keyPressed = 4;
-					break;
 				default:
-					keyPressed = 0;
 					break;
 			}
 			break;
@@ -325,7 +289,6 @@ HRESULT initialize(void)
 	HRESULT PrintD3DInfo(void);
 	void uninitialize(void);
 	HRESULT resize(int, int);
-	HRESULT LoadD3DTexture(const wchar_t*, ID3D11ShaderResourceView**);
 
 	// Variable Declarations
 	HRESULT hr = S_OK;	// Success_Okay
@@ -444,18 +407,17 @@ HRESULT initialize(void)
 	"cbuffer ConstantBuffer" \
 	"{" \
 	"float4x4 worldViewProjectionMatrix;" \
-	"uint keyPressed;" \
 	"}" \
 	"struct vertex" \
 	"{" \
 	"float4 position:SV_POSITION;" \
-	"float2 texcoord:TEXCOORD;" \
+	"float4 color:COLOR;" \
 	"};" \
-	"vertex main(float4 position:POSITION, float2 texcoord:TEXCOORD)" \
+	"vertex main(float4 position:POSITION, float4 color:COLOR)" \
 	"{" \
 	"vertex output;" \
 	"output.position = mul(worldViewProjectionMatrix, position);" \
-	"output.texcoord = texcoord;" \
+	"output.color = color;" \
 	"return output;" \
 	"}";
 
@@ -505,29 +467,15 @@ HRESULT initialize(void)
 
 	// Pixel Shader
 	const char* pixelShaderSourceCode = 
-	"cbuffer ConstantBuffer" \
-	"{" \
-	"float4x4 worldViewProjectionMatrix;" \
-	"uint keyPressed;" \
-	"}" \
-	"Texture2D myTexture2D;" \
-	"SamplerState mySamplerState;" \
 	"struct vertex" \
 	"{" \
 	"float4 position:SV_POSITION;" \
-	"float2 texcoord:TEXCOORD;" \
+	"float4 color:COLOR;" \
 	"};" \
 	"float4 main(vertex input):SV_TARGET" \
 	"{" \
 	"float4 color;" \
-	"if(keyPressed == 1)" \
-	"{" \
-	"color = myTexture2D.Sample(mySamplerState, input.texcoord);" \
-	"}" \
-	"else" \
-	"{" \
-	"color = float4(1.0, 1.0, 1.0, 1.0);" \
-	"}" \
+	"color = input.color;" \
 	"return color;" \
 	"}";
 
@@ -587,11 +535,11 @@ HRESULT initialize(void)
 	d3d11InputElementDescriptor[0].InputSlot = 0;
 	d3d11InputElementDescriptor[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 	d3d11InputElementDescriptor[0].InstanceDataStepRate = 0;
-	// Texture
-	d3d11InputElementDescriptor[1].SemanticName = "TEXCOORD";
+	// Color
+	d3d11InputElementDescriptor[1].SemanticName = "COLOR";
 	d3d11InputElementDescriptor[1].SemanticIndex = 0;
-	d3d11InputElementDescriptor[1].Format = DXGI_FORMAT_R32G32_FLOAT;	//RG are symbolic for 2 floats.
-	d3d11InputElementDescriptor[1].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;	// glPixelStorei - Unpack Aligned in OpenGL
+	d3d11InputElementDescriptor[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;	//RGB are symbolic for 3 floats.
+	d3d11InputElementDescriptor[1].AlignedByteOffset = 0;
 	d3d11InputElementDescriptor[1].InputSlot = 1;
 	d3d11InputElementDescriptor[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 	d3d11InputElementDescriptor[1].InstanceDataStepRate = 0;
@@ -621,33 +569,69 @@ HRESULT initialize(void)
 	pID3DBlob_PixelShaderCode = NULL;
 
 	// Geometry
-	const float quadVertices[] =
+	const float pyramidVertices[] =
 	{
-        -1.0f, +1.0f, 0.0f,
-		+1.0f, +1.0f, 0.0f,
-		-1.0f, -1.0f, 0.0f,
+		// front
+		+0.0f, +1.0f, +0.0f,
+		+1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f, -1.0f,
 
-		-1.0f, -1.0f, 0.0f,
-		+1.0f, +1.0f, 0.0f,
-		+1.0f, -1.0f, 0.0f,
+		// right
+		+0.0f, +1.0f, +0.0f,
+		+1.0f, -1.0f, +1.0f,
+		+1.0f, -1.0f, -1.0f,
+
+		// back
+		+0.0f, +1.0f, +0.0f,
+		-1.0f, -1.0f, +1.0f,
+		+1.0f, -1.0f, +1.0f,
+
+		// left
+		+0.0f, +1.0f, +0.0f,
+		-1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f, +1.0f,
 	};
 
+	const float pyramidColors[] = 
+	{
+		// front
+		+1.0f, +0.0f, +0.0f,
+		+0.0f, +0.0f, +1.0f,
+		+0.0f, +1.0f, +0.0f,
+
+		// right
+		+1.0f, +0.0f, +0.0f,
+		+0.0f, +1.0f, +0.0f,
+		+0.0f, +0.0f, +1.0f,
+
+		// back
+		+1.0f, +0.0f, +0.0f,
+		+0.0f, +0.0f, +1.0f,
+		+0.0f, +1.0f, +0.0f,
+
+		// left
+		+1.0f, +0.0f, +0.0f,
+		+0.0f, +1.0f, +0.0f,
+		+0.0f, +0.0f, +1.0f
+	};
+
+	// Pyramid
 	// Create vertex buffer for above position vertices
 	// Position
 	// A.Initialize buffer descriptor(glGenBuffer)
 	D3D11_BUFFER_DESC d3d11BufferDescriptor;
 	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
 	d3d11BufferDescriptor.Usage = D3D11_USAGE_DEFAULT;	// GL_STATIC_DRAW similar
-	d3d11BufferDescriptor.ByteWidth = sizeof(float) * _ARRAYSIZE(quadVertices);
+	d3d11BufferDescriptor.ByteWidth = sizeof(float) * _ARRAYSIZE(pyramidVertices);
 	d3d11BufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
 	// B.Initialize subresource data structure to put data into the buffer(glBufferData)
 	D3D11_SUBRESOURCE_DATA d3d11SubresourceData;
 	ZeroMemory((void*)&d3d11SubresourceData, sizeof(D3D11_SUBRESOURCE_DATA));
-	d3d11SubresourceData.pSysMem = quadVertices;
+	d3d11SubresourceData.pSysMem = pyramidVertices;
 
 	// C.Create actual buffer
-	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_PositionBuffer_Quad);
+	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_PositionBuffer_Pyramid);
 	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
@@ -662,30 +646,30 @@ HRESULT initialize(void)
 		fclose(gpFile);
 	}
 
-	// Texcoord
+	// Color
 	// A.Initialize buffer descriptor(glGenBuffer)
 	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
-	d3d11BufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;	// GL_STATIC_DRAW similar
-	d3d11BufferDescriptor.ByteWidth = sizeof(float) * 2 * 6;
+	d3d11BufferDescriptor.Usage = D3D11_USAGE_DEFAULT;	// GL_STATIC_DRAW similar
+	d3d11BufferDescriptor.ByteWidth = sizeof(float) * _ARRAYSIZE(pyramidColors);
 	d3d11BufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
 	// B.Initialize subresource data structure to put data into the buffer(glBufferData)
 	ZeroMemory((void*)&d3d11SubresourceData, sizeof(D3D11_SUBRESOURCE_DATA));
-	d3d11SubresourceData.pSysMem = NULL;
+	d3d11SubresourceData.pSysMem = pyramidColors;
 
 	// C.Create actual buffer
-	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_TextureBuffer_Quad);
+	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_ColorBuffer_Pyramid);
 	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for texture buffer.\n");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for color buffer.\n");
 		fclose(gpFile);
 		return hr;
 	}
 	else
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() Successful for texture buffer.\n");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() Successful for color buffer.\n");
 		fclose(gpFile);
 	}
 
@@ -714,7 +698,6 @@ HRESULT initialize(void)
 
 	// C. Set constant buffer into the pipeline
 	gpID3D11DeviceContext->VSSetConstantBuffers(0, 1, &gpID3D11Buffer_ConstantBuffer);
-	gpID3D11DeviceContext->PSSetConstantBuffers(0, 1, &gpID3D11Buffer_ConstantBuffer);
 
 	// Enabling rasterizer state
 	// A.Initialize rasterizer descriptor
@@ -734,6 +717,7 @@ HRESULT initialize(void)
 	// B.Create Rasterizer state
 	hr = gpID3D11Device->CreateRasterizerState(&d3d11RasterizerDescriptor, &gpID3D11RasterizerState);
 	if(FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
 		fprintf(gpFile, "initialize:ID3D11Device::CreateRasterizerState() failed.\n");
@@ -749,45 +733,6 @@ HRESULT initialize(void)
 	// C.Set this state into rasterizer stage of pipeline
 	gpID3D11DeviceContext->RSSetState(gpID3D11RasterizerState);
 
-	// Create Texture
-	hr = LoadD3DTexture(L"Smiley.bmp", &gpID3D11ShaderResourceView_Texture_Smiley);
-	if(FAILED(hr))
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:LoadD3DTexture() failed for Smiley.bmp.\n");
-		fclose(gpFile);
-		return hr;
-	}
-	else
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:LoadD3DTexture() Successful for Smiley.bmp.\n");
-		fclose(gpFile);
-	}
-
-	// Create textureSampler State
-	D3D11_SAMPLER_DESC d3d11SamplerDescriptor;
-	ZeroMemory((void*)&d3d11SamplerDescriptor, sizeof(D3D11_SAMPLER_DESC));
-	d3d11SamplerDescriptor.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	d3d11SamplerDescriptor.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	d3d11SamplerDescriptor.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	d3d11SamplerDescriptor.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-
-	hr = gpID3D11Device->CreateSamplerState(&d3d11SamplerDescriptor, &gpID3D11SamplerState_Texture);
-	if(FAILED(hr))
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateSamplerState() failed.\n");
-		fclose(gpFile);
-		return hr;
-	}
-	else
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateSamplerState() Successful.\n");
-		fclose(gpFile);
-	}
-	
 	// Initialize clearColor array
 	clearColor[0] = 0.0f;
 	clearColor[1] = 0.0f;
@@ -869,17 +814,6 @@ HRESULT PrintD3DInfo(void)
 		pIDXGIFactory->Release();
 		pIDXGIFactory = NULL;
 	}
-	return hr;
-}
-
-// Texture Loading Function
-HRESULT LoadD3DTexture(const wchar_t* textureFileName, ID3D11ShaderResourceView** ppID3D11ShaderResourceView)
-{
-	// Variable Declarations
-	HRESULT hr = S_OK;
-	// Code
-	hr = DirectX::CreateWICTextureFromFile(gpID3D11Device, gpID3D11DeviceContext, textureFileName, NULL, ppID3D11ShaderResourceView);
-	
 	return hr;
 }
 
@@ -1003,20 +937,21 @@ void display(void)
 	// Set position buffer into IA stage of pipeline
 	UINT stride = sizeof(float) * 3;
 	UINT offset = 0;
-	gpID3D11DeviceContext->IASetVertexBuffers(0, 1, &gpID3D11Buffer_PositionBuffer_Quad, &stride, &offset);
+	gpID3D11DeviceContext->IASetVertexBuffers(0, 1, &gpID3D11Buffer_PositionBuffer_Pyramid, &stride, &offset);
 	
-	// Set texture buffer into IA stage of pipeline
-	stride = sizeof(float) * 2;
+	// Set color buffer into IA stage of pipeline
+	stride = sizeof(float) * 3;
 	offset = 0;
-	gpID3D11DeviceContext->IASetVertexBuffers(1, 1, &gpID3D11Buffer_TextureBuffer_Quad, &stride, &offset);
+	gpID3D11DeviceContext->IASetVertexBuffers(1, 1, &gpID3D11Buffer_ColorBuffer_Pyramid, &stride, &offset);
 
 	// Set primitive topology in input assembly state in pipeline
 	gpID3D11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// Transformations
 	// A. Initialize matrices
-	XMMATRIX translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 4.0f);
-	XMMATRIX worldMatrix = translationMatrix;	// Order is important
+	XMMATRIX translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 6.0f);
+	XMMATRIX rotationMatrix = XMMatrixRotationY(XMConvertToRadians(anglePyramid));
+	XMMATRIX worldMatrix = rotationMatrix * translationMatrix;	// Order is important
 	XMMATRIX viewMatrix = XMMatrixIdentity();
 	XMMATRIX wvpMatrix = worldMatrix * viewMatrix * perspectiveProjectionMatrix;
 
@@ -1024,75 +959,10 @@ void display(void)
 	CBUFFER ConstantBuffer;
 	ZeroMemory((void*)&ConstantBuffer, sizeof(CBUFFER));
 	ConstantBuffer.WorldViewProjectionMatrix = wvpMatrix;
-
-	// Dynamic Texcoords
-	float texcoord[12];
-	if(keyPressed == 1)
-	{
-		texcoord[0] = 0.5f;
-		texcoord[1] = 0.5f;
-		texcoord[2] = 0.0f;
-		texcoord[3] = 0.5f;
-		texcoord[4] = 0.0f;
-		texcoord[5] = 0.0f;
-		texcoord[6] = 0.5f;
-		texcoord[7] = 0.0f;
-		ConstantBuffer.KeyPressed = 1;
-	}
-	else if(keyPressed == 2)
-	{
-		texcoord[0] = 1.0f;
-		texcoord[1] = 1.0f;
-		texcoord[2] = 0.0f;
-		texcoord[3] = 1.0f;
-		texcoord[4] = 0.0f;
-		texcoord[5] = 0.0f;
-		texcoord[6] = 1.0f;
-		texcoord[7] = 0.0f;
-		ConstantBuffer.KeyPressed = 1;
-	}
-	else if(keyPressed == 3)
-	{
-		texcoord[0] = 2.0f;
-		texcoord[1] = 2.0f;
-		texcoord[2] = 0.0f;
-		texcoord[3] = 2.0f;
-		texcoord[4] = 0.0f;
-		texcoord[5] = 0.0f;
-		texcoord[6] = 2.0f;
-		texcoord[7] = 0.0f;
-		ConstantBuffer.KeyPressed = 1;
-	}
-	else if(keyPressed == 4)
-	{
-		texcoord[0] = 0.5f;
-		texcoord[1] = 0.5f;
-		texcoord[2] = 0.5f;
-		texcoord[3] = 0.5f;
-		texcoord[4] = 0.5f;
-		texcoord[5] = 0.5f;
-		texcoord[6] = 0.5f;
-		texcoord[7] = 0.5f;
-		texcoord[8] = 0.5f;
-		texcoord[9] = 0.5f;
-		texcoord[10] = 0.5f;
-		texcoord[11] = 0.5f;
-		ConstantBuffer.KeyPressed = 1;
-	}
-	else
-	{
-		ConstantBuffer.KeyPressed = 0;
-	}
 	gpID3D11DeviceContext->UpdateSubresource(gpID3D11Buffer_ConstantBuffer, 0, NULL, &ConstantBuffer, 0, 0);
 
-	// Set ShaderResourceView in pixel shader
-	gpID3D11DeviceContext->PSSetShaderResources(0, 1, &gpID3D11ShaderResourceView_Texture_Smiley);
-
-	// Set SamplerState in pixelShader
-	gpID3D11DeviceContext->PSSetSamplers(0, 1, &gpID3D11SamplerState_Texture);
-
 	// Draw the primitive(glDrawArrays(-, 2, 1))
-	gpID3D11DeviceContext->Draw(6, 0);
+	gpID3D11DeviceContext->Draw(12, 0);
 
 	// Swap Buffers by presenting them 
 	gpIDXGISwapChain->Present(0, 0);
@@ -1101,7 +971,9 @@ void display(void)
 void update(void)
 {
 	// Code
-
+	anglePyramid += 0.05f;
+	if(anglePyramid >= 360.0f)
+		anglePyramid -= 360.0f;
 }
 
 void uninitialize(void)
@@ -1109,16 +981,6 @@ void uninitialize(void)
 	// Function Declarations
 	void ToggleFullscreen(void);
 	// Code
-	if(gpID3D11SamplerState_Texture)
-	{
-		gpID3D11SamplerState_Texture->Release();
-		gpID3D11SamplerState_Texture = NULL;
-	}
-	if(gpID3D11ShaderResourceView_Texture_Smiley)
-	{
-		gpID3D11ShaderResourceView_Texture_Smiley->Release();
-		gpID3D11ShaderResourceView_Texture_Smiley = NULL;
-	}
 	if(gpID3D11DepthStencilView)
 	{
 		gpID3D11DepthStencilView->Release();
@@ -1134,15 +996,15 @@ void uninitialize(void)
 		gpID3D11Buffer_ConstantBuffer->Release();
 		gpID3D11Buffer_ConstantBuffer = NULL;
 	}
-	if(gpID3D11Buffer_TextureBuffer_Quad)
+	if(gpID3D11Buffer_ColorBuffer_Pyramid)
 	{
-		gpID3D11Buffer_TextureBuffer_Quad->Release();
-		gpID3D11Buffer_TextureBuffer_Quad = NULL;
+		gpID3D11Buffer_ColorBuffer_Pyramid->Release();
+		gpID3D11Buffer_ColorBuffer_Pyramid = NULL;
 	}
-	if(gpID3D11Buffer_PositionBuffer_Quad)
+	if(gpID3D11Buffer_PositionBuffer_Pyramid)
 	{
-		gpID3D11Buffer_PositionBuffer_Quad->Release();
-		gpID3D11Buffer_PositionBuffer_Quad = NULL;
+		gpID3D11Buffer_PositionBuffer_Pyramid->Release();
+		gpID3D11Buffer_PositionBuffer_Pyramid = NULL;
 	}
 	if(gpID3D11InputLayout)
 	{
@@ -1188,6 +1050,4 @@ void uninitialize(void)
 		DestroyWindow(ghwnd);
 		ghwnd=NULL;
 	}
-	// Uninitialize COM
-	CoUninitialize();
 }

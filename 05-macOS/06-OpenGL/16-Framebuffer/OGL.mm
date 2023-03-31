@@ -265,6 +265,9 @@ int main(int argc, char* argv[])
         
         // set view's opengl context using above opengl context
         [self setOpenGLContext: glContext];
+        
+        [self  setWantsBestResolutionOpenGLSurface:YES];
+        [self convertRectToBacking:[self bounds]];
     }
     return self;
 }
@@ -344,6 +347,15 @@ int main(int argc, char* argv[])
 - (void)drawRect:(NSRect)dirtyRect
 {
     // Code
+    // Get view dimensions in pixels
+    NSRect backingBounds = [self convertRectToBacking:[self bounds]];
+ 
+    GLsizei backingPixelWidth  = (GLsizei)(backingBounds.size.width),
+            backingPixelHeight = (GLsizei)(backingBounds.size.height);
+ 
+    // Set viewport
+    glViewport(0, 0, backingPixelWidth, backingPixelHeight);
+    
     [self drawView];
 }
 
@@ -588,6 +600,9 @@ int main(int argc, char* argv[])
     bFBOResult = NO;
 
     perspectiveProjectionMatrix = mat4::identity();
+    
+    // Warmup Resize Call
+    [self resize:WIN_WIDTH :WIN_HEIGHT];
     // FBO initialize code
     bFBOResult = [self createFBO:FBO_WIDTH :FBO_HEIGHT];
     int iRetval;
@@ -601,8 +616,6 @@ int main(int argc, char* argv[])
         [self uninitialize];
         return 0;
     }
-    // Warmup Resize Call
-    [self resize:WIN_WIDTH :WIN_HEIGHT];
     return 0;
 }
 
@@ -725,7 +738,7 @@ int main(int argc, char* argv[])
     "out vec4 FragColor;\n" \
     "void main(void)\n" \
     "{\n" \
-    "vec4 fong_ads_light;" \
+    "vec4 fong_ads_light = vec4(0.0, 0.0, 0.0, 0.0);" \
     "if(u_lightingEnabled == 1)\n" \
     "{\n" \
     "vec3 ambient[3];\n" \

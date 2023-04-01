@@ -58,7 +58,7 @@ struct CBUFFER
 };
 
 XMMATRIX perspectiveProjectionMatrix;
-int keyPressed = -1;
+int keyPressed = 0;
 
 
 // Global Function Declarations
@@ -632,7 +632,6 @@ HRESULT initialize(void)
 		+1.0f, -1.0f, 0.0f,
 	};
 
-	// Pyramid
 	// Create vertex buffer for above position vertices
 	// Position
 	// A.Initialize buffer descriptor(glGenBuffer)
@@ -663,7 +662,7 @@ HRESULT initialize(void)
 		fclose(gpFile);
 	}
 
-	// Color
+	// Texcoord
 	// A.Initialize buffer descriptor(glGenBuffer)
 	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
 	d3d11BufferDescriptor.Usage = D3D11_USAGE_DYNAMIC;	// GL_STATIC_DRAW similar
@@ -715,6 +714,7 @@ HRESULT initialize(void)
 
 	// C. Set constant buffer into the pipeline
 	gpID3D11DeviceContext->VSSetConstantBuffers(0, 1, &gpID3D11Buffer_ConstantBuffer);
+	gpID3D11DeviceContext->PSSetConstantBuffers(0, 1, &gpID3D11Buffer_ConstantBuffer);
 
 	// Enabling rasterizer state
 	// A.Initialize rasterizer descriptor
@@ -1026,7 +1026,7 @@ void display(void)
 	ConstantBuffer.WorldViewProjectionMatrix = wvpMatrix;
 
 	// Dynamic Texcoords
-	float texcoord[8];
+	float texcoord[12];
 	if(keyPressed == 1)
 	{
 		texcoord[0] = 0.5f;
@@ -1073,6 +1073,10 @@ void display(void)
 		texcoord[5] = 0.5f;
 		texcoord[6] = 0.5f;
 		texcoord[7] = 0.5f;
+		texcoord[8] = 0.5f;
+		texcoord[9] = 0.5f;
+		texcoord[10] = 0.5f;
+		texcoord[11] = 0.5f;
 		ConstantBuffer.KeyPressed = 1;
 	}
 	else

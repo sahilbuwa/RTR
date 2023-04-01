@@ -605,7 +605,8 @@ int main(int argc, char* argv[])
     {
         glDeleteVertexArrays(1, &vao);
         vao = 0;
-    }     // Shader Uninitialization
+    }
+    // Shader Uninitialization
      if(shaderProgramObject)
      {
          glUseProgram(shaderProgramObject);

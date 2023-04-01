@@ -971,7 +971,7 @@ void display(void)
 	// Transformations
 	// A. Initialize matrices
 	translationMatrix = XMMatrixTranslation(1.5f, 0.0f, 6.0f);
-	rotationMatrix = XMMatrixRotationY(XMConvertToRadians(angleSquare));
+	rotationMatrix = XMMatrixRotationX(XMConvertToRadians(angleSquare));
 	worldMatrix = rotationMatrix * translationMatrix;	// Order is important
 	viewMatrix = XMMatrixIdentity();
 	wvpMatrix = worldMatrix * viewMatrix * perspectiveProjectionMatrix;

@@ -11,10 +11,5 @@ initialize:D3DCompile() successful for pixel shader.
 initialize:ID3D11Device::CreatePixelShader() Successful.
 initialize:ID3D11Device::CreateInputLayout() Successful.
 initialize:ID3D11Device::CreateBuffer() Successful for position buffer.
-initialize:ID3D11Device::CreateBuffer() Successful for texture buffer.
-initialize:ID3D11Device::CreateBuffer() Successful for constant buffer.
-initialize:ID3D11Device::CreateRasterizerState() Successful.
-initialize:LoadD3DTexture() Successful for Smiley.bmp.
-initialize:ID3D11Device::CreateSamplerState() Successful.
-initialize:resize() Successful.
-Initialize() Successful.
+initialize:ID3D11Device::CreateBuffer() failed for texture buffer.
+Initialize() failed.

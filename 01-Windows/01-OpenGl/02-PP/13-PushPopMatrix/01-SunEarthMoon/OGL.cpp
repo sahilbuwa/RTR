@@ -575,8 +575,8 @@ void printGLInfo(void)
 void resize(int width, int height)
 {
 	// Code
-	if(height==0)
-		height=1; // To avoid divided by 0 error(illegal statement) in future calls..
+	if(height == 0)
+		height = 1; // To avoid divided by 0 error(illegal statement) in future calls..
 
 	glViewport(0,0,(GLsizei)width,(GLsizei)height);
 	

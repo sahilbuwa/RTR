@@ -380,7 +380,7 @@ int main(int argc, char* argv[])
     "uniform vec3 u_ks;" \
     "uniform float u_materialShininess;" \
     "uniform int u_lightingEnabled;" \
-    "out vec3 fong_ads_light;" \
+    "out vec3 fong_ads_light = vec3(0.0, 0.0, 0.0);" \
     "void main(void)" \
     "{" \
     "if(u_lightingEnabled == 1)" \
@@ -577,7 +577,7 @@ int main(int argc, char* argv[])
     "out vec4 FragColor;\n" \
     "void main(void)\n" \
     "{\n" \
-    "vec4 fong_ads_light;" \
+    "vec4 fong_ads_light = vec4(0.0, 0.0, 0.0, 0.0);" \
     "if(u_lightingEnabled == 1)\n" \
     "{\n" \
     "vec3 ambient[3];\n" \

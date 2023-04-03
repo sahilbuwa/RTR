@@ -646,6 +646,7 @@ HRESULT initialize(void)
 	"float4 position:SV_POSITION;" \
 	"float3 transformedNormals:NORMAL0;" \
 	"float3 viewerVector:NORMAL1;" \
+	"float3 normalized_lightDirection[3]:NORMAL2;" \
 	"};" \
 	"vertex main(float4 position:POSITION, float4 normals:NORMAL)" \
 	"{" \
@@ -657,6 +658,10 @@ HRESULT initialize(void)
 	"float3x3 normalMatrix = (float3x3)worldMatrix;" \
 	"output.transformedNormals = mul(normalMatrix, (float3)normals);" \
 	"output.viewerVector = -eyeCoordinates.xyz;" \
+	"for(int i = 0; i < 3; i++)"
+	"{" \
+	"output.normalized_lightDirection[i] = normalize(lightPosition[i].xyz - eyeCoordinates.xyz);" \
+	"}" \
 	"}" \
 	"float4 pos = mul(worldMatrix, position);" \
 	"pos = mul(viewMatrix, pos);" \
@@ -729,6 +734,7 @@ HRESULT initialize(void)
 	"float4 position:SV_POSITION;" \
 	"float3 transformedNormals:NORMAL0;" \
 	"float3 viewerVector:NORMAL1;" \
+	"float3 normalized_lightDirection[3]:NORMAL2;" \
 	"};" \
 	"float4 main(vertex input):SV_TARGET" \
 	"{" \
@@ -738,16 +744,14 @@ HRESULT initialize(void)
 	"float3 ambient[3];" \
 	"float3 diffuse[3];" \
 	"float3 specular[3];" \
-	"float3 normalized_lightDirection[3];" \
 	"float3 reflectionVector[3];" \
 	"float3 normalized_viewVector = normalize(input.viewerVector);" \
 	"float3 normalized_transformedNormals = normalize(input.transformedNormals);" \
 	"for(int i=0;i<3;i++)"
 	"{\n" \
 	"ambient[i] = la[i] * ka;\n" \
-	"normalized_lightDirection[i] = normalize(lightPosition[i] + input.viewerVector);" \
-	"diffuse[i] = ld[i] * kd * max(dot(normalized_lightDirection[i], normalized_transformedNormals), 0.0);" \
-	"reflectionVector[i] = reflect(-normalized_lightDirection[i], normalized_transformedNormals);" \
+	"diffuse[i] = ld[i] * kd * max(dot(input.normalized_lightDirection[i], normalized_transformedNormals), 0.0);" \
+	"reflectionVector[i] = reflect(-input.normalized_lightDirection[i], normalized_transformedNormals);" \
 	"specular[i] = ls[i] * ks * pow(max(dot(reflectionVector[i], normalized_viewVector), 0.0), materialShininess);" \
 	"fong_ads_light = fong_ads_light + ambient[i] + diffuse[i] + specular[i];" \
 	"}" \

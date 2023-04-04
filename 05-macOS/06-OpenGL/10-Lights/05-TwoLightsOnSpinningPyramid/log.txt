@@ -2,4 +2,4 @@ Program is started successfully.
 OpenGL Renderer = Intel(R) UHD Graphics 630
 OpenGL version = 4.1 INTEL-18.8.5
 GLSL version = 4.10
- 1.0000001.000000-2.0000000.0000000.0000000.0000000.0000000.0000000.0000001.0000001.0000001.000000Log File Is Successfully Closed.
+ Program is terminated successfully.

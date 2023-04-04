@@ -4,9 +4,8 @@
 #include<stdlib.h>	// For Exit()
 #include<math.h>	// For ceil()
 #include"D3D.h"		//Aplya path (local) madhli header file declare karaichi padhhat
-
-#include "XNAMath/xnamath.h"  // For D3D maths
-#include"WICTextureLoader.h"	
+#include"XNAMath/xnamath.h"
+#include"Sphere.h" // Sphere sathi
 
 // DirectX related header files
 #include<dxgi.h>	// DirectX Graphic Infrastructure
@@ -17,50 +16,62 @@
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
-#pragma comment(lib, "DirectXTK.lib")
-
-// Namespace defined for directx
-// using namespace DirectX;
+#pragma comment(lib,"Sphere.lib")
 
 // Defines
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
+#define MAX_STACK_SIZE 32
 
 // Global Variable Declarations
 HWND ghwnd = NULL;
 BOOL gbFullScreen = FALSE;
-FILE* gpFile = NULL;
+FILE *gpFile = NULL;
 const char gszLogFileName[] = "Log.txt";
 BOOL gbActiveWindow = FALSE;
 
 // D3D11 related global variables
-IDXGISwapChain* gpIDXGISwapChain = NULL;
-ID3D11Device* gpID3D11Device = NULL;
-ID3D11DeviceContext* gpID3D11DeviceContext = NULL;
-ID3D11RenderTargetView* gpID3D11RenderTargetView = NULL;
-ID3D11RasterizerState* gpID3D11RasterizerState = NULL;
-ID3D11DepthStencilView* gpID3D11DepthStencilView = NULL;
+IDXGISwapChain *gpIDXGISwapChain = NULL;
+ID3D11Device *gpID3D11Device = NULL;
+ID3D11DeviceContext *gpID3D11DeviceContext = NULL;
+ID3D11RenderTargetView *gpID3D11RenderTargetView = NULL;
+ID3D11RasterizerState *gpID3D11RasterizerState = NULL;
+ID3D11DepthStencilView *gpID3D11DepthStencilView = NULL;
 float clearColor[4];
 
-ID3D11VertexShader* gpID3D11VertexShader = NULL;
-ID3D11PixelShader* gpID3D11PixelShader = NULL;
-ID3D11InputLayout* gpID3D11InputLayout = NULL;
-ID3D11Buffer* gpID3D11Buffer_PositionBuffer_Quad = NULL;
-ID3D11Buffer* gpID3D11Buffer_TextureBuffer_Quad = NULL;
-ID3D11Buffer* gpID3D11Buffer_ConstantBuffer = NULL;
-ID3D11ShaderResourceView* gpID3D11ShaderResourceView_Texture_Smiley = NULL;
-ID3D11SamplerState* gpID3D11SamplerState_Texture = NULL;
+ID3D11VertexShader *gpID3D11VertexShader = NULL;
+ID3D11PixelShader *gpID3D11PixelShader = NULL;
+ID3D11InputLayout *gpID3D11InputLayout = NULL;
+ID3D11Buffer *gpID3D11Buffer_PositionBuffer_Sphere = NULL;
+ID3D11Buffer *gpID3D11Buffer_IndexBuffer_Sphere = NULL;
+ID3D11Buffer *gpID3D11Buffer_ConstantBuffer = NULL;
 
 // mvpMatrixUniform
-struct CBUFFER
+struct CBUFFER 
 {
-	XMMATRIX WorldViewProjectionMatrix;
-	unsigned int KeyPressed;
+	XMMATRIX WorldMatrix;
+	XMMATRIX ViewMatrix;
+	XMMATRIX ProjectionMatrix;
+	XMVECTOR Color;
 };
 
-XMMATRIX perspectiveProjectionMatrix;
-int keyPressed = 0;
+// Sphere arrays
+float sphere_vertices[1146];
+float sphere_normals[1146];
+float sphere_textures[764];
+unsigned short sphere_elements[2280];
+unsigned int numElements;
+unsigned int numVertices;
 
+XMMATRIX perspectiveProjectionMatrix;
+BOOL bLight = FALSE;
+
+XMMATRIX matrixStack[MAX_STACK_SIZE];
+int top = -1;
+
+int shoulder = 0;
+int elbow = 0;
+int wrist = 0;
 
 // Global Function Declarations
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -78,73 +89,57 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 	WNDCLASSEX wndclass;
 	HWND hwnd;
 	MSG msg;
-	TCHAR szAppName[] = TEXT("MaziWindow");
+	TCHAR szAppName[]= TEXT("MaziWindow");
 	BOOL bDone = FALSE;
 	HRESULT hr = S_OK;
 
 	// Code
-	if (fopen_s(&gpFile, gszLogFileName, "w") != 0)// fopen_s(File Open Secured)
+	if(fopen_s(&gpFile, gszLogFileName, "w") != 0)// fopen_s(File Open Secured)
 	{
-		MessageBox(NULL, TEXT("Creation of log file failed. Exiting...\n"), TEXT("FileIO Error"), MB_OK);
+		MessageBox(NULL, TEXT("Creation of log file failed. Exiting...\n"),TEXT("FileIO Error"),MB_OK);
 		exit(0);
 	}
 	else
 	{
-		fprintf(gpFile, "Log File Is Successfully Created. \n");
-		fclose(gpFile);
-	}
-
-	// Initialize COM
-	hr = CoInitialize(NULL);
-	if (FAILED(hr))
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "WinMain:CoInitialize() failed.\n");
-		fclose(gpFile);
-		return hr;
-	}
-	else
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "WinMain:CoInitialize() Successful.\n");
+		fprintf(gpFile,"Log File Is Successfully Created. \n");
 		fclose(gpFile);
 	}
 
 	// Initialization of WNDCLASSEX structure
 	wndclass.cbSize = sizeof(WNDCLASSEX);
-	wndclass.style = CS_HREDRAW | CS_VREDRAW;
+	wndclass.style = CS_HREDRAW | CS_VREDRAW ;
 	wndclass.cbClsExtra = 0;
 	wndclass.cbWndExtra = 0;
 	wndclass.lpfnWndProc = WndProc;
 	wndclass.hInstance = hInstance;
 	wndclass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);	// BLACK_BRUSH
-	wndclass.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(MYICON));	//ID of icon , MYICON int aslyane tyala string madhe convert karnyasathi MAKEINTRESOURCE macro waparaava laagto
-	wndclass.hCursor = LoadCursor(NULL, IDC_ARROW);	// ID of cursor
+	wndclass.hIcon = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON));	//ID of icon , MYICON int aslyane tyala string madhe convert karnyasathi MAKEINTRESOURCE macro waparaava laagto
+	wndclass.hCursor = LoadCursor(NULL , IDC_ARROW);	// ID of cursor
 	wndclass.lpszClassName = szAppName;
 	wndclass.lpszMenuName = NULL;
-	wndclass.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(MYICON));	//Chotu Icon sathi 
+	wndclass.hIconSm = LoadIcon( hInstance, MAKEINTRESOURCE(MYICON));	//Chotu Icon sathi 
 
 	// Register The WNDCLASSEX
 	RegisterClassEx(&wndclass);
 
 	// Create The Window
-	hwnd = CreateWindow(szAppName,
-		TEXT("Sahil Ajit Buwa"),
-		WS_OVERLAPPEDWINDOW,
-		(GetSystemMetrics(SM_CXSCREEN) - WIN_WIDTH) / 2,
-		(GetSystemMetrics(SM_CYSCREEN) - WIN_HEIGHT) / 2,
-		WIN_WIDTH,
-		WIN_HEIGHT,
-		NULL,
-		NULL,	//Menu Handle , refer 28
-		hInstance,
-		NULL	// Extra Maahiti dya ki
-	);
+	hwnd = CreateWindow (	szAppName,
+							TEXT("Sahil Ajit Buwa"),
+							WS_OVERLAPPEDWINDOW,
+							(GetSystemMetrics(SM_CXSCREEN)-WIN_WIDTH)/2, 
+							(GetSystemMetrics(SM_CYSCREEN)-WIN_HEIGHT)/2,
+							WIN_WIDTH,
+							WIN_HEIGHT,
+							NULL,
+							NULL,	//Menu Handle , refer 28
+							hInstance, 
+							NULL	// Extra Maahiti dya ki
+						);
 
 	ghwnd = hwnd;
 	// Initialize
 	hr = initialize();
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");	// Open the file and append to the existing file.
 		fprintf(gpFile, "Initialize() failed.\n");
@@ -168,11 +163,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 	SetFocus(hwnd);
 
 	// Game Loop
-	while (bDone == FALSE)
+	while(bDone == FALSE)
 	{
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		if(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
-			if (msg.message == WM_QUIT)
+			if(msg.message == WM_QUIT)
 				bDone = TRUE;
 			else
 			{
@@ -182,7 +177,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 		}
 		else
 		{
-			if (gbActiveWindow == TRUE)
+			if(gbActiveWindow == TRUE)
 			{
 				// Render the scene
 				display();
@@ -194,7 +189,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 		}
 	}
 	uninitialize();
-	return (int)msg.wParam;
+	return (int)msg.wParam; 
 }
 
 // Callback Function
@@ -210,73 +205,89 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 	HRESULT hr = S_OK;
 
 	// Code
-	switch (iMsg)
+	switch(iMsg)
 	{
-	case WM_SETFOCUS:
-		gbActiveWindow = TRUE;
-		break;
-	case WM_KILLFOCUS:
-		gbActiveWindow = FALSE;
-		break;
-	case WM_ERASEBKGND:
-		break;
+		case WM_SETFOCUS:
+			gbActiveWindow = TRUE;
+			break;
+		case WM_KILLFOCUS:
+			gbActiveWindow = FALSE;
+			break;
+		case WM_ERASEBKGND:
+			break;
 		// As this is not retained mode graphics, there is not WM_PAINT to paint.
-	case WM_CHAR:
-		switch (wParam)
-		{
-		case 'F':
-		case 'f':
-			ToggleFullScreen();
+		case WM_CHAR:
+			switch(wParam)
+			{
+				case 'F':
+				case 'f':
+					ToggleFullScreen();
+					break;
+				case 'L':
+				case 'l':
+					if (bLight == FALSE)
+					{
+						bLight = TRUE;
+					}
+					else
+					{
+						bLight = FALSE;
+					}
+					break;
+				case 's':
+					shoulder = (shoulder + 6) % 360;
+					break;
+				case 'S':
+					shoulder = (shoulder - 6) % 360;
+					break;
+				case 'e':
+					elbow = (elbow + 3) % 360;
+					break;
+				case 'E':
+					elbow = (elbow - 3) % 360;
+					break;
+				case 'w':
+					wrist = (wrist + 3) % 360;
+					break;
+				case 'W':
+					wrist = (wrist - 3) % 360;
+					break;
+				default:
+					break;
+			}
 			break;
-		case 49:
-			keyPressed = 1;
+		case WM_KEYDOWN:
+			switch(wParam)
+			{
+				case 27:
+					DestroyWindow(hwnd);
+					break;
+				default:
+					break;
+			}
 			break;
-		case 50:
-			keyPressed = 2;
+		case WM_SIZE:
+			if(gpID3D11DeviceContext)
+			{
+				hr = resize(LOWORD(lParam), HIWORD(lParam));
+				if(FAILED(hr))
+				{
+					fopen_s(&gpFile, gszLogFileName, "a+");	// Open the file and append to the existing file.
+					fprintf(gpFile, "WndProc:resize() failed.\n");
+					fclose(gpFile);
+					return hr;
+				}
+			}
 			break;
-		case 51:
-			keyPressed = 3;
-			break;
-		case 52:
-			keyPressed = 4;
-			break;
-		default:
-			keyPressed = 0;
-			break;
-		}
-		break;
-	case WM_KEYDOWN:
-		switch (wParam)
-		{
-		case 27:
+		case WM_CLOSE:
 			DestroyWindow(hwnd);
 			break;
+		case WM_DESTROY:
+			uninitialize();
+			PostQuitMessage(0);
+			break;
 		default:
 			break;
-		}
-		break;
-	case WM_SIZE:
-		if (gpID3D11DeviceContext)
-		{
-			hr = resize(LOWORD(lParam), HIWORD(lParam));
-			if (FAILED(hr))
-			{
-				fopen_s(&gpFile, gszLogFileName, "a+");	// Open the file and append to the existing file.
-				fprintf(gpFile, "WndProc:resize() failed.\n");
-				fclose(gpFile);
-				return hr;
-			}
-		}
-		break;
-	case WM_CLOSE:
-		DestroyWindow(hwnd);
-		break;
-	case WM_DESTROY:
-		uninitialize();
-		PostQuitMessage(0);
-		break;
-	default:
-		break;
 	}
 
 	return DefWindowProc(hwnd, iMsg, wParam, lParam);
@@ -292,17 +303,17 @@ void ToggleFullScreen(void)
 	// Code
 	wp.length = sizeof(WINDOWPLACEMENT);
 
-	if (gbFullScreen == FALSE)
+	if(gbFullScreen == FALSE)
 	{
 		dwStyle = GetWindowLong(ghwnd, GWL_STYLE);
-		if (dwStyle & WS_OVERLAPPEDWINDOW)
+		if(dwStyle & WS_OVERLAPPEDWINDOW)
 		{
 			mi.cbSize = sizeof(MONITORINFO);
 
-			if (GetWindowPlacement(ghwnd, &wp) && GetMonitorInfo(MonitorFromWindow(ghwnd, MONITORINFOF_PRIMARY), &mi))
+			if(GetWindowPlacement(ghwnd, &wp) && GetMonitorInfo(MonitorFromWindow(ghwnd, MONITORINFOF_PRIMARY), &mi))
 			{
-				SetWindowLong(ghwnd, GWL_STYLE, dwStyle & ~WS_OVERLAPPEDWINDOW);
-				SetWindowPos(ghwnd, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top, SWP_NOZORDER | SWP_FRAMECHANGED); //WM_NCCalcSize non client area calculate kar ani consider kar
+				SetWindowLong(ghwnd, GWL_STYLE, dwStyle & ~WS_OVERLAPPEDWINDOW );
+				SetWindowPos(ghwnd, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right-mi.rcMonitor.left, mi.rcMonitor.bottom-mi.rcMonitor.top, SWP_NOZORDER | SWP_FRAMECHANGED); //WM_NCCalcSize non client area calculate kar ani consider kar
 			}
 			ShowCursor(FALSE);
 			gbFullScreen = TRUE;
@@ -312,7 +323,7 @@ void ToggleFullScreen(void)
 	{
 		SetWindowLong(ghwnd, GWL_STYLE, dwStyle | WS_OVERLAPPEDWINDOW);
 		SetWindowPlacement(ghwnd, &wp);
-		SetWindowPos(ghwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_NOZORDER | SWP_FRAMECHANGED);
+		SetWindowPos(ghwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_NOZORDER | SWP_FRAMECHANGED );
 
 		ShowCursor(TRUE);
 		gbFullScreen = FALSE;
@@ -326,24 +337,24 @@ HRESULT initialize(void)
 	HRESULT PrintD3DInfo(void);
 	void uninitialize(void);
 	HRESULT resize(int, int);
-	HRESULT LoadD3DTexture(const wchar_t*, ID3D11ShaderResourceView**);
+	void InitializeMatrixStack(void);
 
 	// Variable Declarations
 	HRESULT hr = S_OK;	// Success_Okay
 	D3D_DRIVER_TYPE d3dDriverType;
-	D3D_DRIVER_TYPE d3dDriverTypes[] = { D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP, D3D_DRIVER_TYPE_REFERENCE };
+	D3D_DRIVER_TYPE d3dDriverTypes[] = {D3D_DRIVER_TYPE_HARDWARE, D3D_DRIVER_TYPE_WARP, D3D_DRIVER_TYPE_REFERENCE};
 	D3D_FEATURE_LEVEL d3dFeatureLevel_Required = D3D_FEATURE_LEVEL_11_0;
 	D3D_FEATURE_LEVEL d3dFeatureLevel_Acquired = D3D_FEATURE_LEVEL_10_0;
 	UINT numDrivers = 0;
 	UINT createDeviceFlags = 0;
 	UINT numFeatureLevels = 1;
-	ID3DBlob* pID3DBlob_VertexShaderCode = NULL;
-	ID3DBlob* pID3DBlob_Error = NULL;
-	ID3DBlob* pID3DBlob_PixelShaderCode = NULL;
+	ID3DBlob *pID3DBlob_VertexShaderCode = NULL;
+	ID3DBlob *pID3DBlob_Error = NULL;
+	ID3DBlob *pID3DBlob_PixelShaderCode = NULL;
 
 	// Code
 	hr = PrintD3DInfo();
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");	// Open the file and append to the existing file.
 		fprintf(gpFile, "initialize:PrintD3DInfo() failed.\n");
@@ -367,30 +378,30 @@ HRESULT initialize(void)
 
 	// Call D3D11CreateDeviceAndSwapChain() for required driver
 	numDrivers = sizeof(d3dDriverTypes) / sizeof(d3dDriverTypes[0]);
-	for (UINT i = 0; i < numDrivers; i++)
+	for(UINT i = 0; i < numDrivers; i++)
 	{
 		d3dDriverType = d3dDriverTypes[i];
 
-		hr = D3D11CreateDeviceAndSwapChain(NULL,
-			d3dDriverType,
-			NULL,	// Jeva khatri ahe software driver milaichi teva tya software chya DLL la LoadLibrary madhun milavlela HMODULE ikde dyava
-			createDeviceFlags,
-			&d3dFeatureLevel_Required,
-			numFeatureLevels,
-			D3D11_SDK_VERSION,
-			&dxgiSwapChainDescriptor,
-			&gpIDXGISwapChain,
-			&gpID3D11Device,
-			&d3dFeatureLevel_Acquired,
-			&gpID3D11DeviceContext);
-
-		if (SUCCEEDED(hr))
+		hr = D3D11CreateDeviceAndSwapChain(	NULL,
+											d3dDriverType,
+											NULL,	// Jeva khatri ahe software driver milaichi teva tya software chya DLL la LoadLibrary madhun milavlela HMODULE ikde dyava
+											createDeviceFlags,
+											&d3dFeatureLevel_Required,
+											numFeatureLevels,
+											D3D11_SDK_VERSION,
+											&dxgiSwapChainDescriptor,
+											&gpIDXGISwapChain,
+											&gpID3D11Device,
+											&d3dFeatureLevel_Acquired,
+											&gpID3D11DeviceContext);
+		
+		if(SUCCEEDED(hr))
 		{
 			break;
 		}
 	}
 
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
 		fprintf(gpFile, "initialize:D3D11CreateDeviceAndSwapChain() failed.\n");
@@ -402,15 +413,15 @@ HRESULT initialize(void)
 		fopen_s(&gpFile, gszLogFileName, "a+");
 
 		// Print Obtained Driver Type
-		if (d3dDriverType == D3D_DRIVER_TYPE_HARDWARE)
+		if(d3dDriverType == D3D_DRIVER_TYPE_HARDWARE)
 		{
 			fprintf(gpFile, "D3D11 obtained Hardware Driver.\n");
 		}
-		else if (d3dDriverType == D3D_DRIVER_TYPE_WARP)
+		else if(d3dDriverType == D3D_DRIVER_TYPE_WARP)
 		{
 			fprintf(gpFile, "D3D11 obtained WARP Driver.\n");
 		}
-		else if (d3dDriverType == D3D_DRIVER_TYPE_REFERENCE)
+		else if(d3dDriverType == D3D_DRIVER_TYPE_REFERENCE)
 		{
 			fprintf(gpFile, "D3D11 obtained Debug Driver.\n");
 		}
@@ -420,15 +431,15 @@ HRESULT initialize(void)
 		}
 
 		// Print obtained D3D feature level
-		if (d3dFeatureLevel_Acquired == D3D_FEATURE_LEVEL_11_0)
+		if(d3dFeatureLevel_Acquired == D3D_FEATURE_LEVEL_11_0)
 		{
 			fprintf(gpFile, "D3D11 obtained 11.0 feature level.\n");
 		}
-		else if (d3dFeatureLevel_Acquired == D3D_FEATURE_LEVEL_10_1)
+		else if(d3dFeatureLevel_Acquired == D3D_FEATURE_LEVEL_10_1)
 		{
 			fprintf(gpFile, "D3D11 obtained 10.1 feature level.\n");
 		}
-		else if (d3dFeatureLevel_Acquired == D3D_FEATURE_LEVEL_10_0)
+		else if(d3dFeatureLevel_Acquired == D3D_FEATURE_LEVEL_10_0)
 		{
 			fprintf(gpFile, "D3D11 obtained 10.0 feature level.\n");
 		}
@@ -441,33 +452,36 @@ HRESULT initialize(void)
 	}
 
 	// Vertex Shader
-	const char* vertexShaderSourceCode =
-		"cbuffer ConstantBuffer" \
-		"{" \
-		"float4x4 worldViewProjectionMatrix;" \
-		"uint keyPressed;" \
-		"}" \
-		"struct vertex" \
-		"{" \
-		"float4 position:SV_POSITION;" \
-		"float2 texcoord:TEXCOORD;" \
-		"};" \
-		"vertex main(float4 position:POSITION, float2 texcoord:TEXCOORD)" \
-		"{" \
-		"vertex output;" \
-		"output.position = mul(worldViewProjectionMatrix, position);" \
-		"output.texcoord = texcoord;" \
-		"return output;" \
-		"}";
+	const char* vertexShaderSourceCode = 
+	"cbuffer ConstantBuffer" \
+	"{" \
+	"float4x4 worldMatrix;" \
+	"float4x4 viewMatrix;" \
+	"float4x4 projectionMatrix;" \
+	"float4 color;" \
+	"}" \
+	"struct vertex" \
+	"{" \
+	"float4 position:SV_POSITION;" \
+	"};" \
+	"vertex main(float4 position:POSITION)" \
+	"{" \
+	"vertex output;" \
+	"position = mul(worldMatrix, position);" \
+	"position = mul(viewMatrix, position);" \
+	"position = mul(projectionMatrix, position);" \
+	"output.position = position;" \
+	"return output;" \
+	"}";
 
 	// Compile Vertex shader
 	hr = D3DCompile(vertexShaderSourceCode, lstrlenA(vertexShaderSourceCode) + 1, "VS", NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "vs_5_0", 0, 0, &pID3DBlob_VertexShaderCode, &pID3DBlob_Error);
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
-		if (pID3DBlob_Error)
+		if(pID3DBlob_Error)
 		{
-			fprintf(gpFile, "initialize:D3DCompile() failed for vertex shader: %s.\n", (char*)pID3DBlob_Error->GetBufferPointer());
+			fprintf(gpFile, "initialize:D3DCompile() failed for vertex shader: %s.\n",(char*)pID3DBlob_Error->GetBufferPointer());
 			pID3DBlob_Error->Release();
 			pID3DBlob_Error = NULL;
 		}
@@ -487,7 +501,7 @@ HRESULT initialize(void)
 
 	// Create Vertex Shader
 	hr = gpID3D11Device->CreateVertexShader(pID3DBlob_VertexShaderCode->GetBufferPointer(), pID3DBlob_VertexShaderCode->GetBufferSize(), NULL, &gpID3D11VertexShader);
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
 		fprintf(gpFile, "initialize:ID3D11Device::CreateVertexShader() failed.\n");
@@ -505,42 +519,32 @@ HRESULT initialize(void)
 	gpID3D11DeviceContext->VSSetShader(gpID3D11VertexShader, NULL, 0);
 
 	// Pixel Shader
-	const char* pixelShaderSourceCode =
-		"cbuffer ConstantBuffer" \
-		"{" \
-		"float4x4 worldViewProjectionMatrix;" \
-		"uint keyPressed;" \
-		"}" \
-		"Texture2D myTexture2D;" \
-		"SamplerState mySamplerState;" \
-		"struct vertex" \
-		"{" \
-		"float4 position:SV_POSITION;" \
-		"float2 texcoord:TEXCOORD;" \
-		"};" \
-		"float4 main(vertex input):SV_TARGET" \
-		"{" \
-		"float4 color;" \
-		"if(keyPressed == 1)" \
-		"{" \
-		"color = myTexture2D.Sample(mySamplerState, input.texcoord);" \
-		"}" \
-		"else" \
-		"{" \
-		"color = float4(1.0, 1.0, 1.0, 1.0);" \
-		"}" \
-		"return color;" \
-		"}";
+	const char* pixelShaderSourceCode = 
+	"cbuffer ConstantBuffer" \
+	"{" \
+	"float4x4 worldMatrix;" \
+	"float4x4 viewMatrix;" \
+	"float4x4 projectionMatrix;" \
+	"float4 color;" \
+	"}" \
+	"struct vertex" \
+	"{" \
+	"float4 position:SV_POSITION;" \
+	"};" \
+	"float4 main(vertex input):SV_TARGET" \
+	"{" \
+	"return color;"
+	"}";
 
 	pID3DBlob_Error = NULL;
 	// Compile Pixel shader
 	hr = D3DCompile(pixelShaderSourceCode, lstrlenA(pixelShaderSourceCode) + 1, "PS", NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", 0, 0, &pID3DBlob_PixelShaderCode, &pID3DBlob_Error);
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
-		if (pID3DBlob_Error)
+		if(pID3DBlob_Error)
 		{
-			fprintf(gpFile, "initialize:D3DCompile() failed for pixel shader: %s.\n", (char*)pID3DBlob_Error->GetBufferPointer());
+			fprintf(gpFile, "initialize:D3DCompile() failed for pixel shader: %s.\n",(char*)pID3DBlob_Error->GetBufferPointer());
 			pID3DBlob_Error->Release();
 			pID3DBlob_Error = NULL;
 		}
@@ -560,7 +564,7 @@ HRESULT initialize(void)
 
 	// Create Pixel Shader
 	hr = gpID3D11Device->CreatePixelShader(pID3DBlob_PixelShaderCode->GetBufferPointer(), pID3DBlob_PixelShaderCode->GetBufferSize(), NULL, &gpID3D11PixelShader);
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
 		fprintf(gpFile, "initialize:ID3D11Device::CreatePixelShader() failed.\n");
@@ -577,6 +581,11 @@ HRESULT initialize(void)
 	// Set this pixel shader in pixel shader stage of pipeline
 	gpID3D11DeviceContext->PSSetShader(gpID3D11PixelShader, NULL, 0);
 
+	// Declaration of vertex data arrays
+    getSphereVertexData(sphere_vertices, sphere_normals, sphere_textures, sphere_elements);
+    numVertices = getNumberOfSphereVertices();
+    numElements = getNumberOfSphereElements();
+	
 	// Create Input Layout
 	// Initialize input layout structure
 	D3D11_INPUT_ELEMENT_DESC d3d11InputElementDescriptor[2];
@@ -588,18 +597,18 @@ HRESULT initialize(void)
 	d3d11InputElementDescriptor[0].InputSlot = 0;
 	d3d11InputElementDescriptor[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 	d3d11InputElementDescriptor[0].InstanceDataStepRate = 0;
-	// Texture
-	d3d11InputElementDescriptor[1].SemanticName = "TEXCOORD";
+
+	d3d11InputElementDescriptor[1].SemanticName = "NORMAL";
 	d3d11InputElementDescriptor[1].SemanticIndex = 0;
-	d3d11InputElementDescriptor[1].Format = DXGI_FORMAT_R32G32_FLOAT;	//RG are symbolic for 2 floats.
-	d3d11InputElementDescriptor[1].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;	// glPixelStorei - Unpack Aligned in OpenGL
+	d3d11InputElementDescriptor[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;	//RGB are symbolic for 3 floats.
+	d3d11InputElementDescriptor[1].AlignedByteOffset = 0;
 	d3d11InputElementDescriptor[1].InputSlot = 1;
 	d3d11InputElementDescriptor[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 	d3d11InputElementDescriptor[1].InstanceDataStepRate = 0;
 
 	// Create Input layout
 	hr = gpID3D11Device->CreateInputLayout(d3d11InputElementDescriptor, _ARRAYSIZE(d3d11InputElementDescriptor), pID3DBlob_VertexShaderCode->GetBufferPointer(), pID3DBlob_VertexShaderCode->GetBufferSize(), &gpID3D11InputLayout);
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
 		fprintf(gpFile, "initialize:ID3D11Device::CreateInputLayout() failed.\n");
@@ -621,36 +630,24 @@ HRESULT initialize(void)
 	pID3DBlob_PixelShaderCode->Release();
 	pID3DBlob_PixelShaderCode = NULL;
 
-	// Geometry
-
-	const float quadVertices[] =
-	{
-		-1.0f, +1.0f, 0.0f,
-		+1.0f, +1.0f, 0.0f,
-		-1.0f, -1.0f, 0.0f,
-
-		-1.0f, -1.0f, 0.0f,
-		+1.0f, +1.0f, 0.0f,
-		+1.0f, -1.0f, 0.0f,
-	};
-
+	// Sphere
 	// Create vertex buffer for above position vertices
 	// Position
 	// A.Initialize buffer descriptor(glGenBuffer)
 	D3D11_BUFFER_DESC d3d11BufferDescriptor;
 	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
 	d3d11BufferDescriptor.Usage = D3D11_USAGE_DEFAULT;	// GL_STATIC_DRAW similar
-	d3d11BufferDescriptor.ByteWidth = sizeof(float) * _ARRAYSIZE(quadVertices);
+	d3d11BufferDescriptor.ByteWidth = sizeof(float) * 3 * numVertices;
 	d3d11BufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
 	// B.Initialize subresource data structure to put data into the buffer(glBufferData)
 	D3D11_SUBRESOURCE_DATA d3d11SubresourceData;
 	ZeroMemory((void*)&d3d11SubresourceData, sizeof(D3D11_SUBRESOURCE_DATA));
-	d3d11SubresourceData.pSysMem = quadVertices;
+	d3d11SubresourceData.pSysMem = sphere_vertices;
 
 	// C.Create actual buffer
-	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_PositionBuffer_Quad);
-	if (FAILED(hr))
+	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_PositionBuffer_Sphere);
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
 		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for position buffer.\n");
@@ -664,6 +661,33 @@ HRESULT initialize(void)
 		fclose(gpFile);
 	}
 
+	// Elements / Index
+	// A.Initialize buffer descriptor(glGenBuffer)
+	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
+	d3d11BufferDescriptor.Usage = D3D11_USAGE_DEFAULT;	// GL_STATIC_DRAW similar
+	d3d11BufferDescriptor.ByteWidth = sizeof(short) * numElements;
+	d3d11BufferDescriptor.BindFlags = D3D11_BIND_INDEX_BUFFER;	// Index instead of vertex
+
+	// B.Initialize subresource data structure to put data into the buffer(glBufferData)
+	ZeroMemory((void*)&d3d11SubresourceData, sizeof(D3D11_SUBRESOURCE_DATA));
+	d3d11SubresourceData.pSysMem = sphere_elements;
+
+	// C.Create actual buffer
+	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_IndexBuffer_Sphere);
+	if(FAILED(hr))
+	{
+		fopen_s(&gpFile, gszLogFileName, "a+");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for index buffer.\n");
+		fclose(gpFile);
+		return hr;
+	}
+	else
+	{
+		fopen_s(&gpFile, gszLogFileName, "a+");
+		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() Successful for index buffer.\n");
+		fclose(gpFile);
+	}
+
 	// Constant Buffer
 	// A.Initialize constant buffer descriptor
 	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
@@ -673,7 +697,7 @@ HRESULT initialize(void)
 
 	// B.Create actual buffer
 	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, NULL, &gpID3D11Buffer_ConstantBuffer);
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
 		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for constant buffer.\n");
@@ -690,7 +714,7 @@ HRESULT initialize(void)
 	// C. Set constant buffer into the pipeline
 	gpID3D11DeviceContext->VSSetConstantBuffers(0, 1, &gpID3D11Buffer_ConstantBuffer);
 	gpID3D11DeviceContext->PSSetConstantBuffers(0, 1, &gpID3D11Buffer_ConstantBuffer);
-
+	
 	// Enabling rasterizer state
 	// A.Initialize rasterizer descriptor
 	D3D11_RASTERIZER_DESC d3d11RasterizerDescriptor;
@@ -708,7 +732,8 @@ HRESULT initialize(void)
 
 	// B.Create Rasterizer state
 	hr = gpID3D11Device->CreateRasterizerState(&d3d11RasterizerDescriptor, &gpID3D11RasterizerState);
-	if (FAILED(hr))
+	if(FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
 		fprintf(gpFile, "initialize:ID3D11Device::CreateRasterizerState() failed.\n");
@@ -724,45 +749,6 @@ HRESULT initialize(void)
 	// C.Set this state into rasterizer stage of pipeline
 	gpID3D11DeviceContext->RSSetState(gpID3D11RasterizerState);
 
-	// Create Texture
-	hr = LoadD3DTexture(L"Smiley.bmp", &gpID3D11ShaderResourceView_Texture_Smiley);
-	if (FAILED(hr))
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:LoadD3DTexture() failed for Smiley.bmp.\n");
-		fclose(gpFile);
-		return hr;
-	}
-	else
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:LoadD3DTexture() Successful for Smiley.bmp.\n");
-		fclose(gpFile);
-	}
-
-	// Create textureSampler State
-	D3D11_SAMPLER_DESC d3d11SamplerDescriptor;
-	ZeroMemory((void*)&d3d11SamplerDescriptor, sizeof(D3D11_SAMPLER_DESC));
-	d3d11SamplerDescriptor.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	d3d11SamplerDescriptor.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	d3d11SamplerDescriptor.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	d3d11SamplerDescriptor.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-
-	hr = gpID3D11Device->CreateSamplerState(&d3d11SamplerDescriptor, &gpID3D11SamplerState_Texture);
-	if (FAILED(hr))
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateSamplerState() failed.\n");
-		fclose(gpFile);
-		return hr;
-	}
-	else
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateSamplerState() Successful.\n");
-		fclose(gpFile);
-	}
-
 	// Initialize clearColor array
 	clearColor[0] = 0.0f;
 	clearColor[1] = 0.0f;
@@ -771,9 +757,12 @@ HRESULT initialize(void)
 
 	perspectiveProjectionMatrix = XMMatrixIdentity();
 
+	// Initialize matrix stack
+	InitializeMatrixStack();
+
 	// Warmup Resize
 	hr = resize(WIN_WIDTH, WIN_HEIGHT);
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
 		fprintf(gpFile, "initialize:resize() failed.\n");
@@ -793,15 +782,15 @@ HRESULT PrintD3DInfo(void)
 {
 	// Variable Declarations
 	HRESULT hr = S_OK;	// Success_Okay
-	IDXGIFactory* pIDXGIFactory = NULL;
-	IDXGIAdapter* pIDXGIAdapter = NULL;
+	IDXGIFactory *pIDXGIFactory = NULL;
+	IDXGIAdapter *pIDXGIAdapter = NULL;
 	DXGI_ADAPTER_DESC dxgiAdapterDescriptor;
 	char str[255];
 
 	// Code
 	// Create DXGIFactory
 	hr = CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&pIDXGIFactory);
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");	// Open the file and append to the existing file.
 		fprintf(gpFile, "PrintD3DInfo:CreateDXGIFactory() failed.\n");
@@ -815,7 +804,7 @@ HRESULT PrintD3DInfo(void)
 	}
 
 	// Get IDXGIAdapter
-	if (pIDXGIFactory->EnumAdapters(0, &pIDXGIAdapter) != DXGI_ERROR_NOT_FOUND)
+	if(pIDXGIFactory->EnumAdapters(0, &pIDXGIAdapter) != DXGI_ERROR_NOT_FOUND)
 	{
 		// Get Description of the found adaptor
 		ZeroMemory((void*)&dxgiAdapterDescriptor, sizeof(DXGI_ADAPTER_DESC));
@@ -833,13 +822,13 @@ HRESULT PrintD3DInfo(void)
 		fclose(gpFile);
 	}
 
-	if (pIDXGIAdapter)
+	if(pIDXGIAdapter)
 	{
 		pIDXGIAdapter->Release();
 		pIDXGIAdapter = NULL;
 	}
 
-	if (pIDXGIFactory)
+	if(pIDXGIFactory)
 	{
 		pIDXGIFactory->Release();
 		pIDXGIFactory = NULL;
@@ -847,33 +836,22 @@ HRESULT PrintD3DInfo(void)
 	return hr;
 }
 
-// Texture Loading Function
-HRESULT LoadD3DTexture(const wchar_t* textureFileName, ID3D11ShaderResourceView** ppID3D11ShaderResourceView)
-{
-	// Variable Declarations
-	HRESULT hr = S_OK;
-	// Code
-	hr = DirectX::CreateWICTextureFromFile(gpID3D11Device, gpID3D11DeviceContext, textureFileName, NULL, ppID3D11ShaderResourceView);
-
-	return hr;
-}
-
 HRESULT resize(int width, int height)
 {
 	// Variable Declarations
 	HRESULT hr = S_OK;
-	ID3D11Texture2D* pID3D11Texture2D_backBuffer;
+	ID3D11Texture2D *pID3D11Texture2D_backBuffer;
 	// Code
-	if (height == 0)
+	if(height == 0)
 		height = 1;	// To avoid divided by 0 error(illegal statement) in future functions.
 
 	// 1.Release existing RTV(RenderTargetView) 
-	if (gpID3D11RenderTargetView)
+	if(gpID3D11RenderTargetView)
 	{
 		gpID3D11RenderTargetView->Release();
 		gpID3D11RenderTargetView = NULL;
 	}
-
+	
 	// 2.Tell SwapChain to resize buffer according to new width and height
 	gpIDXGISwapChain->ResizeBuffers(1, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
 
@@ -882,7 +860,7 @@ HRESULT resize(int width, int height)
 
 	// 4.Create new render target view using above buffers
 	hr = gpID3D11Device->CreateRenderTargetView(pID3D11Texture2D_backBuffer, NULL, &gpID3D11RenderTargetView);
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
 		fprintf(gpFile, "resize:CreateRenderTargetView() failed.\n");
@@ -894,7 +872,7 @@ HRESULT resize(int width, int height)
 
 	// Depth
 	// Release existing DSV(DepthStencilView) 
-	if (gpID3D11DepthStencilView)
+	if(gpID3D11DepthStencilView)
 	{
 		gpID3D11DepthStencilView->Release();
 		gpID3D11DepthStencilView = NULL;
@@ -916,9 +894,9 @@ HRESULT resize(int width, int height)
 	d3d11Texture2DDescriptor.MiscFlags = 0;	// No Misc Flags - Is the depth for DOF or transform depth
 
 	// Declare a 2D texture which is going to be converted into depth buffer
-	ID3D11Texture2D* pID3D11Texture2D_DepthBuffer = NULL;
+	ID3D11Texture2D *pID3D11Texture2D_DepthBuffer = NULL;
 	hr = gpID3D11Device->CreateTexture2D(&d3d11Texture2DDescriptor, NULL, &pID3D11Texture2D_DepthBuffer);
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
 		fprintf(gpFile, "resize:CreateTexture2D() failed.\n");
@@ -933,7 +911,7 @@ HRESULT resize(int width, int height)
 
 	// Using this descriptor create a DSV
 	hr = gpID3D11Device->CreateDepthStencilView(pID3D11Texture2D_DepthBuffer, &d3d11DepthStencilViewDescriptor, &gpID3D11DepthStencilView);
-	if (FAILED(hr))
+	if(FAILED(hr))
 	{
 		fopen_s(&gpFile, gszLogFileName, "a+");
 		fprintf(gpFile, "resize:CreateDepthStencilView() failed.\n");
@@ -948,7 +926,7 @@ HRESULT resize(int width, int height)
 
 	// 5.Set this new render target view in pipeline
 	gpID3D11DeviceContext->OMSetRenderTargets(1, &gpID3D11RenderTargetView, gpID3D11DepthStencilView);
-
+	
 	// Initialize viewport structure
 	D3D11_VIEWPORT d3d11Viewport;
 	d3d11Viewport.TopLeftX = 0.0f;
@@ -962,156 +940,104 @@ HRESULT resize(int width, int height)
 	gpID3D11DeviceContext->RSSetViewports(1, &d3d11Viewport);
 
 	// Set projection matrix
-	perspectiveProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
+	perspectiveProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(45.0f), (float)width/(float)height, 0.1f, 100.0f);
 
 	return hr;
 }
 
 void display(void)
 {
-	// Variable Declarations
-	HRESULT hr = S_OK;
-
+	// Function Declarations
+	void PushMatrix(XMMATRIX);
+	XMMATRIX PopMatrix();
 	// Code
 	// Clear Render Target View with clearColor similar to glClearColor()
 	gpID3D11DeviceContext->ClearRenderTargetView(gpID3D11RenderTargetView, clearColor);
 	gpID3D11DeviceContext->ClearDepthStencilView(gpID3D11DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-	// Pyramid
+	// Cube
 	// Set position buffer into IA stage of pipeline
 	UINT stride = sizeof(float) * 3;
 	UINT offset = 0;
-	gpID3D11DeviceContext->IASetVertexBuffers(0, 1, &gpID3D11Buffer_PositionBuffer_Quad, &stride, &offset);
+	gpID3D11DeviceContext->IASetVertexBuffers(0, 1, &gpID3D11Buffer_PositionBuffer_Sphere, &stride, &offset);
 
-	// Set texture buffer into IA stage of pipeline
-	stride = sizeof(float) * 2;
-	offset = 0;
-	gpID3D11DeviceContext->IASetVertexBuffers(1, 1, &gpID3D11Buffer_TextureBuffer_Quad, &stride, &offset);
+	// Set index buffer into IA stage of pipeline
+	gpID3D11DeviceContext->IASetIndexBuffer(gpID3D11Buffer_IndexBuffer_Sphere, DXGI_FORMAT_R16_UINT, 0);	// This format corresponds to short
 
 	// Set primitive topology in input assembly state in pipeline
 	gpID3D11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// Transformations
 	// A. Initialize matrices
-	XMMATRIX translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 4.0f);
+	XMMATRIX translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
 	XMMATRIX worldMatrix = translationMatrix;	// Order is important
-	XMMATRIX viewMatrix = XMMatrixIdentity();
-	XMMATRIX wvpMatrix = worldMatrix * viewMatrix * perspectiveProjectionMatrix;
+	XMMATRIX viewMatrix = XMMatrixTranslation(0.0f, 0.0f, 10.0f);
+	XMMATRIX rotationMatrixZ1 = XMMatrixIdentity();
+	XMMATRIX rotationMatrixZ2 = XMMatrixIdentity();
+	XMMATRIX rotationMatrixZ3 = XMMatrixIdentity();
+	XMMATRIX scaleMatrix = XMMatrixIdentity();
 
 	// B. Put them into constant buffer
 	CBUFFER ConstantBuffer;
 	ZeroMemory((void*)&ConstantBuffer, sizeof(CBUFFER));
-	ConstantBuffer.WorldViewProjectionMatrix = wvpMatrix;
+	ConstantBuffer.ViewMatrix = viewMatrix;
+	ConstantBuffer.ProjectionMatrix = perspectiveProjectionMatrix;
+	
+	// Save the camera/view Matrix (Push)
+	PushMatrix(viewMatrix);
+	
+	rotationMatrixZ1 = XMMatrixRotationZ(XMConvertToRadians(shoulder));
 
-	float texcoord[12];
-	if (keyPressed == 1)
-	{
-		texcoord[0] = 0.0f;
-		texcoord[1] = 0.5f;
-		texcoord[2] = 0.5f;
-		texcoord[3] = 0.5f;
-		texcoord[4] = 0.0f;
-		texcoord[5] = 0.0f;
-		texcoord[6] = 0.0f;
-		texcoord[7] = 0.0f;
-		texcoord[8] = 0.5f;
-		texcoord[9] = 0.5f;
-		texcoord[10] = 0.5f;
-		texcoord[11] = 0.0f;
-		ConstantBuffer.KeyPressed = 1;
-	}
-	else if (keyPressed == 2)
-	{
-		texcoord[0] = 0.0f;
-		texcoord[1] = 1.0f;
-		texcoord[2] = 1.0f;
-		texcoord[3] = 1.0f;
-		texcoord[4] = 0.0f;
-		texcoord[5] = 0.0f;
-		texcoord[6] = 0.0f;
-		texcoord[7] = 0.0f;
-		texcoord[8] = 1.0f;
-		texcoord[9] = 1.0f;
-		texcoord[10] = 1.0f;
-		texcoord[11] = 0.0f;
-		ConstantBuffer.KeyPressed = 1;
-	}
-	else if (keyPressed == 3)
-	{
-		texcoord[0] = 0.0f;
-		texcoord[1] = 2.0f;
-		texcoord[2] = 2.0f;
-		texcoord[3] = 2.0f;
-		texcoord[4] = 0.0f;
-		texcoord[5] = 0.0f;
-		texcoord[6] = 0.0f;
-		texcoord[7] = 0.0f;
-		texcoord[8] = 2.0f;
-		texcoord[9] = 2.0f;
-		texcoord[10] = 2.0f;
-		texcoord[11] = 0.0f;
-		ConstantBuffer.KeyPressed = 1;
-	}
-	else if (keyPressed == 4)
-	{
-		texcoord[0] = 0.5f;
-		texcoord[1] = 0.5f;
-		texcoord[2] = 0.5f;
-		texcoord[3] = 0.5f;
-		texcoord[4] = 0.5f;
-		texcoord[5] = 0.5f;
-		texcoord[6] = 0.5f;
-		texcoord[7] = 0.5f;
-		texcoord[8] = 0.5f;
-		texcoord[9] = 0.5f;
-		texcoord[10] = 0.5f;
-		texcoord[11] = 0.5f;
-		ConstantBuffer.KeyPressed = 1;
-	}
-	else
-	{
-		ConstantBuffer.KeyPressed = 0;
-	}
+	translationMatrix = XMMatrixTranslation(1.0f, 0.0f, 0.0f);
 
-	// Texcoord
-	// A.Initialize buffer descriptor(glGenBuffer)
-	D3D11_BUFFER_DESC d3d11BufferDescriptor;
-	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
-	d3d11BufferDescriptor.Usage = D3D11_USAGE_DEFAULT;	
-	d3d11BufferDescriptor.ByteWidth = sizeof(float) * _ARRAYSIZE(texcoord);
-	d3d11BufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	scaleMatrix = XMMatrixScaling(2.0f, 0.5f, 1.0f);
+	worldMatrix = translationMatrix * rotationMatrixZ1;
 
-	// B.Initialize subresource data structure to put data into the buffer(glBufferData)
-	D3D11_SUBRESOURCE_DATA d3d11SubresourceData;
-	ZeroMemory((void*)&d3d11SubresourceData, sizeof(D3D11_SUBRESOURCE_DATA));
-	d3d11SubresourceData.pSysMem = texcoord;
+	PushMatrix(worldMatrix);
 
-	// C.Create actual buffer
-	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_TextureBuffer_Quad);
-	if (FAILED(hr))
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() failed for texture buffer.\n");
-		fclose(gpFile);
-		return;
-	}
-	else
-	{
-		fopen_s(&gpFile, gszLogFileName, "a+");
-		fprintf(gpFile, "initialize:ID3D11Device::CreateBuffer() Successful for texture buffer.\n");
-		fclose(gpFile);
-	}
+	worldMatrix = scaleMatrix * worldMatrix;
+	
+	ConstantBuffer.WorldMatrix = worldMatrix;
+
+	ConstantBuffer.Color = XMVectorSet(0.5f, 0.35f, 0.05f, 0.0f);
+	gpID3D11DeviceContext->UpdateSubresource(gpID3D11Buffer_ConstantBuffer, 0, NULL, &ConstantBuffer, 0, 0);
+
+	gpID3D11DeviceContext->DrawIndexed(numElements, 0, 0);
+
+	worldMatrix = PopMatrix();
+	worldMatrix = translationMatrix * worldMatrix;
+	
+	rotationMatrixZ2 = XMMatrixRotationZ(XMConvertToRadians(elbow));
+
+	worldMatrix =  translationMatrix * rotationMatrixZ2 * worldMatrix;
+	
+	PushMatrix(worldMatrix);
+
+	worldMatrix = scaleMatrix * worldMatrix;
+
+	ConstantBuffer.WorldMatrix = worldMatrix;
 
 	gpID3D11DeviceContext->UpdateSubresource(gpID3D11Buffer_ConstantBuffer, 0, NULL, &ConstantBuffer, 0, 0);
 
-	// Set ShaderResourceView in pixel shader
-	gpID3D11DeviceContext->PSSetShaderResources(0, 1, &gpID3D11ShaderResourceView_Texture_Smiley);
+	gpID3D11DeviceContext->DrawIndexed(numElements, 0, 0);
 
-	// Set SamplerState in pixelShader
-	gpID3D11DeviceContext->PSSetSamplers(0, 1, &gpID3D11SamplerState_Texture);
+	worldMatrix = PopMatrix();
+	translationMatrix = XMMatrixTranslation(1.0f, 0.0f, 0.0f);
+	worldMatrix = translationMatrix * worldMatrix;
+	rotationMatrixZ3 = XMMatrixRotationZ(XMConvertToRadians(wrist));
 
-	// Draw the primitive(glDrawArrays(-, 2, 1))
-	gpID3D11DeviceContext->Draw(6, 0);
+	scaleMatrix = XMMatrixScaling(1.0f, 0.5f, 1.0f);
+	translationMatrix = XMMatrixTranslation(0.5f, 0.0f, 0.0f);
+
+	worldMatrix = scaleMatrix * translationMatrix * rotationMatrixZ3  * worldMatrix;
+
+	ConstantBuffer.WorldMatrix = worldMatrix;
+	
+	gpID3D11DeviceContext->UpdateSubresource(gpID3D11Buffer_ConstantBuffer, 0, NULL, &ConstantBuffer, 0, 0);
+
+	gpID3D11DeviceContext->DrawIndexed(numElements, 0, 0);
+
+	PopMatrix();
 
 	// Swap Buffers by presenting them 
 	gpIDXGISwapChain->Present(0, 0);
@@ -1128,85 +1054,109 @@ void uninitialize(void)
 	// Function Declarations
 	void ToggleFullscreen(void);
 	// Code
-	if (gpID3D11SamplerState_Texture)
-	{
-		gpID3D11SamplerState_Texture->Release();
-		gpID3D11SamplerState_Texture = NULL;
-	}
-	if (gpID3D11ShaderResourceView_Texture_Smiley)
-	{
-		gpID3D11ShaderResourceView_Texture_Smiley->Release();
-		gpID3D11ShaderResourceView_Texture_Smiley = NULL;
-	}
-	if (gpID3D11DepthStencilView)
+	if(gpID3D11DepthStencilView)
 	{
 		gpID3D11DepthStencilView->Release();
 		gpID3D11DepthStencilView = NULL;
 	}
-	if (gpID3D11RasterizerState)
+	if(gpID3D11RasterizerState)
 	{
 		gpID3D11RasterizerState->Release();
 		gpID3D11RasterizerState = NULL;
 	}
-	if (gpID3D11Buffer_ConstantBuffer)
+	if(gpID3D11Buffer_ConstantBuffer)
 	{
 		gpID3D11Buffer_ConstantBuffer->Release();
 		gpID3D11Buffer_ConstantBuffer = NULL;
 	}
-	if (gpID3D11Buffer_TextureBuffer_Quad)
+	if(gpID3D11Buffer_IndexBuffer_Sphere)
 	{
-		gpID3D11Buffer_TextureBuffer_Quad->Release();
-		gpID3D11Buffer_TextureBuffer_Quad = NULL;
+		gpID3D11Buffer_IndexBuffer_Sphere->Release();
+		gpID3D11Buffer_IndexBuffer_Sphere = NULL;
 	}
-	if (gpID3D11Buffer_PositionBuffer_Quad)
+	if(gpID3D11Buffer_PositionBuffer_Sphere)
 	{
-		gpID3D11Buffer_PositionBuffer_Quad->Release();
-		gpID3D11Buffer_PositionBuffer_Quad = NULL;
+		gpID3D11Buffer_PositionBuffer_Sphere->Release();
+		gpID3D11Buffer_PositionBuffer_Sphere = NULL;
 	}
-	if (gpID3D11InputLayout)
+	if(gpID3D11InputLayout)
 	{
 		gpID3D11InputLayout->Release();
 		gpID3D11InputLayout = NULL;
 	}
-	if (gpID3D11PixelShader)
+	if(gpID3D11PixelShader)
 	{
 		gpID3D11PixelShader->Release();
 		gpID3D11PixelShader = NULL;
 	}
-	if (gpID3D11VertexShader)
+	if(gpID3D11VertexShader)
 	{
 		gpID3D11VertexShader->Release();
 		gpID3D11VertexShader = NULL;
 	}
-	if (gpID3D11RenderTargetView)
+	if(gpID3D11RenderTargetView)
 	{
 		gpID3D11RenderTargetView->Release();
 		gpID3D11RenderTargetView = NULL;
 	}
-	if (gpIDXGISwapChain)
+	if(gpIDXGISwapChain)
 	{
 		gpIDXGISwapChain->Release();
 		gpIDXGISwapChain = NULL;
 	}
-	if (gpID3D11DeviceContext)
+	if(gpID3D11DeviceContext)
 	{
 		gpID3D11DeviceContext->Release();
 		gpID3D11DeviceContext = NULL;
 	}
-	if (gpID3D11Device)
+	if(gpID3D11Device)
 	{
 		gpID3D11Device->Release();
 		gpID3D11Device = NULL;
 	}
-	if (gbFullScreen)
+	if(gbFullScreen)
 	{
 		ToggleFullScreen();
 	}
-	if (ghwnd)
+	if(ghwnd)
 	{
 		DestroyWindow(ghwnd);
-		ghwnd = NULL;
+		ghwnd=NULL;
 	}
-	// Uninitialize COM
-	CoUninitialize();
+}
+
+
+// =================================================================================================================== //
+// STACK IMPLEMENTATION //
+// =================================================================================================================== //
+
+void InitializeMatrixStack(void)
+{
+	for (int i = 0; i < MAX_STACK_SIZE; i++)
+	{
+		matrixStack[i] = XMMatrixIdentity();
+	}
+}
+
+void PushMatrix(XMMATRIX matrix)
+{
+	if(top > MAX_STACK_SIZE)
+	{
+		fprintf(gpFile, "Stack is full.\n");
+		return;
+	}
+	top++;
+	matrixStack[top] = matrix;
+}
+
+XMMATRIX PopMatrix(void)
+{
+	if(top == 0)
+	{
+		fprintf(gpFile,"Stack is now empty.\n");
+		return XMMatrixIdentity();
+	}
+	XMMATRIX matrix = matrixStack[top];
+	top--;
+	return matrix;
 }

@@ -352,7 +352,7 @@ int main(int argc, char* argv[])
     "uniform vec3 u_ks;\n" \
     "uniform float u_materialShininess;\n" \
     "uniform int u_lightingEnabled;\n" \
-    "out vec3 fong_ads_light;\n" \
+    "out vec3 fong_ads_light = vec3(0.0, 0.0, 0.0);\n" \
     "void main(void)\n" \
     "{\n" \
     "if(u_lightingEnabled == 1)\n" \

@@ -1,0 +1,19 @@
+Log File Is Successfully Created. 
+WinMain:CoInitialize() Successful.
+PrintD3DInfo:CreateDXGIFactory() Successful.
+Graphics Card Name is AMD Radeon(TM) Graphics
+Graphics Card Memory(VRAM) = 2 GBs
+D3D11 obtained Hardware Driver.
+D3D11 obtained 11.0 feature level.
+D3DCompile() Succeded For Vertex Shader.
+CreateVertexShader() Succeded.
+D3DCompile() Succeded For Pixel Shader.
+ID3D11Device::CreatePixelShader() Succeded.
+ID3D11Device::CreateInputLayout() Succeded.
+ID3D11Device::CreateBuffer Succeded For PCNT for Cube.
+ID3D11Device::CreateBuffer Succeded For Constant Buffer.
+ID3D11Device::CreateRasterizerState() Succeded For Constant Buffer.
+LoadD3DTexture() for Marble in initialize() Succeded.
+ID3D11Device::CreateSamplerState() Succeded.
+initialize:resize() Successful.
+Initialize() Successful.

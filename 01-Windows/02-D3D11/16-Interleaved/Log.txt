@@ -17,3 +17,4 @@ LoadD3DTexture() for Marble in initialize() Succeded.
 ID3D11Device::CreateSamplerState() Succeded.
 initialize:resize() Successful.
 Initialize() Successful.
+resize:CreateRenderTargetView() failed.

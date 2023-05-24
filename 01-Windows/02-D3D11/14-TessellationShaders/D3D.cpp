@@ -49,7 +49,7 @@ ID3D11DepthStencilView* gpID3D11DepthStencilView = NULL; // For depth
 
 struct CBUFFER_HULL_SHADER
 {
-	XMVECTOR Hull_Constant_Function_Params;
+	XMVECTOR Hull_Constant_Function_Param;
 };
 
 struct CBUFFER_DOMAIN_SHADER
@@ -699,7 +699,6 @@ HRESULT initialize(void)
 		pID3DBlob_Error = NULL;
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////
 
 	// Pixel Shader
 	const char* pixelShaderSourceCode =
@@ -770,7 +769,7 @@ HRESULT initialize(void)
 	ZeroMemory((void*)d3d11InputElementDescriptor, sizeof(D3D11_INPUT_ELEMENT_DESC) * _ARRAYSIZE(d3d11InputElementDescriptor));
 	d3d11InputElementDescriptor[0].SemanticName = "POSITION";
 	d3d11InputElementDescriptor[0].SemanticIndex = 0;
-	d3d11InputElementDescriptor[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;	//RGB are symbolic for 3 floats.
+	d3d11InputElementDescriptor[0].Format = DXGI_FORMAT_R32G32_FLOAT;	//RGB are symbolic for 3 floats.
 	d3d11InputElementDescriptor[0].AlignedByteOffset = 0;
 	d3d11InputElementDescriptor[0].InputSlot = 0;
 	d3d11InputElementDescriptor[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
@@ -1188,7 +1187,7 @@ void display(void)
 	ZeroMemory((void*)&constantBuffer_HullShader, sizeof(CBUFFER_HULL_SHADER));
 
 	// Push them into the shader
-	constantBuffer_HullShader.Hull_Constant_Function_Params = XMVectorSet(1.0f, (FLOAT)guiNumberOfSegments, 0.0f, 1.0f); // strip, segment, 
+	constantBuffer_HullShader.Hull_Constant_Function_Param = XMVectorSet(1.0f, (FLOAT)guiNumberOfSegments, 0.0f, 1.0f); // strip, segment, 
 
 	gpID3D11DeviceContext->UpdateSubresource(gpID3D11Buffer_ConstantBuffer_HullShader, 0, NULL, &constantBuffer_HullShader, 0, 0);
 	

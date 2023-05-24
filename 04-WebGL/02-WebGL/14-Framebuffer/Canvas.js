@@ -608,7 +608,6 @@ function display(){
 	if(bFBOResult == true)
 	{
 		display_sphere();
-		update_sphere();
 	}
 	// Screen background white kar
 	gl.clearColor(1.0, 1.0, 1.0, 1.0);

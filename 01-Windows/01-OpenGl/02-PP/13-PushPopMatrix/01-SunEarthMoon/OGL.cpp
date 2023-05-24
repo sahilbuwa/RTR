@@ -785,7 +785,6 @@ void PushMatrix(mat4 matrix)
 	}
 	top++;
 	matrixStack[top] = matrix;
-
 }
 
 mat4 PopMatrix(void)

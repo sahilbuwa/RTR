@@ -357,6 +357,9 @@ HRESULT initialize(void)
 	UINT numDrivers = 0;
 	UINT createDeviceFlags = 0;
 	UINT numFeatureLevels = 1;
+	ID3DBlob* pID3DBlob_VertexShaderCode = NULL;
+	ID3DBlob* pID3DBlob_Error = NULL;
+	ID3DBlob* pID3DBlob_PixelShaderCode = NULL;
 
 	// Code
 	hr = PrintD3DInfo();
@@ -504,9 +507,6 @@ HRESULT initialize(void)
 		"return output;" \
 		"}";
 
-	ID3DBlob* pID3DBlob_VertexShaderCode = NULL;
-	ID3DBlob* pID3DBlob_Error = NULL;
-
 	// Compile vertex Shader
 	hr = D3DCompile(vertexShaderSourceCode,lstrlenA(vertexShaderSourceCode) + 1,"VS",NULL,D3D_COMPILE_STANDARD_FILE_INCLUDE,"main","vs_5_0",0,0,&pID3DBlob_VertexShaderCode,&pID3DBlob_Error);
 
@@ -558,6 +558,7 @@ HRESULT initialize(void)
 	// Set this vertex shader in vertex shader stage in vertex shader stage of pipeline
 	gpID3D11DeviceContext->VSSetShader(gpID3D11VertexShader, NULL, 0);
 
+	pID3DBlob_Error = NULL;
 	// Pixel Shader
 	const char* pixelShaderSourceCode =
 		"Texture2D myTexture2D;" \
@@ -609,9 +610,6 @@ HRESULT initialize(void)
 		"return color;" \
 		"}";
 
-	ID3DBlob* pID3DBlob_PixelShaderCode = NULL;
-	pID3DBlob_Error = NULL;
-
 	// Compile Pixel Shader
 	hr = D3DCompile(pixelShaderSourceCode,lstrlenA(pixelShaderSourceCode) + 1,"PS",NULL,D3D_COMPILE_STANDARD_FILE_INCLUDE,"main","ps_5_0",0,0,&pID3DBlob_PixelShaderCode,&pID3DBlob_Error);
 
@@ -640,10 +638,7 @@ HRESULT initialize(void)
 	}
 
 	// Create Pixel Shader
-	hr = gpID3D11Device->CreatePixelShader(pID3DBlob_PixelShaderCode->GetBufferPointer(),
-											pID3DBlob_PixelShaderCode->GetBufferSize(),
-											NULL,
-											&gpID3D11PixelShader);
+	hr = gpID3D11Device->CreatePixelShader(pID3DBlob_PixelShaderCode->GetBufferPointer(),pID3DBlob_PixelShaderCode->GetBufferSize(),NULL,&gpID3D11PixelShader);
 	
 	if (FAILED(hr))
 	{
@@ -788,7 +783,7 @@ HRESULT initialize(void)
 	};
 
 	// Create vertex buffer for above position vertices for Cube 
-	// S1 = Initialize buffer descriptor structure
+	// Initialize buffer descriptor structure
 	D3D11_BUFFER_DESC d3d11BufferDescriptor;
 	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
 
@@ -796,13 +791,12 @@ HRESULT initialize(void)
 	d3d11BufferDescriptor.ByteWidth = sizeof(float) * _ARRAYSIZE(cube_pcnt);
 	d3d11BufferDescriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
-	// S2 = Initialize subresource data structure to put data into the buffer
+	// Initialize subresource data structure to put data into the buffer
 	D3D11_SUBRESOURCE_DATA d3d11SubresourceData;
 	ZeroMemory((void*)&d3d11SubresourceData, sizeof(D3D11_SUBRESOURCE_DATA));
-
 	d3d11SubresourceData.pSysMem = cube_pcnt;
 
-	// S3 = Create the actual buffer
+	// Create the actual buffer
 	hr = gpID3D11Device->CreateBuffer(&d3d11BufferDescriptor, &d3d11SubresourceData, &gpID3D11Buffer_PCNT_Cube_Buffer);
 
 	if (FAILED(hr))
@@ -821,7 +815,7 @@ HRESULT initialize(void)
 	}
 	
 	// Constant Buffer
-	// S1 = Initialize buffer descriptor structure
+	// Initialize buffer descriptor structure
 	ZeroMemory((void*)&d3d11BufferDescriptor, sizeof(D3D11_BUFFER_DESC));
 
 	d3d11BufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
@@ -846,13 +840,13 @@ HRESULT initialize(void)
 		fclose(gpFile);
 	}
 
-	// S3 = Set Constant Buffer in vertex shader stage of pipeline
+	// Set Constant Buffer in vertex shader stage of pipeline
 	gpID3D11DeviceContext->VSSetConstantBuffers(0, 1, &gpID3D11Buffer_ConstantBuffer);
 	// Set Constant Buffer in pixel shader stage of pipeline [ Per pixel lighting ]
 	gpID3D11DeviceContext->PSSetConstantBuffers(0, 1, &gpID3D11Buffer_ConstantBuffer);
 
 	// Enabling rasterizer state
-	// S1 = Initialize rasterizer descriptor
+	// Initialize rasterizer descriptor
 	D3D11_RASTERIZER_DESC d3d11RasterizerDescriptor;
 	ZeroMemory((void*)&d3d11RasterizerDescriptor, sizeof(D3D11_RASTERIZER_DESC));
 
@@ -867,7 +861,7 @@ HRESULT initialize(void)
 	d3d11RasterizerDescriptor.DepthBiasClamp = 0.0f;
 	d3d11RasterizerDescriptor.SlopeScaledDepthBias = false;
 
-	// S2 = Create Rasterizer State Accordingly
+	// Create Rasterizer State Accordingly
 	hr = gpID3D11Device->CreateRasterizerState(&d3d11RasterizerDescriptor, &gpID3D11RasterizerState);
 
 	if (FAILED(hr))
@@ -885,7 +879,7 @@ HRESULT initialize(void)
 		fclose(gpFile);
 	}
 
-	// S3= Set the state into rasterizer state of pipeline
+	// Set the state into rasterizer state of pipeline
 	gpID3D11DeviceContext->RSSetState(gpID3D11RasterizerState);
 
 	// Create Texture Marble
@@ -933,7 +927,7 @@ HRESULT initialize(void)
 	}
 
 	// Initialize clearColor array
-	clearColor[0] = 1.0f;
+	clearColor[0] = 0.0f;
 	clearColor[1] = 0.0f;
 	clearColor[2] = 0.0f;
 	clearColor[3] = 1.0f;
